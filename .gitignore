@@ -1,0 +1,22 @@
+# Frontend (Node / Vite) — frontend/, webapp/
+node_modules/
+dist/
+*/.vite/
+
+# Backend (Python) — backend/, backend-general/
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets / entorno local
+.env
+*.env
+!.env.example
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

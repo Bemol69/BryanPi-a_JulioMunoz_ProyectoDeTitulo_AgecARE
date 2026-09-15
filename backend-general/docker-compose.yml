@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: agecare
+      POSTGRES_PASSWORD: agecare
+      POSTGRES_DB: agecare_general
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata_general:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agecare -d agecare_general"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GENERAL_DATABASE_URL: postgresql+asyncpg://agecare:agecare@db:5432/agecare_general
+      GENERAL_JWT_SECRET: solo-para-desarrollo
+    ports:
+      - "8001:8001"
+    command: >
+      sh -c "python -m scripts.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8001"
+
+volumes:
+  pgdata_general:
