@@ -29,6 +29,11 @@ export function Initials({ name }: { name: string }) {
   return <>{name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("")}</>;
 }
 
+export function Avatar({ name, photoUrl }: { name: string; photoUrl?: string | null }) {
+  if (photoUrl) return <img className="avatar-img" src={photoUrl} alt={name} />;
+  return <Initials name={name} />;
+}
+
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>

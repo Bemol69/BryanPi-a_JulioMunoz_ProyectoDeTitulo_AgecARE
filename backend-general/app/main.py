@@ -1,10 +1,16 @@
 """AgeCare — API general (usuarios, pacientes, marketplace público)."""
+from pathlib import Path
+
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.errors import RequestIdMiddleware, register_error_handlers
 from app.routers import auth, caregiver, marketplace, patients
+
+UPLOAD_ROOT = Path(__file__).resolve().parent.parent / "uploads"
+UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(
     title="AgeCare General API",
@@ -22,6 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 register_error_handlers(app)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
 
 api = APIRouter(prefix="/api/v1")
 api.include_router(auth.router)

@@ -10,6 +10,7 @@ export const AuthApi = {
   login: (email: string, password: string) => api.post<AuthOut>("/auth/login", { email, password }),
   me: () => api.get<UserOut>("/users/me"),
   logout: (refresh_token: string) => api.post<void>("/auth/logout", { refresh_token }),
+  uploadAvatar: (file: File) => api.upload<UserOut>("/users/me/avatar", file),
 };
 
 export const PatientsApi = {

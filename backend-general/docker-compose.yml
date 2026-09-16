@@ -25,9 +25,12 @@ services:
       GENERAL_JWT_SECRET: solo-para-desarrollo
     ports:
       - "8001:8001"
+    volumes:
+      - avatars:/srv/app/uploads
     command: >
       sh -c "python -m scripts.seed &&
              uvicorn app.main:app --host 0.0.0.0 --port 8001"
 
 volumes:
   pgdata_general:
+  avatars:

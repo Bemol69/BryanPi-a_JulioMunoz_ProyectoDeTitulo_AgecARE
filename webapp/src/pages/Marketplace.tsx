@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { MarketplaceApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
-import { Chip, EmptyState, ErrorBanner, Initials, Spinner, Stars } from "../components/ui";
+import { Avatar, Chip, EmptyState, ErrorBanner, Spinner, Stars } from "../components/ui";
 
 export default function Marketplace() {
   const [q, setQ] = useState("");
@@ -34,7 +34,7 @@ export default function Marketplace() {
           {list.data.items.map((c) => (
             <Link to={`/marketplace/cuidadoras/${c.profile_id}`} key={c.profile_id} className="cg-card">
               {c.is_featured && <span className="featured-badge"><Chip kind="gold">⭐ Destacada</Chip></span>}
-              <div className="cg-avatar"><Initials name={c.full_name} /></div>
+              <div className="cg-avatar"><Avatar name={c.full_name} photoUrl={c.photo_url} /></div>
               <div className="name">{c.full_name}</div>
               <div className="headline">{c.headline ?? "—"}</div>
               <div>{c.rating_avg != null ? <Stars rating={c.rating_avg} /> : "Sin reseñas todavía"} <span style={{ fontSize: 12, color: "var(--ac-text-tertiary)" }}>({c.reviews_count})</span></div>

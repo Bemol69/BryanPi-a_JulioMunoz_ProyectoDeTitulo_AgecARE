@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { CaregiverApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
 import { useAuth } from "../auth/AuthContext";
-import { Chip, EmptyState, ErrorBanner, Initials, OkBanner, Spinner, Stars, Switch, fmtDate } from "../components/ui";
+import { Avatar, Chip, EmptyState, ErrorBanner, OkBanner, Spinner, Stars, Switch, fmtDate } from "../components/ui";
+
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 function TagEditor({ label, values, onChange, placeholder }: { label: string; values: string[]; onChange: (v: string[]) => void; placeholder: string }) {
   const [draft, setDraft] = useState("");
@@ -76,6 +79,51 @@ export default function CaregiverDashboard() {
   );
 }
 
+function AvatarPicker() {
+  const { user, uploadAvatar } = useAuth();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onPick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!AVATAR_TYPES.includes(file.type)) {
+      setError("La foto debe ser JPG, PNG o WEBP.");
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      setError("La foto no puede superar los 5 MB.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await uploadAvatar(file);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo subir la foto.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="avatar-picker">
+      <div className="cg-avatar">{user ? <Avatar name={user.full_name} photoUrl={user.avatar_url} /> : "?"}</div>
+      <div>
+        <input ref={inputRef} id="avatarInput" type="file" accept="image/jpeg,image/png,image/webp"
+              onChange={onPick} disabled={busy} />
+        <button type="button" className="btn ghost small" onClick={() => inputRef.current?.click()} disabled={busy}>
+          {busy ? "Subiendo…" : user?.avatar_url ? "Cambiar foto" : "Agregar foto de perfil"}
+        </button>
+        <div style={{ fontSize: 11.5, color: "var(--ac-text-tertiary)", marginTop: 6 }}>JPG, PNG o WEBP · máx. 5 MB</div>
+        {error && <div style={{ fontSize: 12, color: "var(--ac-warn-700)", marginTop: 4 }}>⚠ {error}</div>}
+      </div>
+    </div>
+  );
+}
+
 function ProfileTab() {
   const { user } = useAuth();
   const profile = useApi(() => CaregiverApi.myProfile(), []);
@@ -140,6 +188,11 @@ function ProfileTab() {
         </div>
 
         <div className="field">
+          <label>Foto de perfil</label>
+          <AvatarPicker />
+        </div>
+
+        <div className="field">
           <label>Título profesional</label>
           <input value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Cuidadora certificada · 8 años de experiencia" />
         </div>
@@ -174,7 +227,7 @@ function ProfileTab() {
           Vista previa
         </h3>
         <div className="cg-card" style={{ border: "1px solid var(--ac-border)" }}>
-          <div className="cg-avatar">{user ? <Initials name={user.full_name} /> : "?"}</div>
+          <div className="cg-avatar">{user ? <Avatar name={user.full_name} photoUrl={user.avatar_url} /> : "?"}</div>
           <div className="name">{user?.full_name ?? "Tu perfil"}</div>
           <div className="headline">{headline || "Agrega un título profesional…"}</div>
           <div>{profile.data?.rating_avg != null ? <Stars rating={profile.data.rating_avg} /> : "Sin reseñas todavía"}

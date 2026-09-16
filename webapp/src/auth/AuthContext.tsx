@@ -11,6 +11,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  uploadAvatar: (file: File) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -64,8 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(me);
   }, []);
 
+  const uploadAvatar = useCallback(async (file: File) => {
+    const updated = await AuthApi.uploadAvatar(file);
+    setUser(updated);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, error, register, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, error, register, login, logout, refreshUser, uploadAvatar }}>
       {children}
     </AuthContext.Provider>
   );

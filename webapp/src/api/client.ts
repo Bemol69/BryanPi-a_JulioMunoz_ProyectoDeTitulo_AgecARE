@@ -58,11 +58,31 @@ async function request<T>(path: string, init: RequestInit = {}, retried = false)
   return body as T;
 }
 
+async function upload<T>(path: string, file: File, retried = false): Promise<T> {
+  const form = new FormData();
+  form.append("file", file);
+  const headers: Record<string, string> = {};
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  const res = await fetch(`${BASE}${path}`, { method: "POST", headers, body: form });
+
+  if (res.status === 401 && !retried && refreshToken) {
+    const ok = await doRefresh();
+    if (ok) return upload<T>(path, file, true);
+  }
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = body?.error;
+    throw new ApiError(res.status, err?.code ?? "UNKNOWN", err?.message ?? "Error inesperado del servidor.");
+  }
+  return body as T;
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body: body !== undefined ? JSON.stringify(body) : undefined }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body: body !== undefined ? JSON.stringify(body) : undefined }),
+  upload: <T>(path: string, file: File) => upload<T>(path, file),
 };
 
 export function qs(params: Record<string, string | number | boolean | undefined | null>): string {

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { MarketplaceApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
-import { Chip, ErrorBanner, Initials, Modal, OkBanner, Spinner, Stars, fmtDate } from "../components/ui";
+import { Avatar, Chip, ErrorBanner, Modal, OkBanner, Spinner, Stars, fmtDate } from "../components/ui";
 
 export default function CaregiverDetail() {
   const { id } = useParams<{ id: string }>();
@@ -25,7 +25,7 @@ export default function CaregiverDetail() {
       <div className="grid2" style={{ marginTop: 20 }}>
         <div className="card">
           <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 16 }}>
-            <div className="cg-avatar" style={{ width: 72, height: 72, fontSize: 28 }}><Initials name={c.full_name} /></div>
+            <div className="cg-avatar" style={{ width: 72, height: 72, fontSize: 28 }}><Avatar name={c.full_name} photoUrl={c.photo_url} /></div>
             <div>
               <h1 style={{ margin: 0, fontSize: 22 }}>{c.full_name} {c.is_featured && <Chip kind="gold">⭐ Destacada</Chip>}</h1>
               <div style={{ color: "var(--ac-text-secondary)", fontSize: 14 }}>{c.headline}</div>

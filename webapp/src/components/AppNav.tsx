@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { Initials } from "./ui";
+import { Avatar } from "./ui";
 
 export default function AppNav() {
   const { user, logout } = useAuth();
@@ -25,7 +25,7 @@ export default function AppNav() {
           )}
         </div>
         <div className="app-user">
-          <div className="app-avatar"><Initials name={user.full_name} /></div>
+          <div className="app-avatar"><Avatar name={user.full_name} photoUrl={user.avatar_url} /></div>
           <span>{user.full_name}</span>
           <button className="btn ghost small" onClick={logout}>Salir</button>
         </div>

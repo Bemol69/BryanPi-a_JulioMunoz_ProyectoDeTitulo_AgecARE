@@ -127,7 +127,9 @@ footer.pub-footer { border-top: 1px solid var(--ac-border); padding: 32px 0; mar
 .app-tabs a:hover:not(.active) { background: var(--ac-surface-sunken); }
 .app-user { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .app-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--ac-navy-100); color: var(--ac-navy-800);
-  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
+  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; overflow: hidden; }
+
+.avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
 
 .page { max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; }
 .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 26px; flex-wrap: wrap; }
@@ -155,10 +157,14 @@ footer.pub-footer { border-top: 1px solid var(--ac-border); padding: 32px 0; mar
   padding: 20px; display: flex; flex-direction: column; gap: 10px; position: relative; }
 .cg-card .featured-badge { position: absolute; top: 14px; right: 14px; }
 .cg-avatar { width: 56px; height: 56px; border-radius: 50%; background: var(--ac-coral-100); color: var(--ac-coral-700);
-  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; }
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; overflow: hidden; flex-shrink: 0; }
 .cg-card .name { font-weight: 700; font-size: 16px; }
 .cg-card .headline { font-size: 12.5px; color: var(--ac-text-secondary); min-height: 32px; }
 .cg-card .meta { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.avatar-picker { display: flex; align-items: center; gap: 14px; }
+.avatar-picker .cg-avatar { width: 72px; height: 72px; font-size: 26px; }
+.avatar-picker input[type="file"] { display: none; }
 
 .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; border-radius: var(--ac-radius-m);
   padding: 4px 9px; white-space: nowrap; }

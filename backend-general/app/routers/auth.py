@@ -1,7 +1,8 @@
 """Autenticación y cuenta de usuario."""
 from datetime import timedelta
+from pathlib import Path
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, File, Request, UploadFile
 from sqlalchemy import select
 
 from app import models
@@ -14,6 +15,10 @@ from app.security import (as_utc, create_access_token, hash_password, hash_refre
                           new_refresh_token, now_utc, verify_password)
 
 router = APIRouter(tags=["Autenticación"])
+
+AVATAR_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "avatars"
+AVATAR_MAX_BYTES = 5 * 1024 * 1024
+AVATAR_CONTENT_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 
 
 async def _memberships_for(db: Db, user_id) -> list[MembershipOut]:
@@ -142,5 +147,27 @@ async def patch_me(body: UserPatchIn, db: Db, user: CurrentUser):
         user.avatar_url = body.avatar_url
     if body.locale is not None:
         user.locale = body.locale
+    memberships = await _memberships_for(db, user.id)
+    return _user_out(user, memberships)
+
+
+# ---------- Foto de perfil ----------
+@router.post("/users/me/avatar", response_model=UserOut)
+async def upload_avatar(request: Request, db: Db, user: CurrentUser, file: UploadFile = File(...)):
+    ext = AVATAR_CONTENT_TYPES.get(file.content_type)
+    if ext is None:
+        raise ApiError(422, "INVALID_FILE_TYPE", "La foto debe ser JPG, PNG o WEBP.")
+    data = await file.read()
+    if len(data) > AVATAR_MAX_BYTES:
+        raise ApiError(422, "FILE_TOO_LARGE", "La foto no puede superar los 5 MB.")
+
+    AVATAR_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{user.id}{ext}"
+    for stale_ext in AVATAR_CONTENT_TYPES.values():
+        if stale_ext != ext:
+            (AVATAR_DIR / f"{user.id}{stale_ext}").unlink(missing_ok=True)
+    (AVATAR_DIR / filename).write_bytes(data)
+
+    user.avatar_url = f"{str(request.base_url).rstrip('/')}/uploads/avatars/{filename}?v={int(now_utc().timestamp())}"
     memberships = await _memberships_for(db, user.id)
     return _user_out(user, memberships)
