@@ -3,7 +3,13 @@
    máximo 1200px (sección 6.1). */
 
 * { box-sizing: border-box; }
-body { background: var(--ac-surface-bg); color: var(--ac-text-primary); font-family: var(--ac-font); }
+body {
+  background:
+    radial-gradient(900px 480px at 18% -8%, color-mix(in srgb, var(--ac-teal-500) 10%, transparent), transparent 65%),
+    radial-gradient(700px 420px at 100% 0%, color-mix(in srgb, var(--ac-gold-500) 9%, transparent), transparent 60%),
+    var(--ac-surface-bg);
+  color: var(--ac-text-primary); font-family: var(--ac-font);
+}
 img { max-width: 100%; display: block; }
 a { text-decoration: none; }
 
@@ -29,7 +35,9 @@ a { text-decoration: none; }
 .btn:disabled { opacity: .55; cursor: not-allowed; }
 .btn.primary { background: var(--ac-teal-600); color: #fff; }
 .btn.primary:hover:not(:disabled) { background: var(--ac-teal-700); }
-.btn.ghost { background: transparent; border-color: var(--ac-navy-700); color: var(--ac-navy-700); }
+/* !important: gana el empate de especificidad con `.btn:not(.primary):not(.danger)` de tokens.css
+   (mismo peso, 3 clases) — sin esto el botón queda con fondo blanco y texto blanco encima. */
+.btn.ghost { background: transparent !important; border-color: var(--ac-navy-700); color: var(--ac-navy-700); }
 .btn.ghost:hover:not(:disabled) { background: var(--ac-navy-100); }
 .btn.link { border: none; background: none; color: var(--ac-teal-700); padding: 4px 0; font-weight: 700; }
 .btn.small { padding: 8px 14px; font-size: 12.5px; }
@@ -37,45 +45,68 @@ a { text-decoration: none; }
 .btn.danger { background: var(--ac-attention-600); color: #fff; }
 
 /* ---------------- Hero ---------------- */
-.hero { padding: 64px 0 56px; }
+.hero {
+  padding: 88px 0 76px;
+  background:
+    radial-gradient(640px 420px at 12% 8%, color-mix(in srgb, var(--ac-teal-500) 16%, transparent), transparent 68%),
+    radial-gradient(560px 380px at 92% -4%, color-mix(in srgb, var(--ac-gold-500) 15%, transparent), transparent 66%),
+    radial-gradient(600px 420px at 66% 100%, color-mix(in srgb, var(--ac-coral-500) 10%, transparent), transparent 70%);
+}
 .hero-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
 @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } }
 .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700;
   letter-spacing: .04em; color: var(--ac-teal-700); background: var(--ac-teal-50); border: 1px solid var(--ac-teal-100);
-  border-radius: var(--ac-radius-full); padding: 6px 14px; margin-bottom: 18px; }
-.hero h1 { font-size: 44px; line-height: 1.12; font-weight: 800; letter-spacing: -.02em; margin: 0 0 18px; text-wrap: balance; }
-.hero h1 .accent { color: var(--ac-teal-700); }
-.hero p.lead { font-size: 18px; line-height: 1.6; color: var(--ac-text-secondary); margin: 0 0 28px; max-width: 52ch; }
+  border-radius: var(--ac-radius-full); padding: 6px 14px; margin-bottom: 20px; }
+.hero h1 { font-size: 46px; line-height: 1.12; font-weight: 800; letter-spacing: -.02em; margin: 0 0 18px; text-wrap: balance; }
+.hero h1 .accent { background: linear-gradient(100deg, var(--ac-teal-700), var(--ac-teal-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p.lead { font-size: 18px; line-height: 1.6; color: var(--ac-text-secondary); margin: 0 0 30px; max-width: 52ch; }
 .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
 .hero-art {
   background: linear-gradient(155deg, var(--ac-teal-50), var(--ac-gold-100) 120%);
   border-radius: var(--ac-radius-2xl); border: 1px solid var(--ac-border); padding: 32px;
-  display: flex; flex-direction: column; gap: 16px;
+  display: flex; flex-direction: column; gap: 16px; box-shadow: var(--ac-shadow-dropdown);
 }
 .hero-card { background: var(--ac-surface-card); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-xl);
-  padding: 16px 18px; display: flex; align-items: center; gap: 14px; }
+  padding: 16px 18px; display: flex; align-items: center; gap: 14px; box-shadow: var(--ac-shadow-dropdown);
+  transition: transform .2s ease; }
+.hero-card:hover { transform: translateY(-2px); }
+.hero-card:nth-child(2) { margin-left: 22px; }
+.hero-card:nth-child(3) { margin-left: 44px; }
 .hero-card .ico { width: 42px; height: 42px; border-radius: var(--ac-radius-m); display: flex; align-items: center;
   justify-content: center; font-size: 20px; flex-shrink: 0; }
 .hero-card .t { font-weight: 700; font-size: 14px; }
 .hero-card .s { font-size: 12px; color: var(--ac-text-tertiary); }
 
 /* ---------------- Secciones marketing ---------------- */
-.section { padding: 56px 0; }
+.section { padding: 56px 0; position: relative; }
 .section-head { text-align: center; max-width: 640px; margin: 0 auto 40px; }
 .section-head h2 { font-size: 30px; font-weight: 800; letter-spacing: -.01em; margin: 0 0 12px; text-wrap: balance; }
 .section-head p { color: var(--ac-text-secondary); font-size: 15.5px; line-height: 1.6; }
 .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
 @media (max-width: 860px) { .feature-grid { grid-template-columns: 1fr; } }
 .feature-card { background: var(--ac-surface-card); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-xl);
-  padding: 26px; }
+  padding: 26px; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.feature-card:hover { transform: translateY(-3px); box-shadow: var(--ac-shadow-dropdown); border-color: var(--ac-teal-100); }
 .feature-card .ico { width: 46px; height: 46px; border-radius: var(--ac-radius-m); display: flex; align-items: center;
   justify-content: center; font-size: 22px; margin-bottom: 16px; }
 .feature-card h3 { font-size: 17px; font-weight: 700; margin: 0 0 8px; }
 .feature-card p { font-size: 13.5px; color: var(--ac-text-secondary); line-height: 1.55; margin: 0; }
 
+.role-section {
+  position: relative; border-radius: var(--ac-radius-2xl);
+  background:
+    radial-gradient(520px 320px at 8% 12%, color-mix(in srgb, var(--ac-teal-500) 8%, transparent), transparent 70%),
+    radial-gradient(520px 320px at 96% 90%, color-mix(in srgb, var(--ac-coral-500) 8%, transparent), transparent 70%),
+    var(--ac-surface-sunken);
+  padding: 56px 40px; margin: 0 24px;
+}
+@media (max-width: 900px) { .role-section { padding: 40px 22px; margin: 0 16px; } }
 .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
 @media (max-width: 860px) { .role-grid { grid-template-columns: 1fr; } }
-.role-card { border-radius: var(--ac-radius-2xl); padding: 32px; color: #fff; display: flex; flex-direction: column; gap: 14px; }
+.role-card { border-radius: var(--ac-radius-2xl); padding: 32px; color: #fff; display: flex; flex-direction: column; gap: 14px;
+  box-shadow: var(--ac-shadow-dropdown); transition: transform .2s ease; }
+.role-card:hover { transform: translateY(-3px); }
 .role-card.family { background: linear-gradient(155deg, var(--ac-teal-700), var(--ac-teal-600)); }
 .role-card.caregiver { background: linear-gradient(155deg, var(--ac-coral-700), var(--ac-coral-600)); }
 .role-card h3 { font-size: 22px; font-weight: 800; margin: 0; }

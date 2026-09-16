@@ -72,30 +72,32 @@ export default function Landing() {
       </section>
 
       <section className="section wrap">
-        <div className="section-head">
-          <h2>Para cada quien, su vista</h2>
-          <p>Una cuenta, un propósito claro.</p>
-        </div>
-        <div className="role-grid">
-          <div className="role-card family" id="familias">
-            <h3>Soy familia</h3>
-            <p>Necesito ayuda para cuidar a mi adulto mayor.</p>
-            <ul>
-              <li>✓ Crea el perfil de tu ser querido</li>
-              <li>✓ Busca y compara cuidadoras cerca de ti</li>
-              <li>✓ Contáctalas y deja reseñas después</li>
-            </ul>
-            <Link to="/registro?tipo=family" className="btn ghost">Crear cuenta de familia</Link>
+        <div className="role-section">
+          <div className="section-head">
+            <h2>Para cada quien, su vista</h2>
+            <p>Una cuenta, un propósito claro.</p>
           </div>
-          <div className="role-card caregiver" id="cuidadoras">
-            <h3>Soy cuidadora</h3>
-            <p>Quiero ofrecer mis servicios de cuidado.</p>
-            <ul>
-              <li>✓ Publica tu perfil profesional gratis</li>
-              <li>✓ Aparece en las búsquedas de familias</li>
-              <li>✓ Recibe solicitudes de contacto directo</li>
-            </ul>
-            <Link to="/registro?tipo=caregiver" className="btn ghost">Crear cuenta de cuidadora</Link>
+          <div className="role-grid">
+            <div className="role-card family" id="familias">
+              <h3>Soy familia</h3>
+              <p>Necesito ayuda para cuidar a mi adulto mayor.</p>
+              <ul>
+                <li>✓ Crea el perfil de tu ser querido</li>
+                <li>✓ Busca y compara cuidadoras cerca de ti</li>
+                <li>✓ Contáctalas y deja reseñas después</li>
+              </ul>
+              <Link to="/registro?tipo=family" className="btn ghost">Crear cuenta de familia</Link>
+            </div>
+            <div className="role-card caregiver" id="cuidadoras">
+              <h3>Soy cuidadora</h3>
+              <p>Quiero ofrecer mis servicios de cuidado.</p>
+              <ul>
+                <li>✓ Publica tu perfil profesional gratis</li>
+                <li>✓ Aparece en las búsquedas de familias</li>
+                <li>✓ Recibe solicitudes de contacto directo</li>
+              </ul>
+              <Link to="/registro?tipo=caregiver" className="btn ghost">Crear cuenta de cuidadora</Link>
+            </div>
           </div>
         </div>
       </section>
