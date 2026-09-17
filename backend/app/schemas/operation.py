@@ -79,6 +79,14 @@ class CaregiverReviewIn(BaseModel):
     job_reference: str | None = Field(default=None, max_length=120)
 
 
+class CaregiverReviewSyncIn(BaseModel):
+    """Reseña reenviada por el sitio público cuando una familia reseña a una cuidadora."""
+    caregiver_email: str
+    family_name: str = Field(min_length=2, max_length=120)
+    rating: int = Field(ge=1, le=5)
+    comment: str | None = Field(default=None, max_length=1000)
+
+
 class CaregiverReviewOut(BaseModel):
     id: UUID
     caregiver_id: UUID

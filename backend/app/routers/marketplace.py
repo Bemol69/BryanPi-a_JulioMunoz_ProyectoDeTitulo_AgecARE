@@ -13,8 +13,8 @@ from app.errors import conflict, invalid, not_found
 from app.schemas.common import Page
 from app.schemas.operation import (CaregiverOut, CaregiverPatchIn, CaregiverPointsIn,
                                    CaregiverPointsOut, CaregiverRankingItem, CaregiverReviewIn,
-                                   CaregiverReviewOut, CaregiverSyncIn, ProductCreateIn, ProductOut,
-                                   ProductPatchIn)
+                                   CaregiverReviewOut, CaregiverReviewSyncIn, CaregiverSyncIn,
+                                   ProductCreateIn, ProductOut, ProductPatchIn)
 from app.security import now_utc
 
 router = APIRouter(prefix="/marketplace", tags=["Catálogos marketplace"])
@@ -30,6 +30,40 @@ async def _total_points(db: Db, caregiver_id: UUID) -> int:
         select(func.coalesce(func.sum(models.CaregiverPointsLog.points), 0))
         .where(models.CaregiverPointsLog.caregiver_id == caregiver_id))).scalar_one()
     return int(total)
+
+
+async def _register_review(db: Db, c: models.CaregiverProfile, family_name: str, rating: int,
+                           comment: str | None, job_reference: str | None,
+                           admin: models.AdminUser | None) -> tuple[models.CaregiverReview, int]:
+    """Crea la reseña, otorga los puntos de fidelización que correspondan y
+    recalcula el promedio/conteo de la cuidadora. Compartido entre el registro
+    manual del staff y la sincronización de reseñas del sitio público (donde
+    no hay un admin autenticado, por eso `admin` puede ser None)."""
+    review = models.CaregiverReview(caregiver_id=c.id, family_name=family_name, rating=rating,
+                                    comment=comment, job_reference=job_reference)
+    db.add(review)
+    await db.flush()
+
+    points_awarded = POINTS_JOB_COMPLETED
+    db.add(models.CaregiverPointsLog(caregiver_id=c.id, points=POINTS_JOB_COMPLETED,
+                                     reason="job_completed", review_id=review.id,
+                                     note=f"Trabajo cerrado con reseña de {family_name}.",
+                                     awarded_by=admin.id if admin else None,
+                                     awarded_by_name=admin.full_name if admin else None))
+    if rating >= GOOD_REVIEW_THRESHOLD:
+        points_awarded += POINTS_GOOD_REVIEW_BONUS
+        db.add(models.CaregiverPointsLog(caregiver_id=c.id, points=POINTS_GOOD_REVIEW_BONUS,
+                                         reason="good_review", review_id=review.id,
+                                         note=f"Bono por buena reseña (rating {rating}).",
+                                         awarded_by=admin.id if admin else None,
+                                         awarded_by_name=admin.full_name if admin else None))
+
+    agg = (await db.execute(
+        select(func.avg(models.CaregiverReview.rating), func.count(models.CaregiverReview.id))
+        .where(models.CaregiverReview.caregiver_id == c.id))).one()
+    c.rating_avg = round(float(agg[0]), 2) if agg[0] is not None else None
+    c.reviews_count = int(agg[1])
+    return review, points_awarded
 
 
 def _cg_out(c: models.CaregiverProfile, include_note: bool = False) -> CaregiverOut:
@@ -191,38 +225,37 @@ async def create_review(body: CaregiverReviewIn, request: Request, db: Db,
     if c.status != CaregiverStatus.approved:
         raise conflict("CAREGIVER_NOT_APPROVED",
                        "Solo se puede reseñar a cuidadoras con perfil aprobado.")
-    review = models.CaregiverReview(caregiver_id=c.id, family_name=body.family_name,
-                                    rating=body.rating, comment=body.comment,
-                                    job_reference=body.job_reference)
-    db.add(review)
-    await db.flush()
-
-    # Ciclo de fidelización: toda reseña cierra un trabajo -> puntos base,
-    # más un bono si la calificación es buena (>= GOOD_REVIEW_THRESHOLD).
-    points_awarded = POINTS_JOB_COMPLETED
-    db.add(models.CaregiverPointsLog(caregiver_id=c.id, points=POINTS_JOB_COMPLETED,
-                                     reason="job_completed", review_id=review.id,
-                                     note=f"Trabajo cerrado con reseña de {body.family_name}.",
-                                     awarded_by=admin.id, awarded_by_name=admin.full_name))
-    if body.rating >= GOOD_REVIEW_THRESHOLD:
-        points_awarded += POINTS_GOOD_REVIEW_BONUS
-        db.add(models.CaregiverPointsLog(caregiver_id=c.id, points=POINTS_GOOD_REVIEW_BONUS,
-                                         reason="good_review", review_id=review.id,
-                                         note=f"Bono por buena reseña (rating {body.rating}).",
-                                         awarded_by=admin.id, awarded_by_name=admin.full_name))
-
-    # Recalcular promedio y conteo de reseñas de la cuidadora.
-    agg = (await db.execute(
-        select(func.avg(models.CaregiverReview.rating), func.count(models.CaregiverReview.id))
-        .where(models.CaregiverReview.caregiver_id == c.id))).one()
-    c.rating_avg = round(float(agg[0]), 2) if agg[0] is not None else None
-    c.reviews_count = int(agg[1])
-
+    review, points_awarded = await _register_review(db, c, body.family_name, body.rating,
+                                                     body.comment, body.job_reference, admin)
     await audit(db, request, "marketplace.review_created", "caregiver_profile", c.id,
                after={"rating": body.rating, "points_awarded": points_awarded})
     return CaregiverReviewOut(id=review.id, caregiver_id=c.id, family_name=body.family_name,
                               rating=body.rating, comment=body.comment,
                               job_reference=body.job_reference, points_awarded=points_awarded,
+                              created_at=review.created_at or now_utc())
+
+
+# ---------- Sincronización de reseñas desde el sitio público ----------
+# Cuando una familia deja una reseña en el sitio público, se reenvía aquí
+# (misma clave interna que la sincronización de perfiles) para que también
+# otorgue puntos de fidelización y se refleje en el ranking de la Consola.
+@router.post("/reviews/sync", response_model=CaregiverReviewOut, status_code=201,
+            dependencies=[Depends(require_internal_key)])
+async def sync_review(body: CaregiverReviewSyncIn, request: Request, db: Db):
+    c = (await db.execute(select(models.CaregiverProfile)
+                          .where(models.CaregiverProfile.email == body.caregiver_email))
+        ).scalar_one_or_none()
+    if c is None:
+        raise not_found("No se encontró una cuidadora sincronizada con ese correo.")
+
+    job_reference = "Reseña del sitio público"
+    review, points_awarded = await _register_review(db, c, body.family_name, body.rating,
+                                                     body.comment, job_reference, admin=None)
+    await audit(db, request, "marketplace.review_synced", "caregiver_profile", c.id,
+               after={"rating": body.rating, "points_awarded": points_awarded})
+    return CaregiverReviewOut(id=review.id, caregiver_id=c.id, family_name=body.family_name,
+                              rating=body.rating, comment=body.comment,
+                              job_reference=job_reference, points_awarded=points_awarded,
                               created_at=review.created_at or now_utc())
 
 

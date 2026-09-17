@@ -12,6 +12,7 @@ from app.schemas.common import Page
 from app.schemas.marketplace import (CaregiverCardOut, CaregiverPublicOut, ContactIn, ContactOut,
                                      ProductCardOut, ProductOut, ReviewCreateIn, ReviewCreateOut,
                                      ReviewOut)
+from app.sync import sync_review_to_admin
 
 router = APIRouter(prefix="/marketplace", tags=["Marketplace"])
 
@@ -123,6 +124,7 @@ async def review_caregiver(profile_id: UUID, body: ReviewCreateIn, db: Db, user:
                             .where(models.CaregiverReview.caregiver_profile_id == profile_id))).one()
     p.rating_avg = round(float(agg[0]), 2)
     p.reviews_count = int(agg[1])
+    await sync_review_to_admin(p.user.email, user.full_name, body.rating, body.comment)
     return ReviewCreateOut(review_id=review.id)
 
 

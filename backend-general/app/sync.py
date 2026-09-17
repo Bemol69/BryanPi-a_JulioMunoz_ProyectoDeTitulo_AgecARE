@@ -26,3 +26,25 @@ async def sync_caregiver_to_admin(profile: "models.CaregiverProfile", user: "mod
                               json=payload, headers=headers)
     except httpx.HTTPError:
         pass
+
+
+async def sync_review_to_admin(caregiver_email: str, family_name: str, rating: int,
+                               comment: str | None) -> None:
+    """Reenvía a la Consola de Administración una reseña dejada en el sitio
+    público, para que se reflejen en el ranking y los puntos de fidelización.
+    Falla en silencio si la Consola no está disponible o no conoce aún a la
+    cuidadora (todavía no sincronizada)."""
+    settings = get_settings()
+    payload = {
+        "caregiver_email": caregiver_email,
+        "family_name": family_name,
+        "rating": rating,
+        "comment": comment,
+    }
+    headers = {"X-Internal-Key": settings.admin_sync_key}
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            await client.post(f"{settings.admin_sync_url}/marketplace/reviews/sync",
+                              json=payload, headers=headers)
+    except httpx.HTTPError:
+        pass

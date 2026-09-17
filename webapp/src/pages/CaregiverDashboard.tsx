@@ -7,22 +7,58 @@ import { Avatar, Chip, EmptyState, ErrorBanner, OkBanner, Spinner, Stars, Switch
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-function TagEditor({ label, values, onChange, placeholder }: { label: string; values: string[]; onChange: (v: string[]) => void; placeholder: string }) {
-  const [draft, setDraft] = useState("");
-  function add() {
-    const v = draft.trim();
-    if (v && !values.includes(v)) onChange([...values, v]);
-    setDraft("");
-  }
+const SPECIALTY_OPTIONS = [
+  "Alzheimer", "Demencia", "Parkinson", "Movilidad reducida", "Posoperatorio",
+  "Cuidados paliativos", "Control de medicación", "Estimulación cognitiva", "Acompañamiento",
+  "Diabetes", "Hipertensión", "Oxigenoterapia", "Curación de heridas",
+  "Higiene y aseo personal", "Apoyo en alimentación", "Fisioterapia básica", "Cuidado nocturno",
+];
+const LANGUAGE_OPTIONS = [
+  "Español", "Inglés", "Portugués", "Alemán", "Italiano", "Francés",
+  "Mapudungun", "Lengua de señas chilena",
+];
+const ZONE_OPTIONS = [
+  "Santiago Centro", "Providencia", "Ñuñoa", "Las Condes", "Vitacura", "La Reina",
+  "Macul", "Peñalolén", "La Florida", "Maipú", "San Miguel", "La Cisterna",
+  "Estación Central", "Independencia", "Recoleta", "Quilicura", "Huechuraba",
+  "Lo Barnechea", "San Bernardo", "Puente Alto", "Cerrillos", "Pudahuel",
+];
+
+function TagPicker({ label, values, onChange, options, placeholder }: {
+  label: string; values: string[]; onChange: (v: string[]) => void; options: string[]; placeholder: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  const available = options.filter((o) => !values.includes(o) && o.toLowerCase().includes(query.trim().toLowerCase()));
+
   return (
-    <div className="field">
+    <div className="field tag-picker" ref={wrapRef}>
       <label>{label}</label>
-      <div style={{ display: "flex", gap: 8 }}>
-        <input value={draft} onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-              placeholder={placeholder} />
-        <button type="button" className="btn ghost small" onClick={add}>Agregar</button>
-      </div>
+      <input value={query} autoComplete="off" placeholder={placeholder}
+            onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)} onClick={() => setOpen(true)} />
+      {open && (
+        <div className="tag-picker-menu">
+          {available.length === 0 && <div className="tag-picker-empty">Sin coincidencias.</div>}
+          {available.map((opt) => (
+            <button type="button" key={opt} className="tag-picker-opt"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => { onChange([...values, opt]); setQuery(""); setOpen(false); }}>
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="tag-input-list">
         {values.map((v) => (
           <span key={v} className="tag-pill">{v} <button type="button" onClick={() => onChange(values.filter((x) => x !== v))}>✕</button></span>
@@ -52,29 +88,32 @@ export default function CaregiverDashboard() {
         </button>
       </div>
 
-      {tab === "perfil" ? <ProfileTab /> : (
-        <div className="card">
-          {contacts.error && <ErrorBanner message={contacts.error} />}
-          {contacts.loading && <Spinner />}
-          {contacts.data && contacts.data.items.length === 0 && (
-            <EmptyState label="Todavía no has recibido mensajes. Cuando una familia te contacte desde el marketplace, aparecerá aquí." />
-          )}
-          {contacts.data && contacts.data.items.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {contacts.data.items.map((c) => (
-                <div key={c.contact_id} style={{ borderBottom: "1px solid var(--ac-border)", paddingBottom: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                    <b style={{ fontSize: 14 }}>{c.family_name}</b>
-                    <span style={{ fontSize: 12, color: "var(--ac-text-tertiary)" }}>{fmtDate(c.created_at)}</span>
-                  </div>
-                  <div style={{ fontSize: 12.5, color: "var(--ac-text-secondary)", marginTop: 4 }}>{c.family_email}</div>
-                  {c.message && <div style={{ fontSize: 13.5, marginTop: 8 }}>{c.message}</div>}
+      {/* Ambas pestañas quedan montadas y solo se ocultan con CSS, para que lo escrito en
+          "Mi perfil profesional" no se pierda al pasar a "Mensajes recibidos" y volver. */}
+      <div style={{ display: tab === "perfil" ? "block" : "none" }}>
+        <ProfileTab />
+      </div>
+      <div className="card" style={{ display: tab === "mensajes" ? "block" : "none" }}>
+        {contacts.error && <ErrorBanner message={contacts.error} />}
+        {contacts.loading && <Spinner />}
+        {contacts.data && contacts.data.items.length === 0 && (
+          <EmptyState label="Todavía no has recibido mensajes. Cuando una familia te contacte desde el marketplace, aparecerá aquí." />
+        )}
+        {contacts.data && contacts.data.items.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {contacts.data.items.map((c) => (
+              <div key={c.contact_id} style={{ borderBottom: "1px solid var(--ac-border)", paddingBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                  <b style={{ fontSize: 14 }}>{c.family_name}</b>
+                  <span style={{ fontSize: 12, color: "var(--ac-text-tertiary)" }}>{fmtDate(c.created_at)}</span>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                <div style={{ fontSize: 12.5, color: "var(--ac-text-secondary)", marginTop: 4 }}>{c.family_email}</div>
+                {c.message && <div style={{ fontSize: 13.5, marginTop: 8 }}>{c.message}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -206,9 +245,9 @@ function ProfileTab() {
           <input type="number" min={0} max={60} value={years} onChange={(e) => setYears(e.target.value === "" ? "" : Number(e.target.value))} />
         </div>
 
-        <TagEditor label="Especialidades" values={specialties} onChange={setSpecialties} placeholder="Alzheimer, movilidad reducida…" />
-        <TagEditor label="Idiomas" values={languages} onChange={setLanguages} placeholder="Español, inglés…" />
-        <TagEditor label="Zonas de cobertura" values={zones} onChange={setZones} placeholder="Providencia, Ñuñoa…" />
+        <TagPicker label="Especialidades" values={specialties} onChange={setSpecialties} options={SPECIALTY_OPTIONS} placeholder="Busca una especialidad…" />
+        <TagPicker label="Idiomas" values={languages} onChange={setLanguages} options={LANGUAGE_OPTIONS} placeholder="Busca un idioma…" />
+        <TagPicker label="Zonas de cobertura" values={zones} onChange={setZones} options={ZONE_OPTIONS} placeholder="Busca una comuna…" />
 
         {error && <ErrorBanner message={error} />}
         {saved === "listed" && <OkBanner message="Perfil guardado y publicado — ya apareces en el marketplace." />}
