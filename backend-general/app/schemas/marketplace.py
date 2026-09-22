@@ -66,6 +66,19 @@ class CaregiverPublicOut(CaregiverProfileOut):
     full_name: str
     photo_url: str | None
     reviews: list[ReviewOut] = []
+    hired_by_me: bool = False
+    my_engagement_id: UUID | None = None
+
+
+class HireIn(BaseModel):
+    patient_id: UUID | None = None
+
+
+class EngagementOut(BaseModel):
+    engagement_id: UUID
+    family_name: str
+    patient_name: str | None
+    started_at: datetime
 
 
 class ContactMessageOut(BaseModel):
@@ -88,6 +101,7 @@ class ContactOut(BaseModel):
 class ReviewCreateIn(BaseModel):
     rating: int = Field(ge=1, le=5)
     comment: str | None = Field(default=None, max_length=1000)
+    patient_id: UUID | None = None
 
 
 class ReviewCreateOut(BaseModel):

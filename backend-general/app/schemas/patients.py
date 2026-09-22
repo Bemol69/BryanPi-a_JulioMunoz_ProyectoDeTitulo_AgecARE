@@ -13,6 +13,8 @@ class PatientCreateIn(BaseModel):
     sex: Sex | None = None
     photo_url: str | None = Field(default=None, max_length=500)
     conditions: list[str] = Field(default_factory=list)
+    medication_allergies: list[str] = Field(default_factory=list)
+    food_allergies: list[str] = Field(default_factory=list)
     notes: str | None = Field(default=None, max_length=2000)
 
 
@@ -37,4 +39,6 @@ class PatientOut(BaseModel):
     sex: Sex | None
     photo_url: str | None
     conditions: list[str]
+    medication_allergies: list[str]
+    food_allergies: list[str]
     notes: str | None

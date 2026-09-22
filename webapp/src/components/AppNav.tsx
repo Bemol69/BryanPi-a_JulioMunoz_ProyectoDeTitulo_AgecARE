@@ -16,7 +16,7 @@ export default function AppNav() {
         <div className="app-tabs">
           {isFamily ? (
             <>
-              <NavLink to="/familia" className={({ isActive }) => (isActive ? "active" : "")}>Mis pacientes</NavLink>
+              <NavLink to="/familia" className={({ isActive }) => (isActive ? "active" : "")}>Mis familiares</NavLink>
               <NavLink to="/marketplace" className={({ isActive }) => (isActive ? "active" : "")}>Buscar cuidadoras</NavLink>
               <NavLink to="/marketplace/productos" className={({ isActive }) => (isActive ? "active" : "")}>Artículos de apoyo</NavLink>
             </>

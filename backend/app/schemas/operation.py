@@ -48,6 +48,7 @@ class CaregiverOut(BaseModel):
     certifications_count: int
     rating_avg: float | None
     reviews_count: int
+    is_engaged: bool
     status: CaregiverStatus
     submitted_at: datetime
     reviewed_by_name: str | None
@@ -69,6 +70,7 @@ class CaregiverSyncIn(BaseModel):
     specialties: list[str] = Field(default_factory=list)
     languages: list[str] = Field(default_factory=list)
     certifications_count: int = 0
+    is_engaged: bool = False
 
 
 class CaregiverReviewIn(BaseModel):

@@ -7,7 +7,8 @@ from app import models
 from app.config import get_settings
 
 
-async def sync_caregiver_to_admin(profile: "models.CaregiverProfile", user: "models.User") -> None:
+async def sync_caregiver_to_admin(profile: "models.CaregiverProfile", user: "models.User",
+                                  is_engaged: bool = False) -> None:
     settings = get_settings()
     zones = profile.zones or []
     payload = {
@@ -18,6 +19,7 @@ async def sync_caregiver_to_admin(profile: "models.CaregiverProfile", user: "mod
         "specialties": profile.specialties or [],
         "languages": profile.languages or [],
         "certifications_count": len(profile.certifications or []),
+        "is_engaged": is_engaged,
     }
     headers = {"X-Internal-Key": settings.admin_sync_key}
     try:

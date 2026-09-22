@@ -70,7 +70,8 @@ def _cg_out(c: models.CaregiverProfile, include_note: bool = False) -> Caregiver
     return CaregiverOut(caregiver_id=c.id, name=c.name, zone=c.zone,
                         specialties=c.specialties or [], languages=c.languages or [],
                         certifications_count=c.certifications_count, rating_avg=c.rating_avg,
-                        reviews_count=c.reviews_count, status=CaregiverStatus(c.status),
+                        reviews_count=c.reviews_count, is_engaged=c.is_engaged,
+                        status=CaregiverStatus(c.status),
                         submitted_at=c.submitted_at, reviewed_by_name=c.reviewed_by_name,
                         internal_note=c.internal_note if include_note else None)
 
@@ -93,12 +94,14 @@ async def sync_caregiver(body: CaregiverSyncIn, db: Db):
         existing.specialties = body.specialties
         existing.languages = body.languages
         existing.certifications_count = body.certifications_count
+        existing.is_engaged = body.is_engaged
         return _cg_out(existing)
 
     profile = models.CaregiverProfile(name=body.name, email=body.email, zone=body.zone,
                                       specialties=body.specialties, languages=body.languages,
                                       certifications_count=body.certifications_count,
-                                      certifications_verified=False, status="pending")
+                                      certifications_verified=False, status="pending",
+                                      is_engaged=body.is_engaged)
     db.add(profile)
     await db.flush()
     return _cg_out(profile)

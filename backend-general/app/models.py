@@ -60,6 +60,8 @@ class Patient(Base):
     sex: Mapped[str | None] = mapped_column(String(10), nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     conditions: Mapped[list] = mapped_column(PortableJSON, default=list)
+    medication_allergies: Mapped[list] = mapped_column(PortableJSON, default=list)
+    food_allergies: Mapped[list] = mapped_column(PortableJSON, default=list)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = ts_now()
 
@@ -118,6 +120,23 @@ class ContactRequest(Base):
     family_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
     message: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = ts_now()
+
+
+class CaregiverEngagement(Base):
+    """Un trabajo activo: una familia contrató a una cuidadora para un paciente.
+    Mientras exista un registro con status='active' para una cuidadora, se
+    sincroniza hacia la Consola como "actualmente trabajando"."""
+    __tablename__ = "caregiver_engagements"
+    id: Mapped[uuid.UUID] = pk()
+    caregiver_profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("caregiver_profiles.id"), index=True)
+    family_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    patient_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("patients.id"), nullable=True)
+    status: Mapped[str] = mapped_column(String(10), default="active", index=True)  # active | ended
+    started_at: Mapped[datetime] = ts_now()
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    family: Mapped[User] = relationship(lazy="joined", foreign_keys=[family_user_id])
+    patient: Mapped[Patient | None] = relationship(lazy="joined")
 
 
 class MarketProduct(Base):

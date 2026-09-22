@@ -166,6 +166,7 @@ function AvatarPicker() {
 function ProfileTab() {
   const { user } = useAuth();
   const profile = useApi(() => CaregiverApi.myProfile(), []);
+  const engagement = useApi(() => CaregiverApi.engagement(), []);
   const [headline, setHeadline] = useState("");
   const [bio, setBio] = useState("");
   const [years, setYears] = useState<number | "">("");
@@ -214,6 +215,12 @@ function ProfileTab() {
   return (
     <div className="grid2">
       <div className="card">
+        {engagement.data && (
+          <div className="ok-banner" style={{ marginBottom: 16 }}>
+            ✓ Actualmente trabajando con {engagement.data.family_name}
+            {engagement.data.patient_name ? ` · cuidando a ${engagement.data.patient_name}` : ""}
+          </div>
+        )}
         <div className="toggle-row" style={{ marginBottom: 20, borderColor: isListed ? "var(--ac-border)" : "var(--ac-warn-500)" }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 14, color: isListed ? "var(--ac-text-primary)" : "var(--ac-warn-700)" }}>

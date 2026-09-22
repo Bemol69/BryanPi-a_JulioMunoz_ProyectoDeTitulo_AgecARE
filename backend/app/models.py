@@ -285,6 +285,7 @@ class CaregiverProfile(Base):
     certifications_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     rating_avg: Mapped[float | None] = mapped_column(Float, nullable=True)
     reviews_count: Mapped[int] = mapped_column(Integer, default=0)
+    is_engaged: Mapped[bool] = mapped_column(Boolean, default=False)
     status: Mapped[str] = mapped_column(String(12), index=True, default="pending")
     status_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     internal_note: Mapped[str | None] = mapped_column(Text, nullable=True)

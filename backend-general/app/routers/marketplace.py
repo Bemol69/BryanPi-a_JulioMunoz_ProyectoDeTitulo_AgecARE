@@ -10,11 +10,33 @@ from app.deps import CurrentUser, Db
 from app.errors import conflict, forbidden, not_found
 from app.schemas.common import Page
 from app.schemas.marketplace import (CaregiverCardOut, CaregiverPublicOut, ContactIn, ContactOut,
-                                     ProductCardOut, ProductOut, ReviewCreateIn, ReviewCreateOut,
-                                     ReviewOut)
-from app.sync import sync_review_to_admin
+                                     EngagementOut, HireIn, ProductCardOut, ProductOut, ReviewCreateIn,
+                                     ReviewCreateOut, ReviewOut)
+from app.security import now_utc
+from app.sync import sync_caregiver_to_admin, sync_review_to_admin
 
 router = APIRouter(prefix="/marketplace", tags=["Marketplace"])
+
+
+async def _is_engaged(db: Db, caregiver_profile_id) -> bool:
+    active = (await db.execute(select(models.CaregiverEngagement).where(
+        models.CaregiverEngagement.caregiver_profile_id == caregiver_profile_id,
+        models.CaregiverEngagement.status == "active"))).first()
+    return active is not None
+
+
+async def _family_display_name(db: Db, user: models.User, patient_id) -> str:
+    """Arma "Familia <apellido>" a partir del adulto mayor a cargo, en vez del
+    nombre de quien escribe la reseña o contrata: así se identifica al núcleo
+    familiar, no a la persona puntual que usó la cuenta."""
+    stmt = select(models.PatientMember).where(models.PatientMember.user_id == user.id)
+    if patient_id is not None:
+        stmt = stmt.where(models.PatientMember.patient_id == patient_id)
+    member = (await db.execute(stmt)).scalars().first()
+    if member is None and patient_id is not None:
+        raise forbidden("No tienes acceso a ese perfil de adulto mayor.")
+    surname = (member.patient.full_name if member else user.full_name).split()[-1]
+    return f"Familia {surname}"
 
 
 # ---------- 14.1 Buscar cuidadoras ----------
@@ -72,14 +94,65 @@ async def get_caregiver_public(profile_id: UUID, db: Db, user: CurrentUser):
     reviews = (await db.execute(select(models.CaregiverReview)
                                 .where(models.CaregiverReview.caregiver_profile_id == profile_id)
                                 .order_by(models.CaregiverReview.created_at.desc()))).scalars().all()
+    my_engagement = (await db.execute(select(models.CaregiverEngagement).where(
+        models.CaregiverEngagement.caregiver_profile_id == profile_id,
+        models.CaregiverEngagement.family_user_id == user.id,
+        models.CaregiverEngagement.status == "active"))).scalars().first()
     return CaregiverPublicOut(
         profile_id=p.id, headline=p.headline, bio=p.bio, years_experience=p.years_experience,
         specialties=p.specialties or [], languages=p.languages or [], zones=p.zones or [],
         certifications=p.certifications or [], rating_avg=p.rating_avg, reviews_count=p.reviews_count,
         is_listed=p.is_listed, is_featured=p.is_featured, full_name=p.user.full_name,
-        photo_url=p.user.avatar_url,
+        photo_url=p.user.avatar_url, hired_by_me=my_engagement is not None,
+        my_engagement_id=my_engagement.id if my_engagement else None,
         reviews=[ReviewOut(review_id=r.id, rating=r.rating, comment=r.comment,
                           author_name=r.author_name, created_at=r.created_at) for r in reviews])
+
+
+# ---------- Contratar cuidadora ----------
+@router.post("/caregivers/{profile_id}/hire", response_model=EngagementOut, status_code=201)
+async def hire_caregiver(profile_id: UUID, body: HireIn, db: Db, user: CurrentUser):
+    if user.account_type != "family":
+        raise forbidden("Solo una cuenta de familia puede contratar a una cuidadora.")
+    p = await _get_listed(db, profile_id)
+    already = (await db.execute(select(models.CaregiverEngagement).where(
+        models.CaregiverEngagement.caregiver_profile_id == profile_id,
+        models.CaregiverEngagement.family_user_id == user.id,
+        models.CaregiverEngagement.status == "active"))).scalar_one_or_none()
+    if already is not None:
+        raise conflict("ALREADY_HIRED", "Ya tienes un trabajo activo con esta cuidadora.")
+    if body.patient_id is not None:
+        member = (await db.execute(select(models.PatientMember).where(
+            models.PatientMember.patient_id == body.patient_id,
+            models.PatientMember.user_id == user.id))).scalar_one_or_none()
+        if member is None:
+            raise forbidden("No tienes acceso a ese perfil de adulto mayor.")
+
+    patient_name = None
+    if body.patient_id is not None:
+        patient = await db.get(models.Patient, body.patient_id)
+        patient_name = patient.full_name if patient else None
+
+    engagement = models.CaregiverEngagement(caregiver_profile_id=profile_id, family_user_id=user.id,
+                                            patient_id=body.patient_id)
+    db.add(engagement)
+    await db.flush()
+    await sync_caregiver_to_admin(p, p.user, True)
+    return EngagementOut(engagement_id=engagement.id, family_name=await _family_display_name(db, user, body.patient_id),
+                         patient_name=patient_name, started_at=engagement.started_at)
+
+
+# ---------- Finalizar el trabajo con una cuidadora ----------
+@router.post("/engagements/{engagement_id}/end", status_code=204)
+async def end_engagement(engagement_id: UUID, db: Db, user: CurrentUser):
+    e = await db.get(models.CaregiverEngagement, engagement_id)
+    if e is None or e.family_user_id != user.id:
+        raise not_found()
+    if e.status == "active":
+        e.status = "ended"
+        e.ended_at = now_utc()
+        p = await db.get(models.CaregiverProfile, e.caregiver_profile_id)
+        await sync_caregiver_to_admin(p, p.user, await _is_engaged(db, p.id))
 
 
 # ---------- 14.3 Contactar cuidadora ----------
@@ -114,8 +187,9 @@ async def review_caregiver(profile_id: UUID, body: ReviewCreateIn, db: Db, user:
     if already is not None:
         raise conflict("ALREADY_REVIEWED", "Ya dejaste una reseña para esta cuidadora.")
 
+    display_name = await _family_display_name(db, user, body.patient_id)
     review = models.CaregiverReview(caregiver_profile_id=profile_id, author_user_id=user.id,
-                                    author_name=user.full_name, rating=body.rating, comment=body.comment)
+                                    author_name=display_name, rating=body.rating, comment=body.comment)
     db.add(review)
     await db.flush()
 
@@ -124,7 +198,7 @@ async def review_caregiver(profile_id: UUID, body: ReviewCreateIn, db: Db, user:
                             .where(models.CaregiverReview.caregiver_profile_id == profile_id))).one()
     p.rating_avg = round(float(agg[0]), 2)
     p.reviews_count = int(agg[1])
-    await sync_review_to_admin(p.user.email, user.full_name, body.rating, body.comment)
+    await sync_review_to_admin(p.user.email, display_name, body.rating, body.comment)
     return ReviewCreateOut(review_id=review.id)
 
 

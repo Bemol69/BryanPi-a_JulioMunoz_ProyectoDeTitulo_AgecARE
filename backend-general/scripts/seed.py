@@ -9,7 +9,7 @@ import asyncio
 import random
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from app import models
 from app.database import Base, get_engine, get_session_factory
@@ -62,9 +62,9 @@ async def seed() -> None:
         await conn.run_sync(Base.metadata.create_all)
 
     async with get_session_factory()() as db:
-        for table in (models.ContactRequest, models.CaregiverReview, models.CaregiverProfile,
-                     models.PatientMember, models.Patient, models.MarketProduct,
-                     models.RefreshSession, models.User):
+        for table in (models.CaregiverEngagement, models.ContactRequest, models.CaregiverReview,
+                     models.CaregiverProfile, models.PatientMember, models.Patient,
+                     models.MarketProduct, models.RefreshSession, models.User):
             await db.execute(delete(table))
 
         # ---- Productos ----
@@ -103,10 +103,19 @@ async def seed() -> None:
         db.add(family)
         await db.flush()
         patient = models.Patient(full_name="Elena Muñoz", birth_date=date(1948, 3, 12), sex="female",
-                                 conditions=["Movilidad reducida"], notes="Le gusta la música y el jardín.")
+                                 conditions=["Movilidad reducida"],
+                                 medication_allergies=["Penicilina"], food_allergies=["Mariscos"],
+                                 notes="Le gusta la música y el jardín.")
         db.add(patient)
         await db.flush()
         db.add(models.PatientMember(patient_id=patient.id, user_id=family.id, role="family", is_owner=True))
+
+        # ---- Trabajo activo demo: la familia ya contrató a María Torres ----
+        maria = (await db.execute(select(models.CaregiverProfile)
+                                  .join(models.User, models.User.id == models.CaregiverProfile.user_id)
+                                  .where(models.User.email == "maria@cuidado.cl"))).scalar_one()
+        db.add(models.CaregiverEngagement(caregiver_profile_id=maria.id, family_user_id=family.id,
+                                          patient_id=patient.id))
 
         await db.commit()
         print(f"Seed completado: {len(CAREGIVERS)} cuidadoras publicadas, 1 familia demo, {len(PRODUCTS)} productos.")

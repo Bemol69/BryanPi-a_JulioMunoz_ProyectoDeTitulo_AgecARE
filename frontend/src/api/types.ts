@@ -42,6 +42,7 @@ export interface CaregiverOut {
   certifications_count: number;
   rating_avg: number | null;
   reviews_count: number;
+  is_engaged: boolean;
   status: CaregiverStatus;
   submitted_at: string;
   reviewed_by_name: string | null;

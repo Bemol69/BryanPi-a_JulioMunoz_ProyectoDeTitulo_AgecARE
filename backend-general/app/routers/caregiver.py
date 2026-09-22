@@ -6,10 +6,17 @@ from app import models
 from app.deps import CurrentUser, Db
 from app.errors import forbidden
 from app.schemas.common import Page
-from app.schemas.marketplace import CaregiverProfileOut, CaregiverProfilePatchIn, ContactMessageOut
+from app.schemas.marketplace import CaregiverProfileOut, CaregiverProfilePatchIn, ContactMessageOut, EngagementOut
 from app.sync import sync_caregiver_to_admin
 
 router = APIRouter(prefix="/caregiver", tags=["Perfil de cuidadora"])
+
+
+async def _is_engaged(db: Db, caregiver_profile_id) -> bool:
+    active = (await db.execute(select(models.CaregiverEngagement).where(
+        models.CaregiverEngagement.caregiver_profile_id == caregiver_profile_id,
+        models.CaregiverEngagement.status == "active"))).first()
+    return active is not None
 
 
 def _out(p: models.CaregiverProfile) -> CaregiverProfileOut:
@@ -60,7 +67,7 @@ async def update_profile(body: CaregiverProfilePatchIn, db: Db, user: CurrentUse
     if body.is_listed is not None:
         profile.is_listed = body.is_listed
     await db.flush()
-    await sync_caregiver_to_admin(profile, user)
+    await sync_caregiver_to_admin(profile, user, await _is_engaged(db, profile.id))
     return _out(profile)
 
 
@@ -76,3 +83,17 @@ async def list_contacts(db: Db, user: CurrentUser):
     items = [ContactMessageOut(contact_id=c.id, family_name=u.full_name, family_email=u.email,
                                message=c.message, created_at=c.created_at) for c, u in rows]
     return Page(items=items, total=len(items))
+
+
+# ---------- Trabajo activo ----------
+@router.get("/engagement", response_model=EngagementOut | None)
+async def get_current_engagement(db: Db, user: CurrentUser):
+    profile = await _get_own_profile(db, user)
+    e = (await db.execute(select(models.CaregiverEngagement).where(
+        models.CaregiverEngagement.caregiver_profile_id == profile.id,
+        models.CaregiverEngagement.status == "active")
+        .order_by(models.CaregiverEngagement.started_at.desc()))).scalars().first()
+    if e is None:
+        return None
+    return EngagementOut(engagement_id=e.id, family_name=e.family.full_name,
+                         patient_name=e.patient.full_name if e.patient else None, started_at=e.started_at)

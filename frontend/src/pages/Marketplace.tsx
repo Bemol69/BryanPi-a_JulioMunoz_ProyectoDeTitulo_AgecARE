@@ -2,9 +2,15 @@ import { useState } from "react";
 import { MarketplaceApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
 import {
-  Card, CardHead, Drawer, EmptyState, ErrorBanner, Spinner, StatusChip, Stars, fmtDate, fmtCLP,
+  Card, CardHead, Chip, Drawer, EmptyState, ErrorBanner, Spinner, StatusChip, Stars, fmtDate, fmtCLP,
 } from "../components/ui";
 import type { CaregiverOut, ProductOut } from "../api/types";
+
+function EngagementChip({ isEngaged }: { isEngaged: boolean }) {
+  return isEngaged
+    ? <Chip kind="gold">● Trabajando</Chip>
+    : <Chip kind="neutral">Disponible</Chip>;
+}
 
 export default function Marketplace() {
   const [tab, setTab] = useState<"cuidadoras" | "articulos">("cuidadoras");
@@ -49,7 +55,7 @@ function CaregiversTab() {
       {list.data && list.data.items.length > 0 && (
         <table className="data">
           <thead>
-            <tr><th>Nombre</th><th>Zona</th><th>Especialidades</th><th className="num">Rating</th><th>Estado</th><th>Enviado</th></tr>
+            <tr><th>Nombre</th><th>Zona</th><th>Especialidades</th><th className="num">Rating</th><th>Disponibilidad</th><th>Estado</th><th>Enviado</th></tr>
           </thead>
           <tbody>
             {list.data.items.map((c) => (
@@ -58,6 +64,7 @@ function CaregiversTab() {
                 <td>{c.zone}</td>
                 <td>{c.specialties.join(", ") || "—"}</td>
                 <td className="num">{c.rating_avg != null ? <Stars rating={c.rating_avg} /> : "—"}</td>
+                <td><EngagementChip isEngaged={c.is_engaged} /></td>
                 <td><StatusChip status={c.status} /></td>
                 <td>{fmtDate(c.submitted_at)}</td>
               </tr>
@@ -119,7 +126,7 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
       {detail.error && <ErrorBanner message={detail.error} />}
       {c && (
         <div>
-          <StatusChip status={c.status} />
+          <StatusChip status={c.status} /> <EngagementChip isEngaged={c.is_engaged} />
           <div className="field-label">Zona</div>
           <div className="field-value">{c.zone}</div>
           <div className="field-label">Especialidades</div>

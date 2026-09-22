@@ -89,6 +89,15 @@ export interface CaregiverPublic extends CaregiverProfileOut {
   full_name: string;
   photo_url: string | null;
   reviews: Review[];
+  hired_by_me: boolean;
+  my_engagement_id: string | null;
+}
+
+export interface Engagement {
+  engagement_id: string;
+  family_name: string;
+  patient_name: string | null;
+  started_at: string;
 }
 
 export interface ContactOut {

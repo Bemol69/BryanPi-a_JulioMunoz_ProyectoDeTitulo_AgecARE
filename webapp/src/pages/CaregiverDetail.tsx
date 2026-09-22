@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { MarketplaceApi } from "../api/endpoints";
+import { MarketplaceApi, PatientsApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
 import { Avatar, Chip, ErrorBanner, Modal, OkBanner, Spinner, Stars, fmtDate } from "../components/ui";
 
@@ -9,12 +9,29 @@ export default function CaregiverDetail() {
   const detail = useApi(() => MarketplaceApi.detail(id!), [id]);
   const [showContact, setShowContact] = useState(false);
   const [showReview, setShowReview] = useState(false);
+  const [showHire, setShowHire] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+  const [busyHire, setBusyHire] = useState(false);
 
   if (detail.loading) return <div className="page"><Spinner /></div>;
   if (detail.error) return <div className="page"><ErrorBanner message={detail.error} /></div>;
   const c = detail.data;
   if (!c) return null;
+
+  const engagementId = c.my_engagement_id;
+  async function endEngagement() {
+    if (!engagementId) return;
+    setBusyHire(true);
+    try {
+      await MarketplaceApi.endEngagement(engagementId);
+      setBanner("Diste por terminado el trabajo con esta cuidadora.");
+      detail.reload();
+    } catch (e) {
+      setBanner(e instanceof Error ? e.message : "No se pudo finalizar el trabajo.");
+    } finally {
+      setBusyHire(false);
+    }
+  }
 
   return (
     <div className="page">
@@ -68,10 +85,22 @@ export default function CaregiverDetail() {
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+          <div style={{ display: "flex", gap: 10, marginTop: 22, flexWrap: "wrap" }}>
             <button className="btn primary" onClick={() => setShowContact(true)}>Contactar</button>
+            {c.hired_by_me ? (
+              <button className="btn ghost" onClick={endEngagement} disabled={busyHire}>
+                {busyHire ? "Finalizando…" : "Finalizar trabajo"}
+              </button>
+            ) : (
+              <button className="btn ghost" onClick={() => setShowHire(true)}>Contratar</button>
+            )}
             <button className="btn ghost" onClick={() => setShowReview(true)}>Dejar reseña</button>
           </div>
+          {c.hired_by_me && (
+            <div style={{ marginTop: 10, fontSize: 12.5, color: "var(--ac-teal-700)" }}>
+              ✓ Actualmente trabajando contigo
+            </div>
+          )}
         </div>
 
         <div className="card">
@@ -99,6 +128,10 @@ export default function CaregiverDetail() {
       {showReview && (
         <ReviewModal profileId={c.profile_id} onClose={() => setShowReview(false)}
                     onDone={(msg) => { setShowReview(false); setBanner(msg); detail.reload(); }} />
+      )}
+      {showHire && (
+        <HireModal profileId={c.profile_id} onClose={() => setShowHire(false)}
+                  onDone={(msg) => { setShowHire(false); setBanner(msg); detail.reload(); }} />
       )}
     </div>
   );
@@ -137,9 +170,23 @@ function ContactModal({ profileId, onClose, onDone }: { profileId: string; onClo
   );
 }
 
+function PatientPicker({ patientId, onChange }: { patientId: string; onChange: (id: string) => void }) {
+  const patients = useApi(() => PatientsApi.list(), []);
+  if (!patients.data || patients.data.items.length <= 1) return null;
+  return (
+    <div className="field">
+      <label>¿Sobre qué familiar es esto?</label>
+      <select value={patientId} onChange={(e) => onChange(e.target.value)}>
+        {patients.data.items.map((p) => <option key={p.patient_id} value={p.patient_id}>{p.full_name}</option>)}
+      </select>
+    </div>
+  );
+}
+
 function ReviewModal({ profileId, onClose, onDone }: { profileId: string; onClose: () => void; onDone: (msg: string) => void }) {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [patientId, setPatientId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -147,7 +194,7 @@ function ReviewModal({ profileId, onClose, onDone }: { profileId: string; onClos
     setBusy(true);
     setError(null);
     try {
-      await MarketplaceApi.review(profileId, rating, comment || undefined);
+      await MarketplaceApi.review(profileId, rating, comment || undefined, patientId || undefined);
       onDone("¡Gracias! Tu reseña se publicó.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo registrar la reseña.");
@@ -168,6 +215,7 @@ function ReviewModal({ profileId, onClose, onDone }: { profileId: string; onClos
           ))}
         </div>
       </div>
+      <PatientPicker patientId={patientId} onChange={setPatientId} />
       <div className="field">
         <label>Comentario (opcional)</label>
         <textarea rows={4} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Muy puntual y atenta…" />
@@ -175,6 +223,39 @@ function ReviewModal({ profileId, onClose, onDone }: { profileId: string; onClos
       {error && <ErrorBanner message={error} />}
       <button className="btn primary block" onClick={submit} disabled={busy}>
         {busy ? "Enviando…" : "Publicar reseña"}
+      </button>
+    </Modal>
+  );
+}
+
+function HireModal({ profileId, onClose, onDone }: { profileId: string; onClose: () => void; onDone: (msg: string) => void }) {
+  const [patientId, setPatientId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      await MarketplaceApi.hire(profileId, patientId || undefined);
+      onDone("Listo, quedó marcada como tu cuidadora activa.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo registrar la contratación.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal title="Contratar cuidadora" onClose={onClose}>
+      <p style={{ fontSize: 13.5, color: "var(--ac-text-secondary)", marginTop: 0 }}>
+        Márcala como tu cuidadora activa. Esto ayuda a la Consola de AgeCare a saber qué
+        cuidadoras están trabajando en este momento.
+      </p>
+      <PatientPicker patientId={patientId} onChange={setPatientId} />
+      {error && <ErrorBanner message={error} />}
+      <button className="btn primary block" onClick={submit} disabled={busy}>
+        {busy ? "Guardando…" : "Confirmar contratación"}
       </button>
     </Modal>
   );
