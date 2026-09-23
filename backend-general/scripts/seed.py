@@ -63,8 +63,8 @@ async def seed() -> None:
 
     async with get_session_factory()() as db:
         for table in (models.CaregiverEngagement, models.ContactRequest, models.CaregiverReview,
-                     models.CaregiverProfile, models.PatientMember, models.Patient,
-                     models.MarketProduct, models.RefreshSession, models.User):
+                     models.CaregiverDocument, models.CaregiverProfile, models.PatientMember,
+                     models.Patient, models.MarketProduct, models.RefreshSession, models.User):
             await db.execute(delete(table))
 
         # ---- Productos ----

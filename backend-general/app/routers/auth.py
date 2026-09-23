@@ -42,8 +42,15 @@ async def register(body: RegisterIn, db: Db):
     if exists:
         raise conflict("EMAIL_ALREADY_EXISTS", "Ya existe una cuenta con este correo electrónico.")
 
+    phone = body.phone.strip() if body.phone else None
+    if phone:
+        phone_exists = (await db.execute(
+            select(models.User).where(models.User.phone == phone))).scalar_one_or_none()
+        if phone_exists:
+            raise conflict("PHONE_ALREADY_EXISTS", "Ya existe una cuenta con este número de teléfono.")
+
     user = models.User(full_name=body.full_name, email=email, password_hash=hash_password(body.password),
-                       phone=body.phone, locale=body.locale, account_type=body.account_type)
+                       phone=phone, locale=body.locale, account_type=body.account_type)
     db.add(user)
     await db.flush()
 
@@ -142,7 +149,13 @@ async def patch_me(body: UserPatchIn, db: Db, user: CurrentUser):
     if body.full_name is not None:
         user.full_name = body.full_name
     if body.phone is not None:
-        user.phone = body.phone
+        phone = body.phone.strip() or None
+        if phone and phone != user.phone:
+            phone_exists = (await db.execute(select(models.User).where(
+                models.User.phone == phone, models.User.id != user.id))).scalar_one_or_none()
+            if phone_exists:
+                raise conflict("PHONE_ALREADY_EXISTS", "Ya existe una cuenta con este número de teléfono.")
+        user.phone = phone
     if body.avatar_url is not None:
         user.avatar_url = body.avatar_url
     if body.locale is not None:

@@ -58,8 +58,9 @@ async function request<T>(path: string, init: RequestInit = {}, retried = false)
   return body as T;
 }
 
-async function upload<T>(path: string, file: File, retried = false): Promise<T> {
+async function upload<T>(path: string, file: File, fields: Record<string, string> = {}, retried = false): Promise<T> {
   const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
   form.append("file", file);
   const headers: Record<string, string> = {};
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
@@ -67,7 +68,7 @@ async function upload<T>(path: string, file: File, retried = false): Promise<T> 
 
   if (res.status === 401 && !retried && refreshToken) {
     const ok = await doRefresh();
-    if (ok) return upload<T>(path, file, true);
+    if (ok) return upload<T>(path, file, fields, true);
   }
   const body = await res.json().catch(() => null);
   if (!res.ok) {
@@ -82,7 +83,7 @@ export const api = {
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body: body !== undefined ? JSON.stringify(body) : undefined }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body: body !== undefined ? JSON.stringify(body) : undefined }),
-  upload: <T>(path: string, file: File) => upload<T>(path, file),
+  upload: <T>(path: string, file: File, fields?: Record<string, string>) => upload<T>(path, file, fields),
 };
 
 export function qs(params: Record<string, string | number | boolean | undefined | null>): string {

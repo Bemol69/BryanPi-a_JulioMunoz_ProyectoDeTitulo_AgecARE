@@ -102,6 +102,20 @@ class CaregiverProfile(Base):
     user: Mapped[User] = relationship(lazy="joined")
 
 
+class CaregiverDocument(Base):
+    """Documento de respaldo (cédula, certificado de antecedentes, certificados de
+    cursos) que la cuidadora sube para optar a trabajos. Un documento por tipo:
+    volver a subir el mismo tipo reemplaza el anterior."""
+    __tablename__ = "caregiver_documents"
+    id: Mapped[uuid.UUID] = pk()
+    caregiver_profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("caregiver_profiles.id"), index=True)
+    doc_type: Mapped[str] = mapped_column(String(20))
+    file_url: Mapped[str] = mapped_column(String(500))
+    original_filename: Mapped[str] = mapped_column(String(255))
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
+                                                  onupdate=func.now())
+
+
 class CaregiverReview(Base):
     __tablename__ = "caregiver_reviews"
     id: Mapped[uuid.UUID] = pk()

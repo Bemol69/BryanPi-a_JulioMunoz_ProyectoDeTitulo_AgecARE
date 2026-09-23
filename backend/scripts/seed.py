@@ -73,7 +73,7 @@ async def seed() -> None:
                       models.MetricsHourlyUsers, models.MetricsDailyUsers,
                       models.LatencyWindow, models.ComponentState, models.CriticalProcessState,
                       models.Incident, models.ContentItem, models.CaregiverPointsLog,
-                      models.CaregiverReview, models.CaregiverProfile,
+                      models.CaregiverReview, models.CaregiverDocument, models.CaregiverProfile,
                       models.Product, models.ModerationItem, models.SystemSetting,
                       models.LegalVersion, models.AdminUser):
             await db.execute(delete(table))

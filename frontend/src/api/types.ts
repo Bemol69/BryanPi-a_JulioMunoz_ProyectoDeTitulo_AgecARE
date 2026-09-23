@@ -33,6 +33,15 @@ export interface ApiErrorBody {
 // ---- Marketplace / Fidelizacion ----
 export type CaregiverStatus = "pending" | "approved" | "suspended";
 
+export type CaregiverDocType = "id_card" | "background_check" | "certificate";
+
+export interface CaregiverDocumentOut {
+  doc_type: CaregiverDocType;
+  file_url: string;
+  original_filename: string;
+  uploaded_at: string;
+}
+
 export interface CaregiverOut {
   caregiver_id: string;
   name: string;
@@ -47,6 +56,7 @@ export interface CaregiverOut {
   submitted_at: string;
   reviewed_by_name: string | null;
   internal_note?: string | null;
+  documents: CaregiverDocumentOut[];
 }
 
 export interface CaregiverRankingItem {

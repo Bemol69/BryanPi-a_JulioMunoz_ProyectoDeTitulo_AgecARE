@@ -4,7 +4,14 @@ import { useApi } from "../hooks/useApi";
 import {
   Card, CardHead, Chip, Drawer, EmptyState, ErrorBanner, Spinner, StatusChip, Stars, fmtDate, fmtCLP,
 } from "../components/ui";
-import type { CaregiverOut, ProductOut } from "../api/types";
+import type { CaregiverDocType, CaregiverOut, ProductOut } from "../api/types";
+
+const DOC_TYPE_LABELS: Record<CaregiverDocType, string> = {
+  id_card: "Cédula de identidad",
+  background_check: "Certificado de antecedentes",
+  certificate: "Certificado o diploma de curso",
+};
+const DOC_TYPE_ORDER: CaregiverDocType[] = ["id_card", "background_check", "certificate"];
 
 function EngagementChip({ isEngaged }: { isEngaged: boolean }) {
   return isEngaged
@@ -135,6 +142,24 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
           <div className="field-value">{c.languages.join(", ") || "—"}</div>
           <div className="field-label">Certificaciones</div>
           <div className="field-value">{c.certifications_count}</div>
+
+          <div className="field-label">Documentos</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 4 }}>
+            {DOC_TYPE_ORDER.map((docType) => {
+              const doc = c.documents.find((d) => d.doc_type === docType);
+              return (
+                <div key={docType} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <span style={{ fontSize: 12.5 }}>{DOC_TYPE_LABELS[docType]}</span>
+                  {doc ? (
+                    <a href={doc.file_url} target="_blank" rel="noreferrer" className="btn small ghost">Ver documento</a>
+                  ) : (
+                    <Chip kind="warn">No subido</Chip>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
           <div className="field-label">Rating</div>
           <div className="field-value">{c.rating_avg != null ? <>{c.rating_avg.toFixed(2)} · {c.reviews_count} reseñas</> : "Sin reseñas todavía"}</div>
           <div className="field-label">Enviado el</div>

@@ -11,10 +11,11 @@ from app.deps import Db, require, require_internal_key
 from app.enums import CaregiverStatus, ContentStatus
 from app.errors import conflict, invalid, not_found
 from app.schemas.common import Page
-from app.schemas.operation import (CaregiverOut, CaregiverPatchIn, CaregiverPointsIn,
-                                   CaregiverPointsOut, CaregiverRankingItem, CaregiverReviewIn,
-                                   CaregiverReviewOut, CaregiverReviewSyncIn, CaregiverSyncIn,
-                                   ProductCreateIn, ProductOut, ProductPatchIn)
+from app.schemas.operation import (CaregiverDocumentOut, CaregiverDocumentSyncIn, CaregiverOut,
+                                   CaregiverPatchIn, CaregiverPointsIn, CaregiverPointsOut,
+                                   CaregiverRankingItem, CaregiverReviewIn, CaregiverReviewOut,
+                                   CaregiverReviewSyncIn, CaregiverSyncIn, ProductCreateIn,
+                                   ProductOut, ProductPatchIn)
 from app.security import now_utc
 
 router = APIRouter(prefix="/marketplace", tags=["Catálogos marketplace"])
@@ -76,6 +77,15 @@ def _cg_out(c: models.CaregiverProfile, include_note: bool = False) -> Caregiver
                         internal_note=c.internal_note if include_note else None)
 
 
+async def _documents_for(db: Db, caregiver_id: UUID) -> list[CaregiverDocumentOut]:
+    rows = (await db.execute(select(models.CaregiverDocument)
+                             .where(models.CaregiverDocument.caregiver_id == caregiver_id)
+                             )).scalars().all()
+    return [CaregiverDocumentOut(doc_type=d.doc_type, file_url=d.file_url,
+                                 original_filename=d.original_filename, uploaded_at=d.uploaded_at)
+           for d in rows]
+
+
 # ---------- Sincronización desde el sitio público ----------
 # Cuando una cuidadora publica su perfil en el sitio público, llega aquí como
 # "pendiente" para que el staff la revise. Se autentica con una clave interna
@@ -105,6 +115,33 @@ async def sync_caregiver(body: CaregiverSyncIn, db: Db):
     db.add(profile)
     await db.flush()
     return _cg_out(profile)
+
+
+# ---------- Sincronización de documentos desde el sitio público ----------
+# Cuando una cuidadora sube un documento (cédula, certificado de antecedentes,
+# certificado de curso), se reenvía aquí con la misma clave interna que el
+# resto de la sincronización, para que el staff lo revise antes de aprobar.
+@router.post("/documents/sync", response_model=CaregiverDocumentOut, status_code=201,
+            dependencies=[Depends(require_internal_key)])
+async def sync_document(body: CaregiverDocumentSyncIn, db: Db):
+    c = (await db.execute(select(models.CaregiverProfile)
+                          .where(models.CaregiverProfile.email == body.caregiver_email))
+        ).scalar_one_or_none()
+    if c is None:
+        raise not_found("No se encontró una cuidadora sincronizada con ese correo.")
+
+    existing = (await db.execute(select(models.CaregiverDocument).where(
+        models.CaregiverDocument.caregiver_id == c.id,
+        models.CaregiverDocument.doc_type == body.doc_type))).scalar_one_or_none()
+    if existing is None:
+        existing = models.CaregiverDocument(caregiver_id=c.id, doc_type=body.doc_type)
+        db.add(existing)
+    existing.file_url = body.file_url
+    existing.original_filename = body.original_filename
+    await db.flush()
+    return CaregiverDocumentOut(doc_type=existing.doc_type, file_url=existing.file_url,
+                                original_filename=existing.original_filename,
+                                uploaded_at=existing.uploaded_at or now_utc())
 
 
 # ---------- 10.1 Listar cuidadoras ----------
@@ -194,7 +231,9 @@ async def get_caregiver(caregiver_id: UUID, db: Db):
     c = await db.get(models.CaregiverProfile, caregiver_id)
     if c is None:
         raise not_found()
-    return _cg_out(c, include_note=True)
+    out = _cg_out(c, include_note=True)
+    out.documents = await _documents_for(db, c.id)
+    return out
 
 
 # ---------- Fidelización 2: otorgar puntos manualmente ----------

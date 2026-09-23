@@ -31,3 +31,9 @@ class ContactChannel(StrEnum):
     phone = "phone"
     whatsapp = "whatsapp"
     email = "email"
+
+
+class CaregiverDocType(StrEnum):
+    id_card = "id_card"
+    background_check = "background_check"
+    certificate = "certificate"

@@ -1,7 +1,8 @@
 import { api, qs } from "./client";
 import type {
-  AuthOut, CaregiverCard, CaregiverProfileOut, CaregiverPublic, ContactMessage, ContactOut, Engagement,
-  Page, PatientCard, PatientCreateOut, ProductCard, ProductDetail, UserOut,
+  AuthOut, CaregiverCard, CaregiverDocType, CaregiverDocumentOut, CaregiverProfileOut,
+  CaregiverPublic, ContactMessage, ContactOut, Engagement, Page, PatientCard, PatientCreateOut,
+  ProductCard, ProductDetail, UserOut,
 } from "./types";
 
 export const AuthApi = {
@@ -31,6 +32,9 @@ export const CaregiverApi = {
   }>) => api.put<CaregiverProfileOut>("/caregiver/profile", body),
   contacts: () => api.get<Page<ContactMessage>>("/caregiver/contacts"),
   engagement: () => api.get<Engagement | null>("/caregiver/engagement"),
+  myDocuments: () => api.get<CaregiverDocumentOut[]>("/caregiver/documents"),
+  uploadDocument: (docType: CaregiverDocType, file: File) =>
+    api.upload<CaregiverDocumentOut>("/caregiver/documents", file, { doc_type: docType }),
 };
 
 export const MarketplaceApi = {

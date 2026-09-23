@@ -1,15 +1,24 @@
 """Perfil profesional de la cuidadora: base de su ficha en el marketplace."""
-from fastapi import APIRouter
+from pathlib import Path
+
+from fastapi import APIRouter, File, Form, Request, UploadFile
 from sqlalchemy import select
 
 from app import models
 from app.deps import CurrentUser, Db
-from app.errors import forbidden
+from app.enums import CaregiverDocType
+from app.errors import ApiError, forbidden
 from app.schemas.common import Page
-from app.schemas.marketplace import CaregiverProfileOut, CaregiverProfilePatchIn, ContactMessageOut, EngagementOut
-from app.sync import sync_caregiver_to_admin
+from app.schemas.marketplace import (CaregiverDocumentOut, CaregiverProfileOut,
+                                     CaregiverProfilePatchIn, ContactMessageOut, EngagementOut)
+from app.security import now_utc
+from app.sync import sync_caregiver_to_admin, sync_document_to_admin
 
 router = APIRouter(prefix="/caregiver", tags=["Perfil de cuidadora"])
+
+DOCUMENT_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "documents"
+DOCUMENT_MAX_BYTES = 8 * 1024 * 1024
+DOCUMENT_CONTENT_TYPES = {"application/pdf": ".pdf", "image/jpeg": ".jpg", "image/png": ".png"}
 
 
 async def _is_engaged(db: Db, caregiver_profile_id) -> bool:
@@ -69,6 +78,56 @@ async def update_profile(body: CaregiverProfilePatchIn, db: Db, user: CurrentUse
     await db.flush()
     await sync_caregiver_to_admin(profile, user, await _is_engaged(db, profile.id))
     return _out(profile)
+
+
+# ---------- Documentos de respaldo (cédula, antecedentes, certificados) ----------
+def _doc_out(d: models.CaregiverDocument) -> CaregiverDocumentOut:
+    return CaregiverDocumentOut(doc_type=d.doc_type, file_url=d.file_url,
+                                original_filename=d.original_filename, uploaded_at=d.uploaded_at)
+
+
+@router.get("/documents", response_model=list[CaregiverDocumentOut])
+async def list_documents(db: Db, user: CurrentUser):
+    profile = await _get_own_profile(db, user)
+    rows = (await db.execute(select(models.CaregiverDocument)
+                             .where(models.CaregiverDocument.caregiver_profile_id == profile.id)
+                             )).scalars().all()
+    return [_doc_out(d) for d in rows]
+
+
+@router.post("/documents", response_model=CaregiverDocumentOut, status_code=201)
+async def upload_document(request: Request, db: Db, user: CurrentUser,
+                          doc_type: CaregiverDocType = Form(...), file: UploadFile = File(...)):
+    profile = await _get_own_profile(db, user)
+    ext = DOCUMENT_CONTENT_TYPES.get(file.content_type)
+    if ext is None:
+        raise ApiError(422, "INVALID_FILE_TYPE", "El documento debe ser PDF, JPG o PNG.")
+    data = await file.read()
+    if len(data) > DOCUMENT_MAX_BYTES:
+        raise ApiError(422, "FILE_TOO_LARGE", "El documento no puede superar los 8 MB.")
+
+    doc_dir = DOCUMENT_DIR / str(profile.id)
+    doc_dir.mkdir(parents=True, exist_ok=True)
+    for stale_ext in DOCUMENT_CONTENT_TYPES.values():
+        (doc_dir / f"{doc_type.value}{stale_ext}").unlink(missing_ok=True)
+    filename = f"{doc_type.value}{ext}"
+    (doc_dir / filename).write_bytes(data)
+    file_url = f"{str(request.base_url).rstrip('/')}/uploads/documents/{profile.id}/{filename}"
+
+    existing = (await db.execute(select(models.CaregiverDocument).where(
+        models.CaregiverDocument.caregiver_profile_id == profile.id,
+        models.CaregiverDocument.doc_type == doc_type.value))).scalar_one_or_none()
+    if existing is None:
+        existing = models.CaregiverDocument(caregiver_profile_id=profile.id, doc_type=doc_type.value)
+        db.add(existing)
+    existing.file_url = file_url
+    existing.original_filename = file.filename or filename
+    await db.flush()
+
+    await sync_document_to_admin(user.email, doc_type.value, file_url, existing.original_filename)
+    return CaregiverDocumentOut(doc_type=existing.doc_type, file_url=existing.file_url,
+                                original_filename=existing.original_filename,
+                                uploaded_at=existing.uploaded_at or now_utc())
 
 
 # ---------- Mensajes de contacto recibidos ----------

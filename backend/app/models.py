@@ -294,6 +294,20 @@ class CaregiverProfile(Base):
     reviewed_by_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
 
+class CaregiverDocument(Base):
+    """Documento de respaldo (cédula, certificado de antecedentes, certificados de
+    cursos) sincronizado desde el sitio público cuando la cuidadora lo sube.
+    Un documento por tipo: el staff los revisa antes de aprobar el perfil."""
+    __tablename__ = "marketplace_caregiver_documents"
+    id: Mapped[uuid.UUID] = pk()
+    caregiver_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("marketplace_caregivers.id"), index=True)
+    doc_type: Mapped[str] = mapped_column(String(20))
+    file_url: Mapped[str] = mapped_column(String(500))
+    original_filename: Mapped[str] = mapped_column(String(255))
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
+                                                  onupdate=func.now())
+
+
 class CaregiverReview(Base):
     """Reseña de una familia sobre una cuidadora al cierre de un trabajo.
     Dispara el otorgamiento automático de puntos (ver CaregiverPointsLog)

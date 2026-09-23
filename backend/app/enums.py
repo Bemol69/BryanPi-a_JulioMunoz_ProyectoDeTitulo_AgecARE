@@ -133,6 +133,19 @@ class LegalDocType(StrEnum):
     privacy = "privacy"
 
 
+class CaregiverDocType(StrEnum):
+    id_card = "id_card"
+    background_check = "background_check"
+    certificate = "certificate"
+
+
+CAREGIVER_DOC_TYPE_NAMES = {
+    CaregiverDocType.id_card: "Cédula de identidad",
+    CaregiverDocType.background_check: "Certificado de antecedentes",
+    CaregiverDocType.certificate: "Certificado o diploma de curso",
+}
+
+
 # Nombres visibles en español (para respuestas de la consola)
 PLAN_NAMES = {PlanCode.free: "Gratuito", PlanCode.gold: "Dorado",
               PlanCode.platinum: "Platino", PlanCode.provider: "Proveedor"}

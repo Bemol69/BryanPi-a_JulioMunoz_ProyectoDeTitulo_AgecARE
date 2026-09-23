@@ -50,3 +50,25 @@ async def sync_review_to_admin(caregiver_email: str, family_name: str, rating: i
                               json=payload, headers=headers)
     except httpx.HTTPError:
         pass
+
+
+async def sync_document_to_admin(caregiver_email: str, doc_type: str, file_url: str,
+                                 original_filename: str) -> None:
+    """Reenvía a la Consola de Administración un documento que la cuidadora
+    subió (cédula, certificado de antecedentes, certificados de cursos), para
+    que el staff pueda revisarlo antes de aprobar el perfil. Falla en
+    silencio si la Consola no está disponible o no conoce aún a la cuidadora."""
+    settings = get_settings()
+    payload = {
+        "caregiver_email": caregiver_email,
+        "doc_type": doc_type,
+        "file_url": file_url,
+        "original_filename": original_filename,
+    }
+    headers = {"X-Internal-Key": settings.admin_sync_key}
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            await client.post(f"{settings.admin_sync_url}/marketplace/documents/sync",
+                              json=payload, headers=headers)
+    except httpx.HTTPError:
+        pass

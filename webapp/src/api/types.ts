@@ -49,6 +49,15 @@ export interface Certification {
   year: number | null;
 }
 
+export type CaregiverDocType = "id_card" | "background_check" | "certificate";
+
+export interface CaregiverDocumentOut {
+  doc_type: CaregiverDocType;
+  file_url: string;
+  original_filename: string;
+  uploaded_at: string;
+}
+
 export interface CaregiverProfileOut {
   profile_id: string;
   headline: string | null;

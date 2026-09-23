@@ -25,6 +25,13 @@ class CaregiverProfilePatchIn(BaseModel):
     is_listed: bool | None = None
 
 
+class CaregiverDocumentOut(BaseModel):
+    doc_type: str
+    file_url: str
+    original_filename: str
+    uploaded_at: datetime
+
+
 class CaregiverProfileOut(BaseModel):
     profile_id: UUID
     headline: str | None

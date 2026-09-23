@@ -39,6 +39,21 @@ class ContentPatchIn(BaseModel):
 
 
 # ---- Marketplace ----
+class CaregiverDocumentOut(BaseModel):
+    doc_type: str
+    file_url: str
+    original_filename: str
+    uploaded_at: datetime
+
+
+class CaregiverDocumentSyncIn(BaseModel):
+    """Documento reenviado por el sitio público cuando una cuidadora lo sube."""
+    caregiver_email: str
+    doc_type: str
+    file_url: str
+    original_filename: str = Field(max_length=255)
+
+
 class CaregiverOut(BaseModel):
     caregiver_id: UUID
     name: str
@@ -53,6 +68,7 @@ class CaregiverOut(BaseModel):
     submitted_at: datetime
     reviewed_by_name: str | None
     internal_note: str | None = None
+    documents: list[CaregiverDocumentOut] = []
 
 
 class CaregiverPatchIn(BaseModel):
