@@ -42,6 +42,12 @@ Un solo proyecto de Supabase alcanza: las tablas de la consola (`admin_*`, `mark
 
 ## Paso 2 · Crear las tablas y los datos de demostración
 
+> **Si reutilizas un proyecto de Supabase que ya tiene otras tablas** (p. ej. `pymeclic-dashboard`): antes de
+> seguir, en **SQL Editor** corre `select tablename from pg_tables where schemaname = 'public';`. Si aparece
+> alguna tabla con el mismo nombre que las de AgeCare (`users`, `patients`, `features`, `system_settings`,
+> `market_products`, `alembic_version`…), **no continúes**: `create_all` la saltaría y el seed borraría sus
+> datos. Con el proyecto vacío no hay problema.
+
 Desde tu PC, con Docker Desktop abierto, en PowerShell, parado en la carpeta del repo:
 
 ```powershell
