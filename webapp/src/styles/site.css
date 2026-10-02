@@ -398,3 +398,6 @@ footer.pub-footer { padding: 44px 0 36px; margin-top: 32px; }
 .switch input:checked + .track { background: var(--ac-grad-brand); }
 .switch .thumb { position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; background: #fff; border-radius: 50%; transition: transform .25s var(--ac-ease); box-shadow: 0 2px 6px rgba(0, 0, 0, .25); }
 .switch input:checked ~ .thumb { transform: translateX(19px); }
+
+/* Títulos de tarjeta: espacio inferior (el reset global deja margin 0) */
+.card > h3 { margin-bottom: 12px; font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
