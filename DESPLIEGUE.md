@@ -42,16 +42,14 @@ Un solo proyecto de Supabase alcanza: las tablas de la consola (`admin_*`, `mark
 
 ## Paso 2 · Crear las tablas y los datos de demostración
 
-Desde tu PC, con Docker Desktop abierto, en PowerShell, parado en la carpeta del repo.
-Reemplaza `URL-SESION` por la cadena del puerto **5432**:
+Desde tu PC, con Docker Desktop abierto, en PowerShell, parado en la carpeta del repo:
 
 ```powershell
-cd backend
-docker compose run --rm --no-deps -e ADMIN_DATABASE_URL="URL-SESION" api sh -c "alembic upgrade head && python -m scripts.seed"
-cd ../backend-general
-docker compose run --rm --no-deps -e GENERAL_DATABASE_URL="URL-SESION" api python -m scripts.seed
-cd ..
+.\deploy\crear_tablas_supabase.ps1
 ```
+
+El script te pide la cadena **Session pooler** (puerto `5432`) con entrada oculta, crea las tablas de
+la consola y del sitio y carga los datos de demostración. No guarda la cadena en ningún archivo.
 
 Luego, en Supabase → **SQL Editor**, pega y ejecuta el contenido de
 [`deploy/supabase_seguridad.sql`](deploy/supabase_seguridad.sql). Activa la seguridad por filas
