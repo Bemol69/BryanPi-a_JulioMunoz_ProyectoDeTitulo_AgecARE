@@ -11,7 +11,7 @@ export default function AppNav() {
     <header className="app-nav">
       <div className="app-nav-inner">
         <NavLink to="/" className="pub-logo" style={{ marginRight: 8 }}>
-          <img src="/agecare-logo.jpg" alt="AgeCare" />
+          <img src="/logo-mark.png" alt="AgeCare" />
         </NavLink>
         <div className="app-tabs">
           {isFamily ? (

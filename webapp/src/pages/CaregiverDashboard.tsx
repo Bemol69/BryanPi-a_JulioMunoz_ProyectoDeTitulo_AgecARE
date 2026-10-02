@@ -327,7 +327,7 @@ function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed
       {profile.specialties.length > 0 && (
         <div className="profile-view-section">
           <div className="field-label">Especialidades</div>
-          <div className="chip-row">{profile.specialties.map((s) => <Chip key={s} kind="teal">{s}</Chip>)}</div>
+          <div className="chip-row">{profile.specialties.map((s) => <Chip key={s} kind="brand">{s}</Chip>)}</div>
         </div>
       )}
       {profile.zones.length > 0 && (

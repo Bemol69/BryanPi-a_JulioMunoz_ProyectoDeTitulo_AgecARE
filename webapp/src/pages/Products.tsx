@@ -26,7 +26,7 @@ export default function Products() {
             <div key={p.product_id} className="cg-card">
               <div className="name">{p.name}</div>
               <div className="headline">{CATEGORY_LABEL[p.category] ?? p.category}</div>
-              <div style={{ fontWeight: 700, color: "var(--ac-teal-700)" }}>{p.price_range}</div>
+              <div style={{ fontWeight: 700, color: "var(--ac-brand-700)" }}>{p.price_range}</div>
             </div>
           ))}
         </div>

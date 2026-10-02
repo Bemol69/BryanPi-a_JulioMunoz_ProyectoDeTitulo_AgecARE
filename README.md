@@ -154,6 +154,28 @@ Familia / Cuidadora                 Staff Wellq Co
  PostgreSQL (sitio público)        PostgreSQL (consola)
 ```
 
+## Despliegue de los frontends en Vercel
+
+Los dos frontends (`frontend/` y `webapp/`) se despliegan como **dos proyectos
+distintos** de Vercel desde este mismo repositorio. Cada carpeta ya incluye un
+`vercel.json` con la regla de reescritura para que las rutas de React Router
+funcionen al recargar.
+
+| Proyecto en Vercel | Root Directory | Framework | Variable de entorno |
+|--------------------|----------------|-----------|---------------------|
+| AgeCare Consola    | `frontend`     | Vite      | `VITE_API_BASE_URL` = `https://<backend-admin>/api/v1/admin` |
+| AgeCare Sitio      | `webapp`       | Vite      | `VITE_API_BASE_URL` = `https://<backend-general>/api/v1` |
+
+Pasos: **Add New → Project** → importar el repo → elegir el *Root Directory* de
+la tabla → agregar la variable de entorno → *Deploy*. Build command
+`npm run build` y output `dist` (Vercel los detecta solo).
+
+Vercel solo aloja los frontends. Los backends (FastAPI + PostgreSQL) deben estar
+en un servicio con contenedores/base de datos (Render, Railway, Fly.io, etc.) y
+aceptar el dominio de Vercel mediante la variable `CORS_ORIGINS` (lista separada
+por comas, p. ej. `https://agecare-sitio.vercel.app`). Sin backend, la landing y
+las pantallas de acceso se ven, pero el inicio de sesión y los datos no cargan.
+
 ## Qué probar
 
 **Consola de Administración**

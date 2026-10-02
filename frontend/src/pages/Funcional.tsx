@@ -4,13 +4,13 @@ import { Card, CardHead, EmptyState, ErrorBanner, Spinner } from "../components/
 
 const ROLE_LABEL: Record<string, string> = { family: "Familiar", caregiver: "Cuidadora", elder: "Adulto mayor", doctor: "Médico" };
 
-// Escala secuencial teal-50 -> teal-600 (Guía de Diseño 9.2: "secuenciales... escala de 6 pasos de teal-50 a teal-700")
+// Escala secuencial brand-50 -> brand-600 (Guía de Diseño 9.2: "secuenciales... escala de 6 pasos de teal-50 a teal-700")
 function heatColor(v: number | null): { bg: string; fg: string } {
   if (v == null) return { bg: "var(--ac-surface-sunken)", fg: "var(--ac-text-tertiary)" };
-  if (v >= 0.6) return { bg: "var(--ac-teal-600)", fg: "#fff" };
-  if (v >= 0.3) return { bg: "var(--ac-teal-500)", fg: "#fff" };
-  if (v >= 0.1) return { bg: "var(--ac-teal-100)", fg: "var(--ac-teal-700)" };
-  return { bg: "var(--ac-teal-50)", fg: "var(--ac-text-secondary)" };
+  if (v >= 0.6) return { bg: "var(--ac-brand-600)", fg: "#fff" };
+  if (v >= 0.3) return { bg: "var(--ac-brand-500)", fg: "#fff" };
+  if (v >= 0.1) return { bg: "var(--ac-brand-100)", fg: "var(--ac-brand-700)" };
+  return { bg: "var(--ac-brand-50)", fg: "var(--ac-text-secondary)" };
 }
 
 export default function Funcional() {

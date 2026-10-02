@@ -40,7 +40,7 @@ export default function Marketplace() {
               <div>{c.rating_avg != null ? <Stars rating={c.rating_avg} /> : "Sin reseñas todavía"} <span style={{ fontSize: 12, color: "var(--ac-text-tertiary)" }}>({c.reviews_count})</span></div>
               <div className="meta">
                 {c.zones.slice(0, 2).map((z) => <Chip key={z} kind="neutral">{z}</Chip>)}
-                {c.specialties.slice(0, 2).map((s) => <Chip key={s} kind="teal">{s}</Chip>)}
+                {c.specialties.slice(0, 2).map((s) => <Chip key={s} kind="brand">{s}</Chip>)}
               </div>
             </Link>
           ))}

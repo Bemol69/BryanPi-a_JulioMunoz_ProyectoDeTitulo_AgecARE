@@ -26,7 +26,8 @@ export default function Login() {
   }
 
   return (
-    <div>
+    <div className="site-bg">
+      <div className="site-frame">
       <PublicNav />
       <div className="auth-wrap">
         <div className="auth-card">
@@ -51,6 +52,7 @@ export default function Login() {
           </div>
           <div className="auth-switch">¿No tienes cuenta? <Link to="/registro" className="btn link">Regístrate</Link></div>
         </div>
+      </div>
       </div>
     </div>
   );

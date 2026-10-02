@@ -21,7 +21,7 @@ export function Stars({ rating }: { rating: number }) {
   return <span className="stars">{"★".repeat(full)}{"☆".repeat(5 - full)}</span>;
 }
 
-export function Chip({ kind, children }: { kind: "gold" | "teal" | "neutral"; children: ReactNode }) {
+export function Chip({ kind, children }: { kind: "gold" | "brand" | "neutral"; children: ReactNode }) {
   return <span className={`chip ${kind}`}>{children}</span>;
 }
 

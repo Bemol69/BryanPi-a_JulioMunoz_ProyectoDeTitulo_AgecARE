@@ -5,7 +5,7 @@ export default function PublicNav() {
     <header className="pub-nav">
       <div className="pub-nav-inner">
         <Link to="/" className="pub-logo">
-          <img src="/agecare-logo.jpg" alt="AgeCare" />
+          <img src="/logo-mark.png" alt="AgeCare" />
           AgeCare
         </Link>
         <nav className="pub-links">

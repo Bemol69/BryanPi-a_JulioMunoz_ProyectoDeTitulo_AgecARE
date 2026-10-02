@@ -1,4 +1,5 @@
 """AgeCare — API de la Consola de Administración (FastAPI + PostgreSQL)."""
+import os
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,6 +8,9 @@ from app.errors import RequestIdMiddleware, register_error_handlers
 from app.routers import (auth, content, marketing, marketplace, metrics_commercial,
                          metrics_features, metrics_roles, moderation, ops, support)
 from app.routers import system as system_router
+
+# Orígenes extra permitidos (p. ej. el dominio de Vercel), separados por coma.
+CORS_EXTRA_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
 
 app = FastAPI(
     title="AgeCare Admin API",
@@ -20,7 +24,7 @@ app.add_middleware(RequestIdMiddleware)
 # El backend base no lo traía porque no tenía frontend propio corriendo aún.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", *CORS_EXTRA_ORIGINS],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

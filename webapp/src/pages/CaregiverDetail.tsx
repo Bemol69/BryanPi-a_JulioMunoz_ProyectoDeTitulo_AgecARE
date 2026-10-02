@@ -68,7 +68,7 @@ export default function CaregiverDetail() {
 
           <div style={{ marginTop: 16 }}>
             <div className="field-label" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "var(--ac-text-tertiary)", marginBottom: 6 }}>Especialidades</div>
-            <div className="meta">{c.specialties.map((s) => <Chip key={s} kind="teal">{s}</Chip>)}</div>
+            <div className="meta">{c.specialties.map((s) => <Chip key={s} kind="brand">{s}</Chip>)}</div>
           </div>
           <div style={{ marginTop: 12 }}>
             <div className="field-label" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "var(--ac-text-tertiary)", marginBottom: 6 }}>Zonas de cobertura</div>
@@ -97,7 +97,7 @@ export default function CaregiverDetail() {
             <button className="btn ghost" onClick={() => setShowReview(true)}>Dejar reseña</button>
           </div>
           {c.hired_by_me && (
-            <div style={{ marginTop: 10, fontSize: 12.5, color: "var(--ac-teal-700)" }}>
+            <div style={{ marginTop: 10, fontSize: 12.5, color: "var(--ac-brand-700)" }}>
               ✓ Actualmente trabajando contigo
             </div>
           )}

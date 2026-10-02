@@ -38,7 +38,8 @@ export default function Register() {
   }
 
   return (
-    <div>
+    <div className="site-bg">
+      <div className="site-frame">
       <PublicNav />
       <div className="auth-wrap">
         <div className="auth-card">
@@ -83,6 +84,7 @@ export default function Register() {
           </form>
           <div className="auth-switch">¿Ya tienes cuenta? <Link to="/login" className="btn link">Inicia sesión</Link></div>
         </div>
+      </div>
       </div>
     </div>
   );

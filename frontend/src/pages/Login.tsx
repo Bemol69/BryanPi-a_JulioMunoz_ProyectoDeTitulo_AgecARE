@@ -28,7 +28,7 @@ export default function Login() {
     <div className="login-wrap">
       <div className="login-card">
         <div className="logo" style={{ padding: 0 }}>
-          <div className="logo-mark"><img src="/agecare-logo.jpg" alt="AgeCare" /></div>
+          <div className="logo-mark"><img src="/logo-mark.png" alt="AgeCare" /></div>
           <div>
             <div className="logo-name" style={{ color: "var(--ac-text-primary)" }}>AgeCare</div>
             <div className="logo-sub" style={{ color: "var(--ac-text-tertiary)" }}>Consola de administración</div>

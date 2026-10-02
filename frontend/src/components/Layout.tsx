@@ -52,7 +52,7 @@ export default function Layout() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="logo">
-          <div className="logo-mark"><img src="/agecare-logo.jpg" alt="AgeCare" /></div>
+          <div className="logo-mark"><img src="/logo-mark.png" alt="AgeCare" /></div>
           <div>
             <div className="logo-name">AgeCare</div>
             <div className="logo-sub">Consola de administración</div>
