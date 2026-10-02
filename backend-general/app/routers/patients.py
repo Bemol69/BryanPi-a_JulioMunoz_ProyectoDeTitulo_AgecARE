@@ -1,10 +1,8 @@
 """Pacientes: crear y listar, para la vista de familia."""
-from pathlib import Path
-
 from fastapi import APIRouter, File, Request, UploadFile
 from sqlalchemy import select
 
-from app import models
+from app import models, storage
 from app.deps import CurrentUser, Db
 from app.errors import ApiError, forbidden, not_found
 from app.schemas.common import Page
@@ -13,8 +11,6 @@ from app.security import now_utc
 
 router = APIRouter(tags=["Pacientes"])
 
-PHOTO_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "patients"
-PHOTO_MAX_BYTES = 5 * 1024 * 1024
 PHOTO_CONTENT_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 
 
@@ -54,17 +50,12 @@ async def upload_patient_photo(patient_id, request: Request, db: Db, user: Curre
     if ext is None:
         raise ApiError(422, "INVALID_FILE_TYPE", "La foto debe ser JPG, PNG o WEBP.")
     data = await file.read()
-    if len(data) > PHOTO_MAX_BYTES:
-        raise ApiError(422, "FILE_TOO_LARGE", "La foto no puede superar los 5 MB.")
+    if len(data) > storage.MAX_UPLOAD_BYTES:
+        raise ApiError(422, "FILE_TOO_LARGE", f"La foto no puede superar los {storage.MAX_UPLOAD_LABEL}.")
 
-    PHOTO_DIR.mkdir(parents=True, exist_ok=True)
-    filename = f"{patient.id}{ext}"
-    for stale_ext in PHOTO_CONTENT_TYPES.values():
-        if stale_ext != ext:
-            (PHOTO_DIR / f"{patient.id}{stale_ext}").unlink(missing_ok=True)
-    (PHOTO_DIR / filename).write_bytes(data)
-
-    patient.photo_url = f"{str(request.base_url).rstrip('/')}/uploads/patients/{filename}?v={int(now_utc().timestamp())}"
+    url = await storage.save(f"patients/{patient.id}{ext}", data, file.content_type, str(request.base_url),
+                             stale=[f"patients/{patient.id}{e}" for e in PHOTO_CONTENT_TYPES.values() if e != ext])
+    patient.photo_url = f"{url}?v={int(now_utc().timestamp())}"
     return PatientOut(patient_id=patient.id, full_name=patient.full_name, birth_date=patient.birth_date,
                       sex=patient.sex, photo_url=patient.photo_url, conditions=patient.conditions or [],
                       medication_allergies=patient.medication_allergies or [],

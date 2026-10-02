@@ -1,20 +1,17 @@
 """AgeCare — API general (usuarios, pacientes, marketplace público)."""
 import os
-from pathlib import Path
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app import storage
 from app.config import get_settings
 from app.errors import RequestIdMiddleware, register_error_handlers
 from app.routers import auth, caregiver, marketplace, patients
 
 # Orígenes extra permitidos (p. ej. el dominio de Vercel), separados por coma.
 CORS_EXTRA_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
-
-UPLOAD_ROOT = Path(__file__).resolve().parent.parent / "uploads"
-UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(
     title="AgeCare General API",
@@ -32,7 +29,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 register_error_handlers(app)
-app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
+try:
+    storage.LOCAL_ROOT.mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=storage.LOCAL_ROOT), name="uploads")
+except OSError:
+    pass  # disco de solo lectura (Vercel): los archivos viven en Supabase Storage
 
 api = APIRouter(prefix="/api/v1")
 api.include_router(auth.router)

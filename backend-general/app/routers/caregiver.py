@@ -1,10 +1,8 @@
 """Perfil profesional de la cuidadora: base de su ficha en el marketplace."""
-from pathlib import Path
-
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from sqlalchemy import select
 
-from app import models
+from app import models, storage
 from app.deps import CurrentUser, Db
 from app.enums import CaregiverDocType
 from app.errors import ApiError, forbidden
@@ -16,8 +14,6 @@ from app.sync import sync_caregiver_to_admin, sync_document_to_admin
 
 router = APIRouter(prefix="/caregiver", tags=["Perfil de cuidadora"])
 
-DOCUMENT_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "documents"
-DOCUMENT_MAX_BYTES = 8 * 1024 * 1024
 DOCUMENT_CONTENT_TYPES = {"application/pdf": ".pdf", "image/jpeg": ".jpg", "image/png": ".png"}
 
 
@@ -103,16 +99,13 @@ async def upload_document(request: Request, db: Db, user: CurrentUser,
     if ext is None:
         raise ApiError(422, "INVALID_FILE_TYPE", "El documento debe ser PDF, JPG o PNG.")
     data = await file.read()
-    if len(data) > DOCUMENT_MAX_BYTES:
-        raise ApiError(422, "FILE_TOO_LARGE", "El documento no puede superar los 8 MB.")
+    if len(data) > storage.MAX_UPLOAD_BYTES:
+        raise ApiError(422, "FILE_TOO_LARGE", f"El documento no puede superar los {storage.MAX_UPLOAD_LABEL}.")
 
-    doc_dir = DOCUMENT_DIR / str(profile.id)
-    doc_dir.mkdir(parents=True, exist_ok=True)
-    for stale_ext in DOCUMENT_CONTENT_TYPES.values():
-        (doc_dir / f"{doc_type.value}{stale_ext}").unlink(missing_ok=True)
     filename = f"{doc_type.value}{ext}"
-    (doc_dir / filename).write_bytes(data)
-    file_url = f"{str(request.base_url).rstrip('/')}/uploads/documents/{profile.id}/{filename}"
+    file_url = await storage.save(
+        f"documents/{profile.id}/{filename}", data, file.content_type, str(request.base_url),
+        stale=[f"documents/{profile.id}/{doc_type.value}{e}" for e in DOCUMENT_CONTENT_TYPES.values() if e != ext])
 
     existing = (await db.execute(select(models.CaregiverDocument).where(
         models.CaregiverDocument.caregiver_profile_id == profile.id,

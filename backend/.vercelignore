@@ -1,0 +1,12 @@
+tests/
+scripts/
+alembic/
+alembic.ini
+pytest.ini
+requirements-dev.txt
+Dockerfile
+docker-compose.yml
+uploads/
+__pycache__/
+*.pyc
+.env

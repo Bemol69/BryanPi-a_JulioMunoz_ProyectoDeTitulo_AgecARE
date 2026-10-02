@@ -1,11 +1,10 @@
 """Autenticación y cuenta de usuario."""
 from datetime import timedelta
-from pathlib import Path
 
 from fastapi import APIRouter, File, Request, UploadFile
 from sqlalchemy import select
 
-from app import models
+from app import models, storage
 from app.deps import CurrentUser, Db
 from app.config import get_settings
 from app.errors import ApiError, conflict, unauthorized
@@ -16,8 +15,6 @@ from app.security import (as_utc, create_access_token, hash_password, hash_refre
 
 router = APIRouter(tags=["Autenticación"])
 
-AVATAR_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "avatars"
-AVATAR_MAX_BYTES = 5 * 1024 * 1024
 AVATAR_CONTENT_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 
 
@@ -171,16 +168,11 @@ async def upload_avatar(request: Request, db: Db, user: CurrentUser, file: Uploa
     if ext is None:
         raise ApiError(422, "INVALID_FILE_TYPE", "La foto debe ser JPG, PNG o WEBP.")
     data = await file.read()
-    if len(data) > AVATAR_MAX_BYTES:
-        raise ApiError(422, "FILE_TOO_LARGE", "La foto no puede superar los 5 MB.")
+    if len(data) > storage.MAX_UPLOAD_BYTES:
+        raise ApiError(422, "FILE_TOO_LARGE", f"La foto no puede superar los {storage.MAX_UPLOAD_LABEL}.")
 
-    AVATAR_DIR.mkdir(parents=True, exist_ok=True)
-    filename = f"{user.id}{ext}"
-    for stale_ext in AVATAR_CONTENT_TYPES.values():
-        if stale_ext != ext:
-            (AVATAR_DIR / f"{user.id}{stale_ext}").unlink(missing_ok=True)
-    (AVATAR_DIR / filename).write_bytes(data)
-
-    user.avatar_url = f"{str(request.base_url).rstrip('/')}/uploads/avatars/{filename}?v={int(now_utc().timestamp())}"
+    url = await storage.save(f"avatars/{user.id}{ext}", data, file.content_type, str(request.base_url),
+                             stale=[f"avatars/{user.id}{e}" for e in AVATAR_CONTENT_TYPES.values() if e != ext])
+    user.avatar_url = f"{url}?v={int(now_utc().timestamp())}"
     memberships = await _memberships_for(db, user.id)
     return _user_out(user, memberships)

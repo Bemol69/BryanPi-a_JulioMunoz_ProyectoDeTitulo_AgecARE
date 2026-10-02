@@ -4,7 +4,7 @@ import { PatientsApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
 import { Avatar, EmptyState, ErrorBanner, Modal, Spinner } from "../components/ui";
 
-const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+const PHOTO_MAX_BYTES = 4 * 1024 * 1024;
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export default function FamilyHome() {
@@ -103,7 +103,7 @@ function CreatePatientModal({ onClose, onCreated }: { onClose: () => void; onCre
       return;
     }
     if (file.size > PHOTO_MAX_BYTES) {
-      setError("La foto no puede superar los 5 MB.");
+      setError("La foto no puede superar los 4 MB.");
       return;
     }
     setError(null);
@@ -144,7 +144,7 @@ function CreatePatientModal({ onClose, onCreated }: { onClose: () => void; onCre
             <button type="button" className="btn ghost small" onClick={() => inputRef.current?.click()}>
               {photo ? "Cambiar foto" : "Elegir foto"}
             </button>
-            <div style={{ fontSize: 11.5, color: "var(--ac-text-tertiary)", marginTop: 6 }}>JPG, PNG o WEBP · máx. 5 MB</div>
+            <div style={{ fontSize: 11.5, color: "var(--ac-text-tertiary)", marginTop: 6 }}>JPG, PNG o WEBP · máx. 4 MB</div>
           </div>
         </div>
       </div>

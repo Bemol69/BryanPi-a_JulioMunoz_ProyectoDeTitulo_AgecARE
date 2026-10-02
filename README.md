@@ -154,27 +154,20 @@ Familia / Cuidadora                 Staff Wellq Co
  PostgreSQL (sitio público)        PostgreSQL (consola)
 ```
 
-## Despliegue de los frontends en Vercel
+## Despliegue en Vercel + Supabase
 
-Los dos frontends (`frontend/` y `webapp/`) se despliegan como **dos proyectos
-distintos** de Vercel desde este mismo repositorio. Cada carpeta ya incluye un
-`vercel.json` con la regla de reescritura para que las rutas de React Router
-funcionen al recargar.
+Las dos webs (consola y sitio público) y las dos APIs se despliegan como **cuatro proyectos de Vercel**
+desde este mismo repositorio, con la base de datos y el almacenamiento de archivos en **Supabase**.
+Cada push a `main` actualiza las webs automáticamente.
 
-| Proyecto en Vercel | Root Directory | Framework | Variable de entorno |
-|--------------------|----------------|-----------|---------------------|
-| AgeCare Consola    | `frontend`     | Vite      | `VITE_API_BASE_URL` = `https://<backend-admin>/api/v1/admin` |
-| AgeCare Sitio      | `webapp`       | Vite      | `VITE_API_BASE_URL` = `https://<backend-general>/api/v1` |
+| Proyecto en Vercel | Root Directory |
+|--------------------|----------------|
+| AgeCare Consola (web de administración) | `frontend` |
+| AgeCare Sitio (familias y cuidadoras)   | `webapp` |
+| AgeCare API Admin                       | `backend` |
+| AgeCare API General                     | `backend-general` |
 
-Pasos: **Add New → Project** → importar el repo → elegir el *Root Directory* de
-la tabla → agregar la variable de entorno → *Deploy*. Build command
-`npm run build` y output `dist` (Vercel los detecta solo).
-
-Vercel solo aloja los frontends. Los backends (FastAPI + PostgreSQL) deben estar
-en un servicio con contenedores/base de datos (Render, Railway, Fly.io, etc.) y
-aceptar el dominio de Vercel mediante la variable `CORS_ORIGINS` (lista separada
-por comas, p. ej. `https://agecare-sitio.vercel.app`). Sin backend, la landing y
-las pantallas de acceso se ven, pero el inicio de sesión y los datos no cargan.
+Guía completa paso a paso, variables de entorno y solución de problemas: **[DESPLIEGUE.md](DESPLIEGUE.md)**.
 
 ## Qué probar
 

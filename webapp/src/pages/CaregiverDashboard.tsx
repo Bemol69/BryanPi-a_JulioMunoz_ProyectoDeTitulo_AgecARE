@@ -5,10 +5,10 @@ import { useAuth } from "../auth/AuthContext";
 import { Avatar, Chip, EmptyState, ErrorBanner, OkBanner, Spinner, Stars, Switch, fmtDate } from "../components/ui";
 import type { CaregiverDocType, CaregiverDocumentOut, CaregiverProfileOut, Engagement } from "../api/types";
 
-const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const AVATAR_MAX_BYTES = 4 * 1024 * 1024;
 const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-const DOCUMENT_MAX_BYTES = 8 * 1024 * 1024;
+const DOCUMENT_MAX_BYTES = 4 * 1024 * 1024;
 const DOCUMENT_TYPES_ACCEPT = "application/pdf,image/jpeg,image/png";
 const DOCUMENT_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const DOCUMENT_TYPES: { key: CaregiverDocType; label: string; hint: string }[] = [
@@ -143,7 +143,7 @@ function AvatarPicker() {
       return;
     }
     if (file.size > AVATAR_MAX_BYTES) {
-      setError("La foto no puede superar los 5 MB.");
+      setError("La foto no puede superar los 4 MB.");
       return;
     }
     setBusy(true);
@@ -166,7 +166,7 @@ function AvatarPicker() {
         <button type="button" className="btn ghost small" onClick={() => inputRef.current?.click()} disabled={busy}>
           {busy ? "Subiendo…" : user?.avatar_url ? "Cambiar foto" : "Agregar foto de perfil"}
         </button>
-        <div style={{ fontSize: 11.5, color: "var(--ac-text-tertiary)", marginTop: 6 }}>JPG, PNG o WEBP · máx. 5 MB</div>
+        <div style={{ fontSize: 11.5, color: "var(--ac-text-tertiary)", marginTop: 6 }}>JPG, PNG o WEBP · máx. 4 MB</div>
         {error && <div style={{ fontSize: 12, color: "var(--ac-warn-700)", marginTop: 4 }}>⚠ {error}</div>}
       </div>
     </div>
@@ -190,7 +190,7 @@ function DocumentRow({ type, label, hint, doc, onUploaded }: {
       return;
     }
     if (file.size > DOCUMENT_MAX_BYTES) {
-      setError("El documento no puede superar los 8 MB.");
+      setError("El documento no puede superar los 4 MB.");
       return;
     }
     setBusy(true);
