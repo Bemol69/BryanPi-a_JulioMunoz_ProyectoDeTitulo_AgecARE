@@ -1,6 +1,6 @@
 import { api, qs } from "./client";
 import type {
-  AdoptionOut, AlertsOut, CaregiverOut, CaregiverRankingItem, CaregiverReviewOut,
+  AdoptionOut, AlertsOut, CaregiverDocumentOut, CaregiverOut, CaregiverRankingItem, CaregiverReviewOut,
   CommercialSummaryOut, ContentItemOut, FunnelOut, IncidentOut, LoginOutT, MarketingDashboardOut,
   MeOut, ModerationItemOut, OpsStatusOut, Page, PlansOut, ProductOut, RolesSummaryOut,
   SupportSummaryOut, TicketOut,
@@ -20,6 +20,8 @@ export const MarketplaceApi = {
   getCaregiver: (id: string) => api.get<CaregiverOut>(`/marketplace/caregivers/${id}`),
   patchCaregiver: (id: string, body: { status?: string; reason?: string; internal_note?: string }) =>
     api.patch<CaregiverOut>(`/marketplace/caregivers/${id}`, body),
+  reviewDocument: (id: string, docType: string, action: "approve" | "reject", note?: string) =>
+    api.post<CaregiverDocumentOut>(`/marketplace/caregivers/${id}/documents/${docType}/review`, { action, note }),
   ranking: (params: { zone?: string; page?: number; page_size?: number }) =>
     api.get<Page<CaregiverRankingItem>>(`/marketplace/caregivers/ranking${qs(params)}`),
   awardPoints: (id: string, body: { points: number; reason: string; note?: string }) =>

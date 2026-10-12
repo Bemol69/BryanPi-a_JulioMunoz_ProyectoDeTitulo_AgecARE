@@ -1,5 +1,8 @@
 """Motor async de SQLAlchemy y sesión por petición."""
+import asyncio
+import logging
 import os
+import time
 from collections.abc import AsyncIterator
 from uuid import uuid4
 
@@ -49,7 +52,33 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
     return _session_factory
 
 
+_schema_ready = False
+_schema_retry_at = 0.0
+_schema_lock: asyncio.Lock | None = None
+
+
+async def _ensure_schema_once() -> None:
+    """Aplica el esquema pendiente una vez por instancia (ver app/schema_sync.py). Si falla no
+    tumba la API: se registra y se reintenta pasado un minuto."""
+    global _schema_ready, _schema_retry_at, _schema_lock
+    if _schema_ready or time.monotonic() < _schema_retry_at:
+        return
+    if _schema_lock is None:
+        _schema_lock = asyncio.Lock()
+    async with _schema_lock:
+        if _schema_ready:
+            return
+        from app.schema_sync import ensure_schema
+        try:
+            await ensure_schema(get_engine())
+            _schema_ready = True
+        except Exception:  # noqa: BLE001
+            logging.getLogger("agecare.schema").exception("No se pudo sincronizar el esquema")
+            _schema_retry_at = time.monotonic() + 60
+
+
 async def get_db() -> AsyncIterator[AsyncSession]:
+    await _ensure_schema_once()
     async with get_session_factory()() as session:
         try:
             yield session

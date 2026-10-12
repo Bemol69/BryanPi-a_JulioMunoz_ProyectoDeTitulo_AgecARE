@@ -1,8 +1,8 @@
 import { api, qs } from "./client";
 import type {
   AuthOut, CaregiverCard, CaregiverDocType, CaregiverDocumentOut, CaregiverProfileOut,
-  CaregiverPublic, ContactMessage, ContactOut, Engagement, Page, PatientCard, PatientCreateOut,
-  ProductCard, ProductDetail, UserOut,
+  CaregiverPublic, ChatDetail, ChatMessage, ChatSummary, ContactMessage, ContactOut, Engagement, Page,
+  PatientCard, PatientCreateOut, PatientDetail, ProductCard, ProductDetail, UserOut,
 } from "./types";
 
 export const AuthApi = {
@@ -16,6 +16,7 @@ export const AuthApi = {
 
 export const PatientsApi = {
   list: () => api.get<Page<PatientCard>>("/patients"),
+  detail: (patientId: string) => api.get<PatientDetail>(`/patients/${patientId}`),
   create: (body: {
     full_name: string; birth_date: string; sex?: string; conditions?: string[];
     medication_allergies?: string[]; food_allergies?: string[]; notes?: string;
@@ -51,4 +52,11 @@ export const MarketplaceApi = {
   products: (params: { category?: string; q?: string }) =>
     api.get<Page<ProductCard>>(`/marketplace/products${qs(params)}`),
   product: (id: string) => api.get<ProductDetail>(`/marketplace/products/${id}`),
+};
+
+export const ChatApi = {
+  list: () => api.get<Page<ChatSummary>>("/chats"),
+  detail: (conversationId: string) => api.get<ChatDetail>(`/chats/${conversationId}`),
+  send: (conversationId: string, body: string) =>
+    api.post<ChatMessage>(`/chats/${conversationId}/messages`, { body }),
 };

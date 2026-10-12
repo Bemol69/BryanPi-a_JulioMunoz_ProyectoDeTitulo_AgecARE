@@ -30,6 +30,11 @@ class CaregiverDocumentOut(BaseModel):
     file_url: str
     original_filename: str
     uploaded_at: datetime
+    status: str = "pending"  # pending | approved | rejected
+    pending_file_url: str | None = None  # cambio propuesto, esperando aprobación del staff
+    pending_filename: str | None = None
+    review_note: str | None = None
+    reviewed_at: datetime | None = None
 
 
 class CaregiverProfileOut(BaseModel):
@@ -45,6 +50,7 @@ class CaregiverProfileOut(BaseModel):
     reviews_count: int
     is_listed: bool
     is_featured: bool
+    admin_status: str = "pending"  # pending | approved | suspended (lo decide el staff)
 
 
 # ---- Marketplace público (familia) ----
@@ -59,6 +65,7 @@ class CaregiverCardOut(BaseModel):
     rating_avg: float | None
     reviews_count: int
     is_featured: bool
+    is_engaged: bool = False  # tiene un trabajo activo con alguna familia
 
 
 class ReviewOut(BaseModel):
@@ -75,6 +82,9 @@ class CaregiverPublicOut(CaregiverProfileOut):
     reviews: list[ReviewOut] = []
     hired_by_me: bool = False
     my_engagement_id: UUID | None = None
+    is_engaged: bool = False
+    can_review: bool = False  # la familia terminó un trabajo con ella y aún no lo reseñó
+    conversation_id: UUID | None = None
 
 
 class HireIn(BaseModel):
@@ -103,6 +113,7 @@ class ContactIn(BaseModel):
 class ContactOut(BaseModel):
     contact_channel: ContactChannel
     contact_value: str
+    conversation_id: UUID | None = None
 
 
 class ReviewCreateIn(BaseModel):

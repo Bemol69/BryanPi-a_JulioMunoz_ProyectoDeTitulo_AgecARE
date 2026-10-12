@@ -1,0 +1,88 @@
+[
+  {
+    "fecha": "2026-10-12",
+    "titulo": "Mejoras de la lista \"Mejoras AgeCare\"",
+    "resumen": "Ficha del familiar, chat dentro de la app, reseñas solo al terminar el trabajo, revisión de documentos y perfiles desde la Consola, tarjetas modernas con el estado \"Trabajando\" y limpieza del menú de la Consola.",
+    "areas": [
+      {
+        "nombre": "Sitio de familias",
+        "items": [
+          "Al hacer clic en un familiar se abre su ficha: foto, edad, condiciones, alergias a medicamentos y alimentos, notas y estado de cuidado (con cuidadora asignada / sin cuidadora).",
+          "Buscar cuidadoras: tarjetas rediseñadas (banner de color, foto con anillo, valoración, zonas y especialidades). Las cuidadoras que están trabajando muestran la insignia ámbar \"Trabajando\", un color distinto y aparecen al final de la lista.",
+          "Solo se muestran cuidadoras con perfil aprobado por el staff, sin suspender y marcadas como visibles. Un perfil pendiente o suspendido ya no aparece en la búsqueda ni se puede abrir.",
+          "Las reseñas solo se pueden dejar cuando el trabajo ya terminó (botón \"Finalizar trabajo\"), una vez por trabajo. El botón \"Dejar reseña\" aparece solo en ese caso.",
+          "\"Contactar\" ahora abre un chat dentro de AgeCare. Hay una sección \"Mensajes\" con la lista de conversaciones y los mensajes, con aviso de que se eliminan automáticamente a los 7 días."
+        ]
+      },
+      {
+        "nombre": "Sitio de cuidadoras",
+        "items": [
+          "Perfil profesional rediseñado: portada, foto grande, resumen (experiencia, valoración, reseñas, idiomas) y aviso del estado de revisión (en revisión / aprobado / suspendido).",
+          "La cuidadora puede ver los archivos que subió (cédula, antecedentes, certificado) con su estado: En revisión, Aprobado o Rechazado (con el motivo).",
+          "Para cambiar un documento ya aprobado sube el nuevo archivo: el aprobado sigue vigente y aparece el aviso \"Te confirmaremos dentro de los próximos días si el cambio que deseas realizar ha sido aprobado por el equipo de AgeCare\".",
+          "Los mensajes recibidos pasan a la nueva sección de chat."
+        ]
+      },
+      {
+        "nombre": "Consola de administración",
+        "items": [
+          "El staff ve los documentos que subió cada cuidadora (ver archivo, estado, quién y cuándo lo revisó) y los aprueba o rechaza (el rechazo exige un motivo). Los cambios de documentos aprobados se aprueban o rechazan por separado.",
+          "El perfil solo se puede aprobar cuando la cédula y el certificado de antecedentes están aprobados.",
+          "Nuevo botón \"Reactivar perfil\" para volver a habilitar a una cuidadora suspendida. También se corrigió que un perfil aprobado no se podía suspender (faltaba el campo del motivo).",
+          "Aprobar, suspender o reactivar avisa al sitio público al instante: si no se puede avisar, la acción no se guarda y se informa para repetirla.",
+          "La tabla muestra cuántos documentos hay por revisar en cada cuidadora.",
+          "Se oculta el área de Analítica del menú (Uso comercial, Estado operativo, Usuarios y soporte, Uso por funcionalidad). El código y las rutas se conservan.",
+          "La insignia superior dice \"Producción\" en la web publicada (antes decía siempre \"Entorno local\")."
+        ]
+      },
+      {
+        "nombre": "Backend y base de datos",
+        "items": [
+          "Si los documentos no llegaban a la Consola, se debía a que el aviso fallaba en silencio cuando la API estaba \"dormida\". Ahora se espera hasta 10 segundos con un reintento, y además la Consola consulta al sitio los documentos de la cuidadora cada vez que abre su ficha.",
+          "Tablas y columnas nuevas (chat, estado del perfil, estado de documentos, reseña por trabajo). Se aplican solas al arrancar cada API; también hay un SQL idempotente en deploy/migracion_2026-10-12.sql.",
+          "Fotos y documentos limitados a 4 MB (tope de Vercel por petición).",
+          "Pruebas automáticas nuevas: 14 en el sitio público y 6 en la Consola (29 en total en la Consola)."
+        ]
+      }
+    ],
+    "pasos_manuales": [
+      "Ejecutar deploy/migracion_2026-10-12.sql en Supabase > SQL Editor (opcional: las APIs también lo aplican solas).",
+      "Agregar la variable ADMIN_GENERAL_SYNC_URL = https://agecare-api-general.vercel.app/api/v1 en el proyecto de la API Admin (Vercel) y hacer Redeploy.",
+      "Aprobar desde la Consola los documentos y perfiles de las cuidadoras que deban aparecer en el marketplace."
+    ]
+  },
+  {
+    "fecha": "2026-10-06",
+    "titulo": "Despliegue en Vercel y Supabase",
+    "resumen": "AgeCare quedó publicado: cuatro proyectos en Vercel conectados a GitHub y la base de datos y los archivos en Supabase.",
+    "areas": [
+      {
+        "nombre": "Infraestructura",
+        "items": [
+          "Cuatro proyectos de Vercel desde el mismo repositorio: API Admin (backend), API General (backend-general), Consola (frontend) y Sitio (webapp). Cada push a main despliega solo.",
+          "Proyecto de Supabase \"agecare\" con las tablas de las dos APIs y el almacenamiento de fotos y documentos (bucket agecare-uploads).",
+          "Seguridad por filas (RLS) activada en todas las tablas; las APIs usan una conexión directa a Postgres.",
+          "CORS configurable por variable (CORS_ORIGINS) y guía completa en DESPLIEGUE.md."
+        ]
+      }
+    ],
+    "pasos_manuales": []
+  },
+  {
+    "fecha": "2026-10-02",
+    "titulo": "Rediseño visual con la paleta del logo",
+    "resumen": "Nueva identidad visual para el sitio y la Consola, basada en los colores del logo.",
+    "areas": [
+      {
+        "nombre": "Diseño",
+        "items": [
+          "Paleta tomada del logo: índigo, lavanda, amarillo y crema, con modo oscuro.",
+          "Landing nueva con marco redondeado, tarjetas flotantes, bento de funciones, pasos, roles y llamado final, con animaciones al hacer scroll.",
+          "Botones en píldora con degradado, tarjetas con sombra suave, barra lateral índigo y login animado en la Consola.",
+          "Tipografía Plus Jakarta Sans y logo con fondo transparente."
+        ]
+      }
+    ],
+    "pasos_manuales": []
+  }
+]

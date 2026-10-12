@@ -26,10 +26,11 @@ export default function FamilyHome() {
       {patients.data && (
         <div className="patient-grid">
           {patients.data.items.map((p) => (
-            <div key={p.patient_id} className="patient-card">
+            <Link key={p.patient_id} to={`/familia/${p.patient_id}`} className="patient-card">
               <div className="patient-avatar"><Avatar name={p.full_name} photoUrl={p.photo_url} /></div>
               <div className="name">{p.full_name}</div>
-            </div>
+              <div className="patient-card-foot">Ver perfil y estado <span>→</span></div>
+            </Link>
           ))}
           <button className="dashed-card" onClick={() => setShowCreate(true)}>
             <span style={{ fontSize: 28 }}>+</span>

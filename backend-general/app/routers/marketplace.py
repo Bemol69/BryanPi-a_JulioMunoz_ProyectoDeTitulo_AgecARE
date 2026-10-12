@@ -1,5 +1,4 @@
 """Sección 14 — Marketplace (vitrina de descubrimiento, sin transacciones)."""
-from datetime import date, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Query
@@ -7,7 +6,9 @@ from sqlalchemy import func, select
 
 from app import models
 from app.deps import CurrentUser, Db
+from app.chat_retention import purge_expired
 from app.errors import conflict, forbidden, not_found
+from app.routers.chat import add_message, get_or_create_conversation
 from app.schemas.common import Page
 from app.schemas.marketplace import (CaregiverCardOut, CaregiverPublicOut, ContactIn, ContactOut,
                                      EngagementOut, HireIn, ProductCardOut, ProductOut, ReviewCreateIn,
@@ -53,7 +54,8 @@ async def search_caregivers(db: Db, user: CurrentUser,
         raise forbidden("El marketplace de cuidadoras es para cuentas de familia.")
     stmt = (select(models.CaregiverProfile)
            .join(models.User, models.User.id == models.CaregiverProfile.user_id)
-           .where(models.CaregiverProfile.is_listed.is_(True)))
+           .where(models.CaregiverProfile.is_listed.is_(True),
+                  models.CaregiverProfile.admin_status == "approved"))
     if q:
         stmt = stmt.where(models.User.full_name.ilike(f"%{q}%"))
     if min_rating is not None:
@@ -67,20 +69,24 @@ async def search_caregivers(db: Db, user: CurrentUser,
 
     filtered = [c for c in rows if matches_list_field(c.zones, zone) and
                matches_list_field(c.specialties, specialty) and matches_list_field(c.languages, language)]
-    filtered.sort(key=lambda c: (not c.is_featured, -(c.rating_avg or 0)))
+    engaged_ids = {r[0] for r in (await db.execute(
+        select(models.CaregiverEngagement.caregiver_profile_id)
+        .where(models.CaregiverEngagement.status == "active"))).all()}
+    # Las que no están trabajando van primero; dentro de cada grupo, destacadas y mejor calificadas.
+    filtered.sort(key=lambda c: (c.id in engaged_ids, not c.is_featured, -(c.rating_avg or 0)))
     total = len(filtered)
     page_rows = filtered[(page - 1) * page_size: (page - 1) * page_size + page_size]
     items = [CaregiverCardOut(profile_id=c.id, full_name=c.user.full_name, photo_url=c.user.avatar_url,
                               headline=c.headline, years_experience=c.years_experience,
                               specialties=c.specialties or [], zones=c.zones or [],
                               rating_avg=c.rating_avg, reviews_count=c.reviews_count,
-                              is_featured=c.is_featured) for c in page_rows]
+                              is_featured=c.is_featured, is_engaged=c.id in engaged_ids) for c in page_rows]
     return Page(items=items, total=total)
 
 
 async def _get_listed(db: Db, profile_id: UUID) -> models.CaregiverProfile:
     p = await db.get(models.CaregiverProfile, profile_id)
-    if p is None or not p.is_listed:
+    if p is None or not p.is_listed or p.admin_status != "approved":
         raise not_found("El perfil solicitado no existe.")
     return p
 
@@ -98,6 +104,14 @@ async def get_caregiver_public(profile_id: UUID, db: Db, user: CurrentUser):
         models.CaregiverEngagement.caregiver_profile_id == profile_id,
         models.CaregiverEngagement.family_user_id == user.id,
         models.CaregiverEngagement.status == "active"))).scalars().first()
+    can_review = (await db.execute(select(models.CaregiverEngagement.id).where(
+        models.CaregiverEngagement.caregiver_profile_id == profile_id,
+        models.CaregiverEngagement.family_user_id == user.id,
+        models.CaregiverEngagement.status == "ended",
+        models.CaregiverEngagement.review_id.is_(None)).limit(1))).first() is not None
+    conversation = (await db.execute(select(models.ChatConversation.id).where(
+        models.ChatConversation.caregiver_profile_id == profile_id,
+        models.ChatConversation.family_user_id == user.id))).first()
     return CaregiverPublicOut(
         profile_id=p.id, headline=p.headline, bio=p.bio, years_experience=p.years_experience,
         specialties=p.specialties or [], languages=p.languages or [], zones=p.zones or [],
@@ -105,6 +119,8 @@ async def get_caregiver_public(profile_id: UUID, db: Db, user: CurrentUser):
         is_listed=p.is_listed, is_featured=p.is_featured, full_name=p.user.full_name,
         photo_url=p.user.avatar_url, hired_by_me=my_engagement is not None,
         my_engagement_id=my_engagement.id if my_engagement else None,
+        is_engaged=await _is_engaged(db, profile_id), can_review=can_review,
+        conversation_id=conversation[0] if conversation else None,
         reviews=[ReviewOut(review_id=r.id, rating=r.rating, comment=r.comment,
                           author_name=r.author_name, created_at=r.created_at) for r in reviews])
 
@@ -155,43 +171,48 @@ async def end_engagement(engagement_id: UUID, db: Db, user: CurrentUser):
         await sync_caregiver_to_admin(p, p.user, await _is_engaged(db, p.id))
 
 
-# ---------- 14.3 Contactar cuidadora ----------
+# ---------- 14.3 Contactar cuidadora (abre un chat dentro de la aplicación) ----------
 @router.post("/caregivers/{profile_id}/contact", response_model=ContactOut, status_code=201)
 async def contact_caregiver(profile_id: UUID, body: ContactIn, db: Db, user: CurrentUser):
     if user.account_type != "family":
         raise forbidden("Solo una cuenta de familia puede contactar a una cuidadora.")
     p = await _get_listed(db, profile_id)
-    since = date.today() - timedelta(days=1)
-    dup = (await db.execute(select(models.ContactRequest).where(
-        models.ContactRequest.caregiver_profile_id == profile_id,
-        models.ContactRequest.family_user_id == user.id,
-        models.ContactRequest.created_at >= since))).scalar_one_or_none()
-    if dup is not None:
-        raise conflict("CONTACT_ALREADY_SENT", "Ya enviaste una solicitud de contacto a esta cuidadora hoy.")
-    db.add(models.ContactRequest(caregiver_profile_id=profile_id, family_user_id=user.id,
-                                 message=body.message))
+    await purge_expired(db)
+    conv, created = await get_or_create_conversation(db, p, user)
+    text = (body.message or "").strip() or "Hola, vi tu perfil en AgeCare y me gustaría conversar."
+    await add_message(db, conv, user, text)
+    if created:  # queda además en "Mensajes recibidos" de la cuidadora (se limpia a los 7 días)
+        db.add(models.ContactRequest(caregiver_profile_id=profile_id, family_user_id=user.id,
+                                     message=text[:500]))
     contact_value = p.user.phone or p.user.email
     channel = "phone" if p.user.phone else "email"
-    return ContactOut(contact_channel=channel, contact_value=contact_value)
+    return ContactOut(contact_channel=channel, contact_value=contact_value, conversation_id=conv.id)
 
 
 # ---------- 14.4 Calificar cuidadora ----------
+# Solo se puede reseñar un trabajo terminado (y una sola vez por trabajo).
 @router.post("/caregivers/{profile_id}/reviews", response_model=ReviewCreateOut, status_code=201)
 async def review_caregiver(profile_id: UUID, body: ReviewCreateIn, db: Db, user: CurrentUser):
     if user.account_type != "family":
         raise forbidden("Solo una cuenta de familia puede dejar una reseña.")
     p = await _get_listed(db, profile_id)
-    already = (await db.execute(select(models.CaregiverReview).where(
-        models.CaregiverReview.caregiver_profile_id == profile_id,
-        models.CaregiverReview.author_user_id == user.id))).scalar_one_or_none()
-    if already is not None:
-        raise conflict("ALREADY_REVIEWED", "Ya dejaste una reseña para esta cuidadora.")
+    engagement = (await db.execute(select(models.CaregiverEngagement).where(
+        models.CaregiverEngagement.caregiver_profile_id == profile_id,
+        models.CaregiverEngagement.family_user_id == user.id,
+        models.CaregiverEngagement.status == "ended",
+        models.CaregiverEngagement.review_id.is_(None))
+        .order_by(models.CaregiverEngagement.ended_at.desc()))).scalars().first()
+    if engagement is None:
+        raise conflict("REVIEW_NOT_ALLOWED",
+                       "Solo puedes dejar una reseña cuando el trabajo con la cuidadora haya terminado.")
 
-    display_name = await _family_display_name(db, user, body.patient_id)
+    patient_id = body.patient_id or engagement.patient_id
+    display_name = await _family_display_name(db, user, patient_id)
     review = models.CaregiverReview(caregiver_profile_id=profile_id, author_user_id=user.id,
                                     author_name=display_name, rating=body.rating, comment=body.comment)
     db.add(review)
     await db.flush()
+    engagement.review_id = review.id
 
     agg = (await db.execute(select(func.avg(models.CaregiverReview.rating),
                                    func.count(models.CaregiverReview.id))

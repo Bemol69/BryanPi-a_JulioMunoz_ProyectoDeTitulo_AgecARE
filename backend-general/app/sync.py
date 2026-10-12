@@ -1,17 +1,43 @@
-"""Notifica a la Consola de Administración cuando una cuidadora publica su
-perfil, para que quede pendiente de revisión. Falla en silencio si la
-Consola no está disponible."""
+"""Notifica a la Consola de Administración los cambios del sitio público (perfil publicado,
+reseñas, documentos) para que el staff los revise. Si la Consola no responde, el error se
+registra pero no se propaga: lo que la persona hizo en el sitio no debe fallar por eso.
+
+Las instancias de Vercel se "duermen", así que la primera llamada a la Consola puede demorar
+varios segundos: timeout generoso y un reintento."""
+import logging
+
 import httpx
 
 from app import models
 from app.config import get_settings
 
+log = logging.getLogger("agecare.sync")
+TIMEOUT_SECONDS = 10.0
+
+
+async def _post_to_admin(path: str, payload: dict) -> bool:
+    settings = get_settings()
+    headers = {"X-Internal-Key": settings.admin_sync_key}
+    url = f"{settings.admin_sync_url}{path}"
+    for attempt in (1, 2):
+        try:
+            async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
+                res = await client.post(url, json=payload, headers=headers)
+            if res.status_code < 400:
+                return True
+            if res.status_code < 500:  # 4xx: reintentar no sirve (p. ej. cuidadora aún no sincronizada)
+                log.warning("La Consola rechazó %s: %s %s", path, res.status_code, res.text[:200])
+                return False
+            log.warning("La Consola respondió %s en %s (intento %s)", res.status_code, path, attempt)
+        except httpx.HTTPError as exc:
+            log.warning("No se pudo contactar a la Consola en %s (intento %s): %r", path, attempt, exc)
+    return False
+
 
 async def sync_caregiver_to_admin(profile: "models.CaregiverProfile", user: "models.User",
                                   is_engaged: bool = False) -> None:
-    settings = get_settings()
     zones = profile.zones or []
-    payload = {
+    await _post_to_admin("/marketplace/caregivers/sync", {
         "external_user_id": str(user.id),
         "name": user.full_name,
         "email": user.email,
@@ -20,55 +46,23 @@ async def sync_caregiver_to_admin(profile: "models.CaregiverProfile", user: "mod
         "languages": profile.languages or [],
         "certifications_count": len(profile.certifications or []),
         "is_engaged": is_engaged,
-    }
-    headers = {"X-Internal-Key": settings.admin_sync_key}
-    try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            await client.post(f"{settings.admin_sync_url}/marketplace/caregivers/sync",
-                              json=payload, headers=headers)
-    except httpx.HTTPError:
-        pass
+    })
 
 
 async def sync_review_to_admin(caregiver_email: str, family_name: str, rating: int,
                                comment: str | None) -> None:
-    """Reenvía a la Consola de Administración una reseña dejada en el sitio
-    público, para que se reflejen en el ranking y los puntos de fidelización.
-    Falla en silencio si la Consola no está disponible o no conoce aún a la
-    cuidadora (todavía no sincronizada)."""
-    settings = get_settings()
-    payload = {
-        "caregiver_email": caregiver_email,
-        "family_name": family_name,
-        "rating": rating,
-        "comment": comment,
-    }
-    headers = {"X-Internal-Key": settings.admin_sync_key}
-    try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            await client.post(f"{settings.admin_sync_url}/marketplace/reviews/sync",
-                              json=payload, headers=headers)
-    except httpx.HTTPError:
-        pass
+    """Reenvía una reseña a la Consola para que otorgue puntos de fidelización."""
+    await _post_to_admin("/marketplace/reviews/sync", {
+        "caregiver_email": caregiver_email, "family_name": family_name,
+        "rating": rating, "comment": comment,
+    })
 
 
 async def sync_document_to_admin(caregiver_email: str, doc_type: str, file_url: str,
-                                 original_filename: str) -> None:
-    """Reenvía a la Consola de Administración un documento que la cuidadora
-    subió (cédula, certificado de antecedentes, certificados de cursos), para
-    que el staff pueda revisarlo antes de aprobar el perfil. Falla en
-    silencio si la Consola no está disponible o no conoce aún a la cuidadora."""
-    settings = get_settings()
-    payload = {
-        "caregiver_email": caregiver_email,
-        "doc_type": doc_type,
-        "file_url": file_url,
-        "original_filename": original_filename,
-    }
-    headers = {"X-Internal-Key": settings.admin_sync_key}
-    try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            await client.post(f"{settings.admin_sync_url}/marketplace/documents/sync",
-                              json=payload, headers=headers)
-    except httpx.HTTPError:
-        pass
+                                 original_filename: str, is_change: bool = False) -> None:
+    """Reenvía un documento subido (cédula, antecedentes, certificado). `is_change` indica que
+    reemplaza a uno ya aprobado: queda como cambio pendiente de aprobación, sin pisar el vigente."""
+    await _post_to_admin("/marketplace/documents/sync", {
+        "caregiver_email": caregiver_email, "doc_type": doc_type, "file_url": file_url,
+        "original_filename": original_filename, "is_change": is_change,
+    })

@@ -35,11 +35,19 @@ export type CaregiverStatus = "pending" | "approved" | "suspended";
 
 export type CaregiverDocType = "id_card" | "background_check" | "certificate";
 
+export type DocStatus = "pending" | "approved" | "rejected";
+
 export interface CaregiverDocumentOut {
   doc_type: CaregiverDocType;
   file_url: string;
   original_filename: string;
   uploaded_at: string;
+  status: DocStatus;
+  pending_file_url: string | null; // cambio propuesto por la cuidadora, esperando decisión
+  pending_filename: string | null;
+  review_note: string | null;
+  reviewed_at: string | null;
+  reviewed_by_name: string | null;
 }
 
 export interface CaregiverOut {
@@ -56,6 +64,8 @@ export interface CaregiverOut {
   submitted_at: string;
   reviewed_by_name: string | null;
   internal_note?: string | null;
+  certifications_verified: boolean; // cédula y antecedentes aprobados: permite aprobar el perfil
+  pending_documents: number; // documentos (o cambios) esperando revisión
   documents: CaregiverDocumentOut[];
 }
 

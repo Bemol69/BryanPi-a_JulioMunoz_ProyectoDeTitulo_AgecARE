@@ -1,4 +1,7 @@
 """Pacientes: crear y listar, para la vista de familia."""
+from datetime import date
+from uuid import UUID
+
 from fastapi import APIRouter, File, Request, UploadFile
 from sqlalchemy import select
 
@@ -6,7 +9,8 @@ from app import models, storage
 from app.deps import CurrentUser, Db
 from app.errors import ApiError, forbidden, not_found
 from app.schemas.common import Page
-from app.schemas.patients import PatientCardOut, PatientCreateIn, PatientCreateOut, PatientOut
+from app.schemas.patients import (PatientCardOut, PatientCaregiverOut, PatientCreateIn,
+                                  PatientCreateOut, PatientDetailOut, PatientOut)
 from app.security import now_utc
 
 router = APIRouter(tags=["Pacientes"])
@@ -43,7 +47,7 @@ async def _member_patient(db: Db, patient_id, user: models.User) -> models.Patie
 
 # ---------- Foto del adulto mayor ----------
 @router.post("/patients/{patient_id}/photo", response_model=PatientOut)
-async def upload_patient_photo(patient_id, request: Request, db: Db, user: CurrentUser,
+async def upload_patient_photo(patient_id: UUID, request: Request, db: Db, user: CurrentUser,
                                file: UploadFile = File(...)):
     patient = await _member_patient(db, patient_id, user)
     ext = PHOTO_CONTENT_TYPES.get(file.content_type)
@@ -72,11 +76,24 @@ async def list_patients(db: Db, user: CurrentUser):
     return Page(items=items, total=len(items))
 
 
-# ---------- 4.3 Detalle de paciente ----------
-@router.get("/patients/{patient_id}", response_model=PatientOut)
-async def get_patient(patient_id, db: Db, user: CurrentUser):
+# ---------- 4.3 Detalle de paciente (ficha + estado de cuidado) ----------
+@router.get("/patients/{patient_id}", response_model=PatientDetailOut)
+async def get_patient(patient_id: UUID, db: Db, user: CurrentUser):
     p = await _member_patient(db, patient_id, user)
-    return PatientOut(patient_id=p.id, full_name=p.full_name, birth_date=p.birth_date, sex=p.sex,
-                      photo_url=p.photo_url, conditions=p.conditions or [],
-                      medication_allergies=p.medication_allergies or [],
-                      food_allergies=p.food_allergies or [], notes=p.notes)
+    today = date.today()
+    age = today.year - p.birth_date.year - ((today.month, today.day) < (p.birth_date.month, p.birth_date.day))
+    e = (await db.execute(select(models.CaregiverEngagement).where(
+        models.CaregiverEngagement.patient_id == p.id,
+        models.CaregiverEngagement.status == "active")
+        .order_by(models.CaregiverEngagement.started_at.desc()))).scalars().first()
+    caregiver = None
+    if e is not None:
+        profile = await db.get(models.CaregiverProfile, e.caregiver_profile_id)
+        caregiver = PatientCaregiverOut(engagement_id=e.id, profile_id=profile.id,
+                                        full_name=profile.user.full_name, photo_url=profile.user.avatar_url,
+                                        started_at=e.started_at)
+    return PatientDetailOut(patient_id=p.id, full_name=p.full_name, birth_date=p.birth_date, sex=p.sex,
+                            photo_url=p.photo_url, conditions=p.conditions or [],
+                            medication_allergies=p.medication_allergies or [],
+                            food_allergies=p.food_allergies or [], notes=p.notes, age=max(age, 0),
+                            caregiver=caregiver)

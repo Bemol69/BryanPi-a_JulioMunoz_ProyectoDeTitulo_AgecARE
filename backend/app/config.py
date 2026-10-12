@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     # Clave compartida para el endpoint de sincronizacion con el sitio publico.
     internal_sync_key: str = "clave-interna-solo-para-desarrollo"
 
+    # URL base de la API del sitio público (p. ej. https://agecare-api-general.vercel.app/api/v1).
+    # La Consola la usa para avisarle cuando el staff aprueba, suspende o revisa documentos.
+    # Vacía = no se avisa (desarrollo sin el sitio público).
+    general_sync_url: str = ""
+
     @field_validator("database_url")
     @classmethod
     def _normalize_url(cls, v: str) -> str:

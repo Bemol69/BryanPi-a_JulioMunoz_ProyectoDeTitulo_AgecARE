@@ -7,7 +7,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String,
-                        Text, Uuid, func)
+                        Text, UniqueConstraint, Uuid, func)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -95,6 +95,9 @@ class CaregiverProfile(Base):
     reviews_count: Mapped[int] = mapped_column(Integer, default=0)
     is_listed: Mapped[bool] = mapped_column(Boolean, default=False)
     is_featured: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Estado de revisión que decide el staff en la Consola: solo las cuidadoras
+    # 'approved' (y con is_listed) aparecen en el marketplace.
+    admin_status: Mapped[str] = mapped_column(String(12), default="pending")  # pending | approved | suspended
     created_at: Mapped[datetime] = ts_now()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
                                                  onupdate=func.now())
@@ -112,6 +115,14 @@ class CaregiverDocument(Base):
     doc_type: Mapped[str] = mapped_column(String(20))
     file_url: Mapped[str] = mapped_column(String(500))
     original_filename: Mapped[str] = mapped_column(String(255))
+    # Revisión del staff: pending (esperando) | approved | rejected. Si el documento ya está
+    # aprobado y la cuidadora sube uno nuevo, el nuevo queda en pending_file_url hasta que el
+    # staff lo apruebe (el aprobado sigue vigente mientras tanto).
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    pending_file_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    pending_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
                                                   onupdate=func.now())
 
@@ -148,6 +159,8 @@ class CaregiverEngagement(Base):
     status: Mapped[str] = mapped_column(String(10), default="active", index=True)  # active | ended
     started_at: Mapped[datetime] = ts_now()
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Reseña dejada por este trabajo: solo se puede reseñar un trabajo terminado, una vez.
+    review_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
 
     family: Mapped[User] = relationship(lazy="joined", foreign_keys=[family_user_id])
     patient: Mapped[Patient | None] = relationship(lazy="joined")
@@ -164,3 +177,28 @@ class MarketProduct(Base):
     price_range: Mapped[str] = mapped_column(String(60))
     external_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     contact_info: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+
+# ============ Chat dentro de la aplicación ============
+class ChatConversation(Base):
+    """Conversación entre una familia y una cuidadora. Los mensajes se eliminan solos a los
+    7 días (ver app/chat_retention.py)."""
+    __tablename__ = "chat_conversations"
+    __table_args__ = (UniqueConstraint("caregiver_profile_id", "family_user_id", name="uq_chat_pair"),)
+    id: Mapped[uuid.UUID] = pk()
+    caregiver_profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("caregiver_profiles.id"), index=True)
+    family_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    created_at: Mapped[datetime] = ts_now()
+    last_message_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    family: Mapped[User] = relationship(lazy="joined", foreign_keys=[family_user_id])
+    caregiver: Mapped[CaregiverProfile] = relationship(lazy="joined")
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+    id: Mapped[uuid.UUID] = pk()
+    conversation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chat_conversations.id"), index=True)
+    sender_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    body: Mapped[str] = mapped_column(String(1000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)

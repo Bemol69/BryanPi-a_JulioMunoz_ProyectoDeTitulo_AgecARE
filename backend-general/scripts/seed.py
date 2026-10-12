@@ -62,7 +62,8 @@ async def seed() -> None:
         await conn.run_sync(Base.metadata.create_all)
 
     async with get_session_factory()() as db:
-        for table in (models.CaregiverEngagement, models.ContactRequest, models.CaregiverReview,
+        for table in (models.ChatMessage, models.ChatConversation,
+                      models.CaregiverEngagement, models.ContactRequest, models.CaregiverReview,
                      models.CaregiverDocument, models.CaregiverProfile, models.PatientMember,
                      models.Patient, models.MarketProduct, models.RefreshSession, models.User):
             await db.execute(delete(table))
@@ -84,7 +85,7 @@ async def seed() -> None:
                 "de servicio. Me dedico al cuidado de adultos mayores con paciencia, cariño y responsabilidad.",
                 years_experience=c["years_experience"], specialties=c["specialties"],
                 languages=c["languages"], zones=c["zones"], certifications=c["certifications"],
-                is_listed=True, is_featured=c["featured"])
+                is_listed=True, is_featured=c["featured"], admin_status="approved")
             db.add(profile)
             await db.flush()
             for i, rating in enumerate(c["rating_seed"]):

@@ -5,13 +5,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 
-from app import models
+from app import general_client, models
 from app.audit import audit
 from app.deps import Db, require, require_internal_key
 from app.enums import CaregiverStatus, ContentStatus
 from app.errors import conflict, invalid, not_found
 from app.schemas.common import Page
-from app.schemas.operation import (CaregiverDocumentOut, CaregiverDocumentSyncIn, CaregiverOut,
+from app.schemas.operation import (CaregiverDocumentOut, CaregiverDocumentReviewIn,
+                                   CaregiverDocumentSyncIn, CaregiverOut, CaregiverStatusItem,
                                    CaregiverPatchIn, CaregiverPointsIn, CaregiverPointsOut,
                                    CaregiverRankingItem, CaregiverReviewIn, CaregiverReviewOut,
                                    CaregiverReviewSyncIn, CaregiverSyncIn, ProductCreateIn,
@@ -74,16 +75,77 @@ def _cg_out(c: models.CaregiverProfile, include_note: bool = False) -> Caregiver
                         reviews_count=c.reviews_count, is_engaged=c.is_engaged,
                         status=CaregiverStatus(c.status),
                         submitted_at=c.submitted_at, reviewed_by_name=c.reviewed_by_name,
-                        internal_note=c.internal_note if include_note else None)
+                        internal_note=c.internal_note if include_note else None,
+                        certifications_verified=c.certifications_verified)
 
 
-async def _documents_for(db: Db, caregiver_id: UUID) -> list[CaregiverDocumentOut]:
-    rows = (await db.execute(select(models.CaregiverDocument)
-                             .where(models.CaregiverDocument.caregiver_id == caregiver_id)
-                             )).scalars().all()
-    return [CaregiverDocumentOut(doc_type=d.doc_type, file_url=d.file_url,
-                                 original_filename=d.original_filename, uploaded_at=d.uploaded_at)
-           for d in rows]
+def _doc_out(d: models.CaregiverDocument) -> CaregiverDocumentOut:
+    return CaregiverDocumentOut(doc_type=d.doc_type, file_url=d.file_url,
+                                original_filename=d.original_filename, uploaded_at=d.uploaded_at,
+                                status=d.status, pending_file_url=d.pending_file_url,
+                                pending_filename=d.pending_filename, review_note=d.review_note,
+                                reviewed_at=d.reviewed_at, reviewed_by_name=d.reviewed_by_name)
+
+
+def _needs_review(d: models.CaregiverDocument) -> bool:
+    return d.status == "pending" or d.pending_file_url is not None
+
+
+async def _documents_for(db: Db, caregiver_id: UUID) -> list[models.CaregiverDocument]:
+    return list((await db.execute(select(models.CaregiverDocument)
+                                  .where(models.CaregiverDocument.caregiver_id == caregiver_id)
+                                  )).scalars().all())
+
+
+# Documentos que deben estar aprobados para poder aprobar (o reactivar) el perfil.
+REQUIRED_DOCS = ("id_card", "background_check")
+
+
+def _recompute_verified(c: models.CaregiverProfile, docs: list[models.CaregiverDocument]) -> None:
+    approved = {d.doc_type for d in docs if d.status == "approved"}
+    c.certifications_verified = all(t in approved for t in REQUIRED_DOCS)
+
+
+def _apply_upload(existing: models.CaregiverDocument | None, c: models.CaregiverProfile, doc_type: str,
+                  file_url: str, filename: str, is_change: bool, db: Db) -> models.CaregiverDocument:
+    """Registra un archivo subido en el sitio público. Si reemplaza a un documento ya aprobado,
+    el nuevo queda como cambio pendiente y el aprobado sigue vigente."""
+    if existing is None:
+        existing = models.CaregiverDocument(caregiver_id=c.id, doc_type=doc_type, file_url=file_url,
+                                            original_filename=filename, status="pending")
+        db.add(existing)
+    elif is_change and existing.status == "approved":
+        existing.pending_file_url = file_url
+        existing.pending_filename = filename
+        existing.review_note = None
+    else:
+        existing.file_url = file_url
+        existing.original_filename = filename
+        existing.status = "pending"
+        existing.review_note = None
+        existing.pending_file_url = None
+        existing.pending_filename = None
+    return existing
+
+
+def _apply_review(d: models.CaregiverDocument, action: str, note: str | None, admin_name: str) -> None:
+    """Misma lógica que aplica el sitio público a su copia del documento."""
+    d.reviewed_at = now_utc()
+    d.reviewed_by_name = admin_name
+    d.review_note = note
+    if action == "approve":
+        if d.pending_file_url:  # el cambio propuesto pasa a ser el documento vigente
+            d.file_url = d.pending_file_url
+            d.original_filename = d.pending_filename or d.original_filename
+            d.pending_file_url = None
+            d.pending_filename = None
+        d.status = "approved"
+    elif d.pending_file_url:  # se descarta el cambio; el documento aprobado sigue vigente
+        d.pending_file_url = None
+        d.pending_filename = None
+        d.status = "approved"
+    else:
+        d.status = "rejected"
 
 
 # ---------- Sincronización desde el sitio público ----------
@@ -133,15 +195,20 @@ async def sync_document(body: CaregiverDocumentSyncIn, db: Db):
     existing = (await db.execute(select(models.CaregiverDocument).where(
         models.CaregiverDocument.caregiver_id == c.id,
         models.CaregiverDocument.doc_type == body.doc_type))).scalar_one_or_none()
-    if existing is None:
-        existing = models.CaregiverDocument(caregiver_id=c.id, doc_type=body.doc_type)
-        db.add(existing)
-    existing.file_url = body.file_url
-    existing.original_filename = body.original_filename
+    doc = _apply_upload(existing, c, body.doc_type, body.file_url, body.original_filename,
+                        body.is_change, db)
     await db.flush()
-    return CaregiverDocumentOut(doc_type=existing.doc_type, file_url=existing.file_url,
-                                original_filename=existing.original_filename,
-                                uploaded_at=existing.uploaded_at or now_utc())
+    await db.refresh(doc)
+    _recompute_verified(c, await _documents_for(db, c.id))
+    return _doc_out(doc)
+
+
+# La Consola del sitio público consulta aquí el estado de cada cuidadora al arrancar (por si
+# aún no tiene el estado de revisión) — solo la llama el otro servicio, con la clave interna.
+@router.get("/caregivers/statuses", dependencies=[Depends(require_internal_key)])
+async def caregiver_statuses(db: Db):
+    rows = (await db.execute(select(models.CaregiverProfile.email, models.CaregiverProfile.status))).all()
+    return {"items": [CaregiverStatusItem(email=e, status=CaregiverStatus(st)).model_dump() for e, st in rows]}
 
 
 # ---------- 10.1 Listar cuidadoras ----------
@@ -167,7 +234,20 @@ async def list_caregivers(db: Db,
                              .offset((page - 1) * page_size).limit(page_size))).scalars().all()
     if specialty:  # las especialidades viven en JSON; filtro en memoria sobre la página
         rows = [r for r in rows if specialty.lower() in [s.lower() for s in (r.specialties or [])]]
-    return Page(items=[_cg_out(c) for c in rows], page=page, page_size=page_size, total=total)
+    pending = {}
+    if rows:
+        docs = (await db.execute(select(models.CaregiverDocument)
+                                 .where(models.CaregiverDocument.caregiver_id.in_([r.id for r in rows])))
+                ).scalars().all()
+        for d in docs:
+            if _needs_review(d):
+                pending[d.caregiver_id] = pending.get(d.caregiver_id, 0) + 1
+    items = []
+    for c in rows:
+        out = _cg_out(c)
+        out.pending_documents = pending.get(c.id, 0)
+        items.append(out)
+    return Page(items=items, page=page, page_size=page_size, total=total)
 
 
 # ---------- 10.2 Aprobar / suspender / anotar ----------
@@ -181,7 +261,8 @@ async def patch_caregiver(caregiver_id: UUID, body: CaregiverPatchIn, request: R
     if body.status is not None:
         if body.status == CaregiverStatus.approved and not c.certifications_verified:
             raise conflict("CERTIFICATION_REQUIRED",
-                           "No puede aprobarse un perfil sin certificación verificada.")
+                           "Para aprobar el perfil primero aprueba su cédula de identidad y su "
+                           "certificado de antecedentes.")
         if body.status == CaregiverStatus.suspended and not body.reason:
             raise invalid("REASON_REQUIRED", "Para suspender un perfil debes indicar el motivo.")
         c.status = body.status
@@ -193,6 +274,9 @@ async def patch_caregiver(caregiver_id: UUID, body: CaregiverPatchIn, request: R
         c.internal_note = body.internal_note
     await audit(db, request, "marketplace.caregiver_update", "caregiver_profile", c.id,
                 before=before, after={"status": c.status})
+    if body.status is not None:
+        # De esto depende quién aparece en el marketplace: si no se puede avisar, no se guarda.
+        await general_client.push_status(c.email, c.status)
     return _cg_out(c, include_note=True)
 
 
@@ -225,15 +309,72 @@ async def caregiver_ranking(db: Db,
 
 
 # ---------- 10.2b Detalle de una cuidadora ----------
+async def _reconcile_documents(db: Db, c: models.CaregiverProfile) -> None:
+    """Trae del sitio público los documentos de la cuidadora y registra los que la notificación
+    de subida no alcanzó a entregar (instancia dormida, error de red). Nunca pisa decisiones del
+    staff: solo agrega archivos nuevos o cambios propuestos."""
+    remote = await general_client.fetch_documents(c.email)
+    if not remote:
+        return
+    local = {d.doc_type: d for d in await _documents_for(db, c.id)}
+    for r in remote:
+        d = local.get(r["doc_type"])
+        if d is None:
+            d = _apply_upload(None, c, r["doc_type"], r["file_url"], r["original_filename"], False, db)
+            if r["status"] == "approved":  # ya lo había aprobado el sitio (datos previos a este cambio)
+                d.status = "approved"
+            local[r["doc_type"]] = d
+        if r.get("pending_file_url") and d.status == "approved" and d.pending_file_url != r["pending_file_url"]:
+            _apply_upload(d, c, d.doc_type, r["pending_file_url"], r.get("pending_filename") or d.original_filename,
+                          True, db)
+        elif r["status"] != "approved" and r["file_url"] != d.file_url and d.status != "approved":
+            _apply_upload(d, c, d.doc_type, r["file_url"], r["original_filename"], False, db)
+    await db.flush()
+    _recompute_verified(c, list(local.values()))
+
+
 @router.get("/caregivers/{caregiver_id}", response_model=CaregiverOut,
            dependencies=[require("marketplace")])
 async def get_caregiver(caregiver_id: UUID, db: Db):
     c = await db.get(models.CaregiverProfile, caregiver_id)
     if c is None:
         raise not_found()
+    await _reconcile_documents(db, c)
+    docs = await _documents_for(db, c.id)
     out = _cg_out(c, include_note=True)
-    out.documents = await _documents_for(db, c.id)
+    out.documents = [_doc_out(d) for d in docs]
+    out.pending_documents = sum(1 for d in docs if _needs_review(d))
     return out
+
+
+# ---------- Revisar un documento (aprobar / rechazar) ----------
+@router.post("/caregivers/{caregiver_id}/documents/{doc_type}/review", response_model=CaregiverDocumentOut)
+async def review_document(caregiver_id: UUID, doc_type: str, body: CaregiverDocumentReviewIn,
+                          request: Request, db: Db,
+                          admin: models.AdminUser = require("marketplace", write=True)):
+    c = await db.get(models.CaregiverProfile, caregiver_id)
+    if c is None:
+        raise not_found()
+    d = (await db.execute(select(models.CaregiverDocument).where(
+        models.CaregiverDocument.caregiver_id == c.id,
+        models.CaregiverDocument.doc_type == doc_type))).scalar_one_or_none()
+    if d is None:
+        raise not_found("La cuidadora no ha subido ese documento.")
+    if not _needs_review(d):
+        raise conflict("NOTHING_TO_REVIEW", "Este documento ya fue revisado y no tiene cambios pendientes.")
+    if body.action == "reject" and not (body.note and len(body.note.strip()) >= 5):
+        raise invalid("REASON_REQUIRED", "Para rechazar un documento indica el motivo (mínimo 5 caracteres).")
+
+    before = {"status": d.status, "has_pending_change": d.pending_file_url is not None}
+    _apply_review(d, body.action, body.note.strip() if body.note else None, admin.full_name)
+    _recompute_verified(c, await _documents_for(db, c.id))
+    await audit(db, request, "marketplace.document_review", "caregiver_profile", c.id, before=before,
+                after={"doc_type": doc_type, "action": body.action, "status": d.status})
+    await db.flush()
+    await db.refresh(d)
+    await general_client.push_document_review(c.email, doc_type, body.action,
+                                              body.note.strip() if body.note else None)
+    return _doc_out(d)
 
 
 # ---------- Fidelización 2: otorgar puntos manualmente ----------

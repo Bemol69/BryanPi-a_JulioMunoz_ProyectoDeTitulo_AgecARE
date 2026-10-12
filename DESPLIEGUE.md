@@ -84,6 +84,7 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `ADMIN_JWT_SECRET` | secreto generado |
 | `ADMIN_ENVIRONMENT` | `prod` |
 | `ADMIN_INTERNAL_SYNC_KEY` | otro secreto generado (se repite en 3.2) |
+| `ADMIN_GENERAL_SYNC_URL` | `https://<URL-GENERAL>/api/v1` (la API General; así la Consola le avisa al sitio cuando el staff aprueba o suspende un perfil o revisa un documento. Se agrega después de crear 3.2) |
 
 Al terminar, abre `https://<url-del-proyecto>/api/v1/admin/docs`: debe mostrar la documentación de la API.
 Anota la URL → **URL-ADMIN**.
@@ -145,9 +146,11 @@ Las cuentas de demostración están en el README.
   - Consola: crea la migración Alembic en `backend/alembic/versions/`, haz push y aplícala con
     `docker compose run --rm --no-deps -e ADMIN_DATABASE_URL="URL-SESION" api alembic upgrade head`
     (desde `backend/`).
-  - Sitio público: hoy las tablas se crean con `create_all`, que **no modifica tablas existentes**. Si se
-    agrega una columna a un modelo, hay que aplicarla a mano en el *SQL Editor* de Supabase
-    (`alter table ... add column ...`). Pendiente de equipo: pasar `backend-general` a Alembic.
+  - Sitio público: `create_all` no modifica tablas existentes, así que al arrancar cada instancia la API
+    ejecuta `app/schema_sync.py`, que crea las tablas y agrega las columnas que falten. Al agregar una
+    columna a un modelo, agrégala también a `COLUMN_PATCHES` en ese archivo (y, si quieres aplicarla antes
+    del deploy, corre el equivalente `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` en el SQL Editor; hay un
+    ejemplo en `deploy/migracion_2026-10-12.sql`).
 
 ## Límites y puntos a tener en cuenta
 

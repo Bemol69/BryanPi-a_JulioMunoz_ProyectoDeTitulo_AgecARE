@@ -304,6 +304,14 @@ class CaregiverDocument(Base):
     doc_type: Mapped[str] = mapped_column(String(20))
     file_url: Mapped[str] = mapped_column(String(500))
     original_filename: Mapped[str] = mapped_column(String(255))
+    # Revisión del staff: pending | approved | rejected. Si el documento ya está aprobado y la
+    # cuidadora sube uno nuevo, el nuevo queda en pending_* hasta que el staff lo decida.
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    pending_file_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    pending_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reviewed_by_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
                                                   onupdate=func.now())
 

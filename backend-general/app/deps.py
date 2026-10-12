@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
 from app.database import get_db
+from app.config import get_settings
 from app.errors import unauthorized
 from app.security import decode_access_token
 
@@ -39,3 +40,10 @@ def require_account_type(account_type: str):
             raise forbidden(f"Esta acción es solo para cuentas de tipo '{account_type}'.")
         return user
     return Depends(checker)
+
+
+async def require_internal_key(request: Request) -> None:
+    """Protege los endpoints /internal, que llama la Consola de Administración (otro servicio,
+    sin sesión de usuario) con la clave compartida."""
+    if request.headers.get("X-Internal-Key", "") != get_settings().admin_sync_key:
+        raise unauthorized("Clave interna inválida.")

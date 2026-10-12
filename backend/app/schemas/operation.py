@@ -1,5 +1,6 @@
 """Esquemas de contenido, marketplace y moderación."""
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
@@ -44,6 +45,12 @@ class CaregiverDocumentOut(BaseModel):
     file_url: str
     original_filename: str
     uploaded_at: datetime
+    status: str = "pending"  # pending | approved | rejected
+    pending_file_url: str | None = None  # cambio propuesto, esperando decisión del staff
+    pending_filename: str | None = None
+    review_note: str | None = None
+    reviewed_at: datetime | None = None
+    reviewed_by_name: str | None = None
 
 
 class CaregiverDocumentSyncIn(BaseModel):
@@ -52,6 +59,17 @@ class CaregiverDocumentSyncIn(BaseModel):
     doc_type: str
     file_url: str
     original_filename: str = Field(max_length=255)
+    is_change: bool = False  # reemplaza a un documento ya aprobado
+
+
+class CaregiverDocumentReviewIn(BaseModel):
+    action: Literal["approve", "reject"]
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class CaregiverStatusItem(BaseModel):
+    email: str
+    status: CaregiverStatus
 
 
 class CaregiverOut(BaseModel):
@@ -68,6 +86,8 @@ class CaregiverOut(BaseModel):
     submitted_at: datetime
     reviewed_by_name: str | None
     internal_note: str | None = None
+    certifications_verified: bool = False  # cédula y antecedentes aprobados: permite aprobar el perfil
+    pending_documents: int = 0  # documentos (o cambios) esperando revisión
     documents: list[CaregiverDocumentOut] = []
 
 

@@ -6,7 +6,7 @@ const ROLE_LABEL: Record<string, string> = {
   editor: "Editor de contenido", moderator: "Moderador",
 };
 
-const NAV: { group: string; items: { to: string; icon: string; label: string; module: string; badge?: string }[] }[] = [
+const NAV: { group: string; hidden?: boolean; items: { to: string; icon: string; label: string; module: string; badge?: string }[] }[] = [
   {
     group: "Marketing y fidelización",
     items: [
@@ -16,6 +16,7 @@ const NAV: { group: string; items: { to: string; icon: string; label: string; mo
   },
   {
     group: "Analítica",
+    hidden: true, // módulos no visibles por ahora (se conservan las rutas y el código)
     items: [
       { to: "/comercial", icon: "📈", label: "Uso comercial", module: "metrics" },
       { to: "/operativo", icon: "🖥️", label: "Estado operativo", module: "ops" },
@@ -59,7 +60,7 @@ export default function Layout() {
           </div>
         </div>
         <nav className="nav">
-          {NAV.map((group) => {
+          {NAV.filter((group) => !group.hidden).map((group) => {
             const visible = group.items.filter((i) => can(i.module));
             if (!visible.length) return null;
             return (
@@ -92,7 +93,7 @@ export default function Layout() {
             <div className="tb-crumb">{meta.crumb}</div>
           </div>
           <div className="tb-spacer" />
-          <span className="env-badge">Entorno local · datos de prueba</span>
+          <span className="env-badge">{import.meta.env.PROD ? "Producción" : "Entorno local"} · datos de prueba</span>
         </header>
         <main className="content">
           <Outlet />

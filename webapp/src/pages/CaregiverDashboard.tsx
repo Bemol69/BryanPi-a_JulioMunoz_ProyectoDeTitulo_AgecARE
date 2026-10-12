@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { CaregiverApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
 import { useAuth } from "../auth/AuthContext";
-import { Avatar, Chip, EmptyState, ErrorBanner, OkBanner, Spinner, Stars, Switch, fmtDate } from "../components/ui";
+import { Link } from "react-router-dom";
+import { Avatar, Chip, ErrorBanner, OkBanner, Spinner, Stars, Switch, fmtDate } from "../components/ui";
 import type { CaregiverDocType, CaregiverDocumentOut, CaregiverProfileOut, Engagement } from "../api/types";
 
 const AVATAR_MAX_BYTES = 4 * 1024 * 1024;
@@ -79,51 +80,16 @@ function TagPicker({ label, values, onChange, options, placeholder }: {
 }
 
 export default function CaregiverDashboard() {
-  const [tab, setTab] = useState<"perfil" | "mensajes">("perfil");
-  const contacts = useApi(() => CaregiverApi.contacts(), [tab]);
-
   return (
     <div className="page">
       <div className="page-head">
         <div>
-          <h1>{tab === "perfil" ? "Mi perfil profesional" : "Mensajes recibidos"}</h1>
-          <p>{tab === "perfil" ? "Así te ven las familias que buscan cuidadoras en el marketplace." : "Familias que pidieron contactarte desde el marketplace."}</p>
+          <h1>Mi perfil profesional</h1>
+          <p>Así te ven las familias que buscan cuidadoras en el marketplace.</p>
         </div>
+        <Link to="/mensajes" className="btn ghost">💬 Mis mensajes</Link>
       </div>
-
-      <div className="tabs">
-        <button className={tab === "perfil" ? "on" : ""} onClick={() => setTab("perfil")}>Mi perfil profesional</button>
-        <button className={tab === "mensajes" ? "on" : ""} onClick={() => setTab("mensajes")}>
-          Mensajes recibidos{contacts.data && contacts.data.total > 0 ? ` (${contacts.data.total})` : ""}
-        </button>
-      </div>
-
-      {/* Ambas pestañas quedan montadas y solo se ocultan con CSS, para que lo escrito en
-          "Mi perfil profesional" no se pierda al pasar a "Mensajes recibidos" y volver. */}
-      <div style={{ display: tab === "perfil" ? "block" : "none" }}>
-        <ProfileTab />
-      </div>
-      <div className="card" style={{ display: tab === "mensajes" ? "block" : "none" }}>
-        {contacts.error && <ErrorBanner message={contacts.error} />}
-        {contacts.loading && <Spinner />}
-        {contacts.data && contacts.data.items.length === 0 && (
-          <EmptyState label="Todavía no has recibido mensajes. Cuando una familia te contacte desde el marketplace, aparecerá aquí." />
-        )}
-        {contacts.data && contacts.data.items.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {contacts.data.items.map((c) => (
-              <div key={c.contact_id} style={{ borderBottom: "1px solid var(--ac-border)", paddingBottom: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                  <b style={{ fontSize: 14 }}>{c.family_name}</b>
-                  <span style={{ fontSize: 12, color: "var(--ac-text-tertiary)" }}>{fmtDate(c.created_at)}</span>
-                </div>
-                <div style={{ fontSize: 12.5, color: "var(--ac-text-secondary)", marginTop: 4 }}>{c.family_email}</div>
-                {c.message && <div style={{ fontSize: 13.5, marginTop: 8 }}>{c.message}</div>}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <ProfileTab />
     </div>
   );
 }
@@ -173,6 +139,17 @@ function AvatarPicker() {
   );
 }
 
+const CHANGE_NOTICE =
+  "Te confirmaremos dentro de los próximos días si el cambio que deseas realizar ha sido aprobado por el equipo de AgeCare.";
+
+function DocStatusChip({ doc }: { doc: CaregiverDocumentOut | undefined }) {
+  if (!doc) return <span className="doc-chip none">No subido</span>;
+  if (doc.status === "approved" && doc.pending_file_url) return <span className="doc-chip pending">Cambio en revisión</span>;
+  if (doc.status === "approved") return <span className="doc-chip ok">✓ Aprobado</span>;
+  if (doc.status === "rejected") return <span className="doc-chip bad">✕ Rechazado</span>;
+  return <span className="doc-chip pending">En revisión</span>;
+}
+
 function DocumentRow({ type, label, hint, doc, onUploaded }: {
   type: CaregiverDocType; label: string; hint: string; doc: CaregiverDocumentOut | undefined;
   onUploaded: () => void;
@@ -180,6 +157,7 @@ function DocumentRow({ type, label, hint, doc, onUploaded }: {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justSent, setJustSent] = useState<"change" | "new" | null>(null);
 
   async function onPick(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -196,7 +174,8 @@ function DocumentRow({ type, label, hint, doc, onUploaded }: {
     setBusy(true);
     setError(null);
     try {
-      await CaregiverApi.uploadDocument(type, file);
+      const res = await CaregiverApi.uploadDocument(type, file);
+      setJustSent(res.pending_file_url ? "change" : "new");
       onUploaded();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo subir el documento.");
@@ -205,25 +184,49 @@ function DocumentRow({ type, label, hint, doc, onUploaded }: {
     }
   }
 
+  function startPick() {
+    if (doc?.status === "approved" &&
+        !window.confirm("Este documento ya está aprobado. Si subes uno nuevo, el equipo de AgeCare deberá aprobar el cambio; mientras tanto seguirá vigente el actual. ¿Continuar?")) {
+      return;
+    }
+    inputRef.current?.click();
+  }
+
+  const hasPendingChange = !!doc?.pending_file_url;
   return (
-    <div className="doc-row">
-      <div>
-        <div className="doc-row-label">{label}</div>
+    <div className="doc-card">
+      <div className="doc-card-main">
+        <div className="doc-card-title">
+          <span className="doc-row-label">{label}</span>
+          <DocStatusChip doc={doc} />
+        </div>
         <div className="doc-row-hint">{hint}</div>
         {doc ? (
           <div className="doc-row-file">
-            <a href={doc.file_url} target="_blank" rel="noreferrer">{doc.original_filename}</a>
+            <a href={doc.file_url} target="_blank" rel="noreferrer">📄 {doc.original_filename}</a>
             <span className="doc-row-date"> · subido {fmtDate(doc.uploaded_at)}</span>
+            {hasPendingChange && doc.pending_file_url && (
+              <div style={{ marginTop: 4 }}>
+                <a href={doc.pending_file_url} target="_blank" rel="noreferrer">🕒 Cambio enviado: {doc.pending_filename}</a>
+              </div>
+            )}
           </div>
         ) : (
           <div className="doc-row-missing">Todavía no subes este documento.</div>
+        )}
+        {doc?.status === "rejected" && doc.review_note && (
+          <div className="doc-note bad">Motivo del rechazo: {doc.review_note}. Sube uno nuevo para que lo revisemos otra vez.</div>
+        )}
+        {hasPendingChange && <div className="doc-note">{CHANGE_NOTICE}</div>}
+        {justSent === "new" && !hasPendingChange && (
+          <div className="doc-note">Documento enviado. El equipo de AgeCare lo revisará y te avisaremos el resultado.</div>
         )}
         {error && <div style={{ fontSize: 12, color: "var(--ac-warn-700)", marginTop: 4 }}>⚠ {error}</div>}
       </div>
       <div>
         <input ref={inputRef} type="file" accept={DOCUMENT_TYPES_ACCEPT} onChange={onPick} disabled={busy} style={{ display: "none" }} />
-        <button type="button" className="btn ghost small" onClick={() => inputRef.current?.click()} disabled={busy}>
-          {busy ? "Subiendo…" : doc ? "Reemplazar" : "Subir"}
+        <button type="button" className="btn ghost small" onClick={startPick} disabled={busy}>
+          {busy ? "Subiendo…" : !doc ? "Subir" : doc.status === "approved" ? "Solicitar cambio" : "Reemplazar"}
         </button>
       </div>
     </div>
@@ -265,6 +268,20 @@ function IdentityPanel({ docs }: { docs: DocsState }) {
   );
 }
 
+function ReviewStatusBanner({ status }: { status: CaregiverProfileOut["admin_status"] }) {
+  if (status === "approved") {
+    return <div className="review-banner ok"><b>✓ Perfil aprobado.</b> Ya puedes aparecer en el marketplace cuando lo mantengas visible.</div>;
+  }
+  if (status === "suspended") {
+    return <div className="review-banner bad"><b>Perfil suspendido.</b> No apareces en las búsquedas. Escríbenos si crees que es un error.</div>;
+  }
+  return (
+    <div className="review-banner wait">
+      <b>🕒 Tu perfil está en revisión.</b> El equipo de AgeCare revisará tus documentos; mientras tanto no apareces en las búsquedas de las familias.
+    </div>
+  );
+}
+
 function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed, onEdit }: {
   user: { full_name: string; avatar_url: string | null } | null;
   profile: CaregiverProfileOut;
@@ -275,81 +292,75 @@ function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed
   onEdit: () => void;
 }) {
   const byType = new Map((docs.data ?? []).map((d) => [d.doc_type, d]));
-  const missing = DOCUMENT_TYPES.filter((t) => !byType.has(t.key));
 
   return (
-    <div className="card profile-view">
-      <div className="profile-view-top">
-        <div className="cg-avatar profile-view-avatar">{user ? <Avatar name={user.full_name} photoUrl={user.avatar_url} /> : "?"}</div>
-        <div className="profile-view-id">
-          <div className="profile-view-name">{user?.full_name ?? "Tu perfil"}</div>
-          <div className="profile-view-headline">{profile.headline || "Todavía no agregas un título profesional."}</div>
-          <div style={{ marginTop: 4 }}>
-            {profile.rating_avg != null ? <Stars rating={profile.rating_avg} /> : <span style={{ fontSize: 12.5, color: "var(--ac-text-tertiary)" }}>Sin reseñas todavía</span>}
-            {profile.rating_avg != null && <span style={{ fontSize: 12, color: "var(--ac-text-tertiary)", marginLeft: 6 }}>({profile.reviews_count})</span>}
+    <>
+      <div className="card profile-view profile-hero-card">
+        <div className="profile-cover" />
+        <div className="profile-view-top">
+          <div className="cg-avatar profile-view-avatar ring">{user ? <Avatar name={user.full_name} photoUrl={user.avatar_url} /> : "?"}</div>
+          <div className="profile-view-id">
+            <div className="profile-view-name">{user?.full_name ?? "Tu perfil"}</div>
+            <div className="profile-view-headline">{profile.headline || "Todavía no agregas un título profesional."}</div>
           </div>
+          <button type="button" className="btn primary" onClick={onEdit}>✎ Editar perfil</button>
         </div>
-        <button type="button" className="btn primary" onClick={onEdit}>✎ Editar perfil</button>
-      </div>
 
-      <div className="toggle-row" style={{ margin: "16px 0", borderColor: isListed ? "var(--ac-border)" : "var(--ac-warn-500)" }}>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 14, color: isListed ? "var(--ac-text-primary)" : "var(--ac-warn-700)" }}>
-            {isListed ? "✓ Visible en el marketplace" : "● Oculto — no apareces en las búsquedas"}
+        <ReviewStatusBanner status={profile.admin_status} />
+
+        <div className="stat-tiles">
+          <div className="stat-tile"><span>Experiencia</span><b>{profile.years_experience != null ? `${profile.years_experience} años` : "—"}</b></div>
+          <div className="stat-tile"><span>Valoración</span><b>{profile.rating_avg != null ? <><Stars rating={profile.rating_avg} /> {profile.rating_avg.toFixed(1)}</> : "Sin reseñas"}</b></div>
+          <div className="stat-tile"><span>Reseñas</span><b>{profile.reviews_count}</b></div>
+          <div className="stat-tile"><span>Idiomas</span><b>{profile.languages.join(", ") || "—"}</b></div>
+        </div>
+
+        <div className="toggle-row" style={{ margin: "16px 0", borderColor: isListed ? "var(--ac-border)" : "var(--ac-warn-500)" }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: isListed ? "var(--ac-text-primary)" : "var(--ac-warn-700)" }}>
+              {isListed ? "✓ Visible en el marketplace" : "● Oculto — no apareces en las búsquedas"}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--ac-text-tertiary)" }}>
+              {isListed ? "Las familias pueden encontrarte y contactarte (si tu perfil está aprobado)." : "Actívalo para que las familias te encuentren."}
+            </div>
           </div>
-          <div style={{ fontSize: 12, color: "var(--ac-text-tertiary)" }}>
-            {isListed ? "Las familias pueden encontrarte y contactarte." : "Actívalo para que las familias te encuentren."}
+          <Switch checked={isListed} onChange={onToggleListed} />
+        </div>
+
+        {engagement && (
+          <div className="ok-banner" style={{ marginBottom: 4 }}>
+            ✓ Actualmente trabajando con {engagement.family_name}
+            {engagement.patient_name ? ` · cuidando a ${engagement.patient_name}` : ""}
           </div>
-        </div>
-        <Switch checked={isListed} onChange={onToggleListed} />
+        )}
+
+        {profile.bio && <p className="profile-view-bio">{profile.bio}</p>}
+
+        {profile.specialties.length > 0 && (
+          <div className="profile-view-section">
+            <div className="field-label">Especialidades</div>
+            <div className="chip-row">{profile.specialties.map((s) => <Chip key={s} kind="brand">{s}</Chip>)}</div>
+          </div>
+        )}
+        {profile.zones.length > 0 && (
+          <div className="profile-view-section">
+            <div className="field-label">Zonas de cobertura</div>
+            <div className="chip-row">{profile.zones.map((z) => <Chip key={z} kind="neutral">📍 {z}</Chip>)}</div>
+          </div>
+        )}
       </div>
 
-      {engagement && (
-        <div className="ok-banner" style={{ marginBottom: 4 }}>
-          ✓ Actualmente trabajando con {engagement.family_name}
-          {engagement.patient_name ? ` · cuidando a ${engagement.patient_name}` : ""}
-        </div>
-      )}
-
-      {profile.bio && <p className="profile-view-bio">{profile.bio}</p>}
-
-      <div className="profile-view-grid">
-        <div>
-          <div className="field-label">Experiencia</div>
-          <div className="field-value">{profile.years_experience != null ? `${profile.years_experience} años` : "—"}</div>
-        </div>
-        <div>
-          <div className="field-label">Idiomas</div>
-          <div className="field-value">{profile.languages.join(", ") || "—"}</div>
-        </div>
+      <div className="card">
+        <h3>Mis documentos</h3>
+        <p style={{ fontSize: 12.5, color: "var(--ac-text-secondary)", marginTop: -6, marginBottom: 14 }}>
+          Aquí puedes ver los archivos que subiste. Para cambiar uno ya aprobado, sube el nuevo y el equipo de AgeCare lo revisará.
+        </p>
+        {docs.error && <ErrorBanner message={docs.error} />}
+        {docs.loading ? <Spinner /> : DOCUMENT_TYPES.map((t) => (
+          <DocumentRow key={t.key} type={t.key} label={t.label} hint={t.hint} doc={byType.get(t.key)} onUploaded={docs.reload} />
+        ))}
       </div>
-
-      {profile.specialties.length > 0 && (
-        <div className="profile-view-section">
-          <div className="field-label">Especialidades</div>
-          <div className="chip-row">{profile.specialties.map((s) => <Chip key={s} kind="brand">{s}</Chip>)}</div>
-        </div>
-      )}
-      {profile.zones.length > 0 && (
-        <div className="profile-view-section">
-          <div className="field-label">Zonas de cobertura</div>
-          <div className="chip-row">{profile.zones.map((z) => <Chip key={z} kind="neutral">{z}</Chip>)}</div>
-        </div>
-      )}
-
-      <div className="profile-view-section">
-        <div className="field-label">
-          Documentos {missing.length === 0 ? "· completos ✓" : `· falta${missing.length > 1 ? "n" : ""} ${missing.length}`}
-        </div>
-        <div className="doc-status-list">
-          {DOCUMENT_TYPES.map((t) => (
-            <span key={t.key} className={`doc-status-item ${byType.has(t.key) ? "ok" : "missing"}`}>
-              {byType.has(t.key) ? "✓" : "○"} {t.label}
-            </span>
-          ))}
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
 

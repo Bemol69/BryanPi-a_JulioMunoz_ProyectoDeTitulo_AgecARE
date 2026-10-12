@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { MarketplaceApi, PatientsApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
 import { Avatar, Chip, ErrorBanner, Modal, OkBanner, Spinner, Stars, fmtDate } from "../components/ui";
@@ -24,7 +24,7 @@ export default function CaregiverDetail() {
     setBusyHire(true);
     try {
       await MarketplaceApi.endEngagement(engagementId);
-      setBanner("Diste por terminado el trabajo con esta cuidadora.");
+      setBanner("Diste por terminado el trabajo. Ahora puedes dejar tu reseña sobre esta cuidadora.");
       detail.reload();
     } catch (e) {
       setBanner(e instanceof Error ? e.message : "No se pudo finalizar el trabajo.");
@@ -86,7 +86,9 @@ export default function CaregiverDetail() {
           )}
 
           <div style={{ display: "flex", gap: 10, marginTop: 22, flexWrap: "wrap" }}>
-            <button className="btn primary" onClick={() => setShowContact(true)}>Contactar</button>
+            <button className="btn primary" onClick={() => setShowContact(true)}>
+              {c.conversation_id ? "Escribirle" : "Contactar"}
+            </button>
             {c.hired_by_me ? (
               <button className="btn ghost" onClick={endEngagement} disabled={busyHire}>
                 {busyHire ? "Finalizando…" : "Finalizar trabajo"}
@@ -94,11 +96,19 @@ export default function CaregiverDetail() {
             ) : (
               <button className="btn ghost" onClick={() => setShowHire(true)}>Contratar</button>
             )}
-            <button className="btn ghost" onClick={() => setShowReview(true)}>Dejar reseña</button>
+            {c.can_review && <button className="btn gold" onClick={() => setShowReview(true)}>⭐ Dejar reseña</button>}
           </div>
           {c.hired_by_me && (
             <div style={{ marginTop: 10, fontSize: 12.5, color: "var(--ac-brand-700)" }}>
-              ✓ Actualmente trabajando contigo
+              ✓ Actualmente trabajando contigo · podrás dejar tu reseña cuando finalices el trabajo
+            </div>
+          )}
+          {!c.hired_by_me && c.is_engaged && (
+            <div className="working-note"><i /> Está trabajando actualmente con otra familia. Puedes escribirle igual.</div>
+          )}
+          {!c.hired_by_me && !c.can_review && !c.is_engaged && (
+            <div style={{ marginTop: 10, fontSize: 12, color: "var(--ac-text-tertiary)" }}>
+              Las reseñas se habilitan una vez que termina un trabajo con ella.
             </div>
           )}
         </div>
@@ -122,8 +132,7 @@ export default function CaregiverDetail() {
       </div>
 
       {showContact && (
-        <ContactModal profileId={c.profile_id} onClose={() => setShowContact(false)}
-                     onDone={(msg) => { setShowContact(false); setBanner(msg); }} />
+        <ContactModal profileId={c.profile_id} onClose={() => setShowContact(false)} />
       )}
       {showReview && (
         <ReviewModal profileId={c.profile_id} onClose={() => setShowReview(false)}
@@ -137,7 +146,8 @@ export default function CaregiverDetail() {
   );
 }
 
-function ContactModal({ profileId, onClose, onDone }: { profileId: string; onClose: () => void; onDone: (msg: string) => void }) {
+function ContactModal({ profileId, onClose }: { profileId: string; onClose: () => void }) {
+  const navigate = useNavigate();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -147,24 +157,26 @@ function ContactModal({ profileId, onClose, onDone }: { profileId: string; onClo
     setError(null);
     try {
       const res = await MarketplaceApi.contact(profileId, message || undefined);
-      onDone(`Listo. Puedes contactarla por ${res.contact_channel === "phone" ? "teléfono" : res.contact_channel === "whatsapp" ? "WhatsApp" : "correo"}: ${res.contact_value}`);
+      navigate(res.conversation_id ? `/mensajes/${res.conversation_id}` : "/mensajes");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo enviar el contacto.");
-    } finally {
+      setError(e instanceof Error ? e.message : "No se pudo enviar el mensaje.");
       setBusy(false);
     }
   }
 
   return (
-    <Modal title="Contactar cuidadora" onClose={onClose}>
+    <Modal title="Escribirle a la cuidadora" onClose={onClose}>
       <div className="field">
-        <label>Mensaje (opcional)</label>
+        <label>Tu mensaje</label>
         <textarea rows={4} value={message} onChange={(e) => setMessage(e.target.value)}
                   placeholder="Hola, busco apoyo para mi mamá de lunes a viernes…" />
       </div>
+      <div className="retention-note" style={{ marginBottom: 14 }}>
+        🕒 La conversación se abre dentro de AgeCare y los mensajes se <b>eliminan automáticamente a los 7 días</b>.
+      </div>
       {error && <ErrorBanner message={error} />}
       <button className="btn primary block" onClick={submit} disabled={busy}>
-        {busy ? "Enviando…" : "Enviar solicitud de contacto"}
+        {busy ? "Abriendo chat…" : "Enviar y abrir chat"}
       </button>
     </Modal>
   );

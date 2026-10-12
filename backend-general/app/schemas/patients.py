@@ -42,3 +42,18 @@ class PatientOut(BaseModel):
     medication_allergies: list[str]
     food_allergies: list[str]
     notes: str | None
+
+
+class PatientCaregiverOut(BaseModel):
+    engagement_id: UUID
+    profile_id: UUID
+    full_name: str
+    photo_url: str | None
+    started_at: datetime
+
+
+class PatientDetailOut(PatientOut):
+    """Ficha del adulto mayor con su estado actual de cuidado."""
+    age: int
+    caregiver: PatientCaregiverOut | None = None  # cuidadora con trabajo activo, si la hay
+    wellbeing_status: str = "ok"  # placeholder: el módulo de salud no está en este alcance

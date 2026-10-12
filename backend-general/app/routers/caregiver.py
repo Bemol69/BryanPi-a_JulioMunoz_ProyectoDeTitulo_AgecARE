@@ -30,7 +30,7 @@ def _out(p: models.CaregiverProfile) -> CaregiverProfileOut:
                                languages=p.languages or [], zones=p.zones or [],
                                certifications=p.certifications or [], rating_avg=p.rating_avg,
                                reviews_count=p.reviews_count, is_listed=p.is_listed,
-                               is_featured=p.is_featured)
+                               is_featured=p.is_featured, admin_status=p.admin_status)
 
 
 async def _get_own_profile(db: Db, user: models.User) -> models.CaregiverProfile:
@@ -79,7 +79,10 @@ async def update_profile(body: CaregiverProfilePatchIn, db: Db, user: CurrentUse
 # ---------- Documentos de respaldo (cédula, antecedentes, certificados) ----------
 def _doc_out(d: models.CaregiverDocument) -> CaregiverDocumentOut:
     return CaregiverDocumentOut(doc_type=d.doc_type, file_url=d.file_url,
-                                original_filename=d.original_filename, uploaded_at=d.uploaded_at)
+                                original_filename=d.original_filename, uploaded_at=d.uploaded_at,
+                                status=d.status, pending_file_url=d.pending_file_url,
+                                pending_filename=d.pending_filename, review_note=d.review_note,
+                                reviewed_at=d.reviewed_at)
 
 
 @router.get("/documents", response_model=list[CaregiverDocumentOut])
@@ -102,25 +105,38 @@ async def upload_document(request: Request, db: Db, user: CurrentUser,
     if len(data) > storage.MAX_UPLOAD_BYTES:
         raise ApiError(422, "FILE_TOO_LARGE", f"El documento no puede superar los {storage.MAX_UPLOAD_LABEL}.")
 
-    filename = f"{doc_type.value}{ext}"
-    file_url = await storage.save(
-        f"documents/{profile.id}/{filename}", data, file.content_type, str(request.base_url),
-        stale=[f"documents/{profile.id}/{doc_type.value}{e}" for e in DOCUMENT_CONTENT_TYPES.values() if e != ext])
+    filename = f"{doc_type.value}-{int(now_utc().timestamp())}{ext}"
+    file_url = await storage.save(f"documents/{profile.id}/{filename}", data, file.content_type,
+                                  str(request.base_url))
+    original_name = file.filename or filename
 
     existing = (await db.execute(select(models.CaregiverDocument).where(
         models.CaregiverDocument.caregiver_profile_id == profile.id,
         models.CaregiverDocument.doc_type == doc_type.value))).scalar_one_or_none()
+    is_change = False
     if existing is None:
-        existing = models.CaregiverDocument(caregiver_profile_id=profile.id, doc_type=doc_type.value)
+        existing = models.CaregiverDocument(caregiver_profile_id=profile.id, doc_type=doc_type.value,
+                                            file_url=file_url, original_filename=original_name,
+                                            status="pending")
         db.add(existing)
-    existing.file_url = file_url
-    existing.original_filename = file.filename or filename
+    elif existing.status == "approved":
+        # El documento aprobado sigue vigente; el nuevo espera la aprobación del staff.
+        is_change = True
+        existing.pending_file_url = file_url
+        existing.pending_filename = original_name
+        existing.review_note = None
+    else:
+        existing.file_url = file_url
+        existing.original_filename = original_name
+        existing.status = "pending"
+        existing.review_note = None
+        existing.pending_file_url = None
+        existing.pending_filename = None
     await db.flush()
+    await db.refresh(existing)
 
-    await sync_document_to_admin(user.email, doc_type.value, file_url, existing.original_filename)
-    return CaregiverDocumentOut(doc_type=existing.doc_type, file_url=existing.file_url,
-                                original_filename=existing.original_filename,
-                                uploaded_at=existing.uploaded_at or now_utc())
+    await sync_document_to_admin(user.email, doc_type.value, file_url, original_name, is_change)
+    return _doc_out(existing)
 
 
 # ---------- Mensajes de contacto recibidos ----------

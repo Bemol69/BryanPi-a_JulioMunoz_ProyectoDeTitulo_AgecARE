@@ -51,11 +51,18 @@ export interface Certification {
 
 export type CaregiverDocType = "id_card" | "background_check" | "certificate";
 
+export type DocStatus = "pending" | "approved" | "rejected";
+
 export interface CaregiverDocumentOut {
   doc_type: CaregiverDocType;
   file_url: string;
   original_filename: string;
   uploaded_at: string;
+  status: DocStatus;
+  pending_file_url: string | null; // cambio propuesto, esperando la decisión del staff
+  pending_filename: string | null;
+  review_note: string | null;
+  reviewed_at: string | null;
 }
 
 export interface CaregiverProfileOut {
@@ -71,6 +78,7 @@ export interface CaregiverProfileOut {
   reviews_count: number;
   is_listed: boolean;
   is_featured: boolean;
+  admin_status: "pending" | "approved" | "suspended";
 }
 
 export interface CaregiverCard {
@@ -84,6 +92,7 @@ export interface CaregiverCard {
   rating_avg: number | null;
   reviews_count: number;
   is_featured: boolean;
+  is_engaged: boolean; // tiene un trabajo activo con alguna familia
 }
 
 export interface Review {
@@ -100,6 +109,9 @@ export interface CaregiverPublic extends CaregiverProfileOut {
   reviews: Review[];
   hired_by_me: boolean;
   my_engagement_id: string | null;
+  is_engaged: boolean;
+  can_review: boolean; // la familia terminó un trabajo con ella y aún no lo reseñó
+  conversation_id: string | null;
 }
 
 export interface Engagement {
@@ -112,6 +124,48 @@ export interface Engagement {
 export interface ContactOut {
   contact_channel: "phone" | "whatsapp" | "email";
   contact_value: string;
+  conversation_id: string | null;
+}
+
+export interface PatientDetail {
+  patient_id: string;
+  full_name: string;
+  birth_date: string;
+  sex: string | null;
+  photo_url: string | null;
+  conditions: string[];
+  medication_allergies: string[];
+  food_allergies: string[];
+  notes: string | null;
+  age: number;
+  wellbeing_status: string;
+  caregiver: { engagement_id: string; profile_id: string; full_name: string; photo_url: string | null; started_at: string } | null;
+}
+
+export interface ChatMessage {
+  message_id: string;
+  body: string;
+  mine: boolean;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface ChatSummary {
+  conversation_id: string;
+  other_name: string;
+  other_photo_url: string | null;
+  other_profile_id: string | null;
+  last_message: { body: string; mine: boolean; created_at: string } | null;
+  last_message_at: string;
+}
+
+export interface ChatDetail {
+  conversation_id: string;
+  other_name: string;
+  other_photo_url: string | null;
+  other_profile_id: string | null;
+  retention_days: number;
+  messages: ChatMessage[];
 }
 
 export interface ContactMessage {

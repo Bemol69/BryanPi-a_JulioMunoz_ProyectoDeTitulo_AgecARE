@@ -9,6 +9,8 @@ import Marketplace from "./pages/Marketplace";
 import CaregiverDetail from "./pages/CaregiverDetail";
 import CaregiverDashboard from "./pages/CaregiverDashboard";
 import Products from "./pages/Products";
+import PatientProfile from "./pages/PatientProfile";
+import Messages from "./pages/Messages";
 import { Spinner } from "./components/ui";
 
 function AppHome() {
@@ -46,6 +48,9 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Register />} />
           <Route path="/familia" element={<Protected forAccountType="family"><AppLayout><FamilyHome /></AppLayout></Protected>} />
+          <Route path="/familia/:id" element={<Protected forAccountType="family"><AppLayout><PatientProfile /></AppLayout></Protected>} />
+          <Route path="/mensajes" element={<Protected><AppLayout><Messages /></AppLayout></Protected>} />
+          <Route path="/mensajes/:id" element={<Protected><AppLayout><Messages /></AppLayout></Protected>} />
           <Route path="/marketplace" element={<Protected forAccountType="family"><AppLayout><Marketplace /></AppLayout></Protected>} />
           <Route path="/marketplace/productos" element={<Protected forAccountType="family"><AppLayout><Products /></AppLayout></Protected>} />
           <Route path="/marketplace/cuidadoras/:id" element={<Protected forAccountType="family"><AppLayout><CaregiverDetail /></AppLayout></Protected>} />

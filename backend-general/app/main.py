@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app import storage
 from app.config import get_settings
 from app.errors import RequestIdMiddleware, register_error_handlers
-from app.routers import auth, caregiver, marketplace, patients
+from app.routers import auth, caregiver, chat, internal, marketplace, patients
 
 # Orígenes extra permitidos (p. ej. el dominio de Vercel), separados por coma.
 CORS_EXTRA_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
@@ -40,6 +40,8 @@ api.include_router(auth.router)
 api.include_router(patients.router)
 api.include_router(caregiver.router)
 api.include_router(marketplace.router)
+api.include_router(chat.router)
+api.include_router(internal.router)
 app.include_router(api)
 
 
