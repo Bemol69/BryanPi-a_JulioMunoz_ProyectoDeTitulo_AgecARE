@@ -202,3 +202,21 @@ class ChatMessage(Base):
     sender_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     body: Mapped[str] = mapped_column(String(1000))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class HireRequest(Base):
+    """Solicitud de contratación: la familia la envía y la cuidadora la acepta o la rechaza.
+    Al aceptarla se crea el trabajo activo (CaregiverEngagement)."""
+    __tablename__ = "hire_requests"
+    id: Mapped[uuid.UUID] = pk()
+    caregiver_profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("caregiver_profiles.id"), index=True)
+    family_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    patient_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("patients.id"), nullable=True)
+    message: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # pending | accepted | declined | cancelled | unavailable (la cuidadora aceptó otro trabajo antes)
+    status: Mapped[str] = mapped_column(String(12), default="pending", index=True)
+    created_at: Mapped[datetime] = ts_now()
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    family: Mapped[User] = relationship(lazy="joined", foreign_keys=[family_user_id])
+    patient: Mapped[Patient | None] = relationship(lazy="joined")

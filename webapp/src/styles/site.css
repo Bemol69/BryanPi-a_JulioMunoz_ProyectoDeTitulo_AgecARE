@@ -526,3 +526,20 @@ footer.pub-footer { padding: 44px 0 36px; margin-top: 32px; }
 .doc-chip.bad { background: var(--ac-attention-100); color: var(--ac-attention-700); }
 .doc-note { margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--ac-brand-700); background: var(--ac-brand-50); border-radius: var(--ac-radius-m); padding: 8px 12px; }
 .doc-note.bad { color: var(--ac-attention-700); background: var(--ac-attention-100); }
+
+/* ---- Solicitudes de contratación ---- */
+.nav-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 8px; border-radius: 999px;
+  background: var(--ac-grad-sun); color: #3A2600; font-size: 11px; font-weight: 800; animation: ac-pulse 1.8s ease-out infinite; }
+.request-banner { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; padding: 14px 18px; border-radius: var(--ac-radius-xl);
+  text-decoration: none; color: var(--ac-gold-700); background: var(--ac-gold-100); border: 1px solid color-mix(in srgb, var(--ac-gold-500) 55%, transparent); font-size: 14px; }
+.request-status { margin-top: 14px; padding: 12px 14px; border-radius: var(--ac-radius-l); font-size: 13px; line-height: 1.5; }
+.request-status.wait { background: var(--ac-gold-100); color: var(--ac-gold-700); border: 1px solid color-mix(in srgb, var(--ac-gold-500) 45%, transparent); }
+.request-status.bad { background: var(--ac-surface-sunken); color: var(--ac-text-secondary); border: 1px solid var(--ac-border); }
+.request-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.hire-list { display: flex; flex-direction: column; gap: 14px; }
+.hire-card { padding: 20px; border-radius: var(--ac-radius-xl); background: var(--ac-surface-card); border: 1px solid var(--ac-border); box-shadow: var(--ac-shadow-card); }
+.hire-card.pending { border-color: color-mix(in srgb, var(--ac-gold-500) 60%, transparent); }
+.hire-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.hire-family { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+.hire-patient { margin-top: 14px; padding: 12px 14px; border-radius: var(--ac-radius-l); background: var(--ac-surface-bg); border: 1px solid var(--ac-border); font-size: 13.5px; }
+.hire-message { margin-top: 12px; font-size: 14px; line-height: 1.55; font-style: italic; color: var(--ac-text-secondary); }

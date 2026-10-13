@@ -112,6 +112,32 @@ export interface CaregiverPublic extends CaregiverProfileOut {
   is_engaged: boolean;
   can_review: boolean; // la familia terminó un trabajo con ella y aún no lo reseñó
   conversation_id: string | null;
+  my_request: { request_id: string; status: "pending" | "declined" | "unavailable"; created_at: string } | null;
+}
+
+export interface HireRequestOut {
+  request_id: string;
+  status: string;
+  created_at: string;
+  conversation_id: string | null;
+}
+
+export type HireRequestStatus = "pending" | "accepted" | "declined" | "cancelled" | "unavailable";
+
+export interface ReceivedHireRequest {
+  request_id: string;
+  status: HireRequestStatus;
+  created_at: string;
+  responded_at: string | null;
+  family_name: string;
+  contact_name: string;
+  patient_name: string | null;
+  patient_age: number | null;
+  conditions: string[];
+  medication_allergies: string[];
+  food_allergies: string[];
+  message: string | null;
+  conversation_id: string | null;
 }
 
 export interface Engagement {

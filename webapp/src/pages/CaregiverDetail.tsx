@@ -10,6 +10,7 @@ export default function CaregiverDetail() {
   const [showContact, setShowContact] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [showHire, setShowHire] = useState(false);
+  const navigate = useNavigate();
   const [banner, setBanner] = useState<string | null>(null);
   const [busyHire, setBusyHire] = useState(false);
 
@@ -19,6 +20,20 @@ export default function CaregiverDetail() {
   if (!c) return null;
 
   const engagementId = c.my_engagement_id;
+  async function cancelRequest() {
+    if (!c?.my_request) return;
+    setBusyHire(true);
+    try {
+      await MarketplaceApi.cancelRequest(c.my_request.request_id);
+      setBanner("Cancelaste la solicitud de contratación.");
+      detail.reload();
+    } catch (e) {
+      setBanner(e instanceof Error ? e.message : "No se pudo cancelar la solicitud.");
+    } finally {
+      setBusyHire(false);
+    }
+  }
+
   async function endEngagement() {
     if (!engagementId) return;
     setBusyHire(true);
@@ -93,10 +108,12 @@ export default function CaregiverDetail() {
               <button className="btn ghost" onClick={endEngagement} disabled={busyHire}>
                 {busyHire ? "Finalizando…" : "Finalizar trabajo"}
               </button>
+            ) : c.my_request?.status === "pending" ? (
+              <button className="btn ghost" disabled>🕒 Solicitud enviada</button>
             ) : c.is_engaged ? (
               <button className="btn ghost" disabled title="Ya está trabajando con otra familia">En servicio</button>
             ) : (
-              <button className="btn ghost" onClick={() => setShowHire(true)}>Contratar</button>
+              <button className="btn ghost" onClick={() => setShowHire(true)}>Solicitar contratación</button>
             )}
             {c.can_review && <button className="btn gold" onClick={() => setShowReview(true)}>⭐ Dejar reseña</button>}
           </div>
@@ -105,7 +122,23 @@ export default function CaregiverDetail() {
               ✓ Actualmente trabajando contigo · podrás dejar tu reseña cuando finalices el trabajo
             </div>
           )}
-          {!c.hired_by_me && c.is_engaged && (
+          {c.my_request?.status === "pending" && (
+            <div className="request-status wait">
+              <div><b>🕒 Solicitud enviada.</b> Esperando la respuesta de {c.full_name.split(" ")[0]}; el trabajo comienza cuando la acepte.</div>
+              <div className="request-actions">
+                {c.conversation_id && <Link to={`/mensajes/${c.conversation_id}`} className="btn small">💬 Ir al chat</Link>}
+                <button className="btn small" disabled={busyHire} onClick={cancelRequest}>Cancelar solicitud</button>
+              </div>
+            </div>
+          )}
+          {c.my_request && c.my_request.status !== "pending" && (
+            <div className="request-status bad">
+              {c.my_request.status === "declined"
+                ? "La cuidadora no aceptó tu última solicitud. Puedes escribirle o enviar otra."
+                : "Tu última solicitud quedó sin efecto porque la cuidadora aceptó otro trabajo."}
+            </div>
+          )}
+          {!c.hired_by_me && c.is_engaged && !c.my_request && (
             <div className="working-note"><i /> Está trabajando actualmente con otra familia, por eso no se puede contratar por ahora. Puedes escribirle igual.</div>
           )}
           {!c.hired_by_me && !c.can_review && !c.is_engaged && (
@@ -142,7 +175,7 @@ export default function CaregiverDetail() {
       )}
       {showHire && (
         <HireModal profileId={c.profile_id} onClose={() => setShowHire(false)}
-                  onDone={(msg) => { setShowHire(false); setBanner(msg); detail.reload(); }} />
+                  onDone={(convId) => { setShowHire(false); navigate(convId ? `/mensajes/${convId}` : "/mensajes"); }} />
       )}
     </div>
   );
@@ -242,8 +275,9 @@ function ReviewModal({ profileId, onClose, onDone }: { profileId: string; onClos
   );
 }
 
-function HireModal({ profileId, onClose, onDone }: { profileId: string; onClose: () => void; onDone: (msg: string) => void }) {
+function HireModal({ profileId, onClose, onDone }: { profileId: string; onClose: () => void; onDone: (conversationId: string | null) => void }) {
   const [patientId, setPatientId] = useState("");
+  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -251,25 +285,32 @@ function HireModal({ profileId, onClose, onDone }: { profileId: string; onClose:
     setBusy(true);
     setError(null);
     try {
-      await MarketplaceApi.hire(profileId, patientId || undefined);
-      onDone("Listo, quedó marcada como tu cuidadora activa.");
+      const res = await MarketplaceApi.requestHire(profileId, patientId || undefined, message.trim() || undefined);
+      onDone(res.conversation_id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo registrar la contratación.");
-    } finally {
+      setError(e instanceof Error ? e.message : "No se pudo enviar la solicitud.");
       setBusy(false);
     }
   }
 
   return (
-    <Modal title="Contratar cuidadora" onClose={onClose}>
+    <Modal title="Solicitar contratación" onClose={onClose}>
       <p style={{ fontSize: 13.5, color: "var(--ac-text-secondary)", marginTop: 0 }}>
-        Márcala como tu cuidadora activa. Esto ayuda a la Consola de AgeCare a saber qué
-        cuidadoras están trabajando en este momento.
+        Le enviaremos tu solicitud a la cuidadora. El trabajo comienza cuando ella la <b>acepte</b>, y podrán
+        conversar por el chat mientras tanto.
       </p>
       <PatientPicker patientId={patientId} onChange={setPatientId} />
+      <div className="field">
+        <label>Mensaje (opcional)</label>
+        <textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Necesito apoyo de lunes a viernes por las mañanas…" />
+      </div>
+      <div className="retention-note" style={{ marginBottom: 14 }}>
+        🕒 Los mensajes del chat se eliminan automáticamente a los 7 días.
+      </div>
       {error && <ErrorBanner message={error} />}
       <button className="btn primary block" onClick={submit} disabled={busy}>
-        {busy ? "Guardando…" : "Confirmar contratación"}
+        {busy ? "Enviando…" : "Enviar solicitud"}
       </button>
     </Modal>
   );

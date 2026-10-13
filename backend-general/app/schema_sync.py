@@ -27,7 +27,7 @@ COLUMN_PATCHES: list[tuple[str, str, str]] = [
     ("caregiver_engagements", "review_id", "UUID"),
 ]
 # Tablas que Supabase expondría por su API pública: se les activa RLS sin políticas.
-RLS_TABLES = ["chat_conversations", "chat_messages"]
+RLS_TABLES = ["chat_conversations", "chat_messages", "hire_requests"]
 ADVISORY_LOCK_KEY = 727_501  # evita que dos instancias nuevas apliquen el esquema a la vez
 
 

@@ -79,6 +79,18 @@ function TagPicker({ label, values, onChange, options, placeholder }: {
   );
 }
 
+function PendingRequestsBanner() {
+  const reqs = useApi(() => CaregiverApi.hireRequests(), []);
+  const pending = reqs.data?.items.filter((r) => r.status === "pending").length ?? 0;
+  if (pending === 0) return null;
+  return (
+    <Link to="/solicitudes" className="request-banner">
+      <span>📩 Tienes <b>{pending}</b> {pending === 1 ? "solicitud de contratación" : "solicitudes de contratación"} por responder</span>
+      <span className="btn gold small">Ver solicitudes</span>
+    </Link>
+  );
+}
+
 export default function CaregiverDashboard() {
   return (
     <div className="page">
@@ -89,6 +101,7 @@ export default function CaregiverDashboard() {
         </div>
         <Link to="/mensajes" className="btn ghost">💬 Mis mensajes</Link>
       </div>
+      <PendingRequestsBanner />
       <ProfileTab />
     </div>
   );

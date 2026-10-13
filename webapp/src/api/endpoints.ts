@@ -1,8 +1,8 @@
 import { api, qs } from "./client";
 import type {
   AuthOut, CaregiverCard, CaregiverDocType, CaregiverDocumentOut, CaregiverProfileOut,
-  CaregiverPublic, ChatDetail, ChatMessage, ChatSummary, ContactMessage, ContactOut, Engagement, Page,
-  PatientCard, PatientCreateOut, PatientDetail, ProductCard, ProductDetail, UserOut,
+  CaregiverPublic, ChatDetail, ChatMessage, ChatSummary, ContactMessage, ContactOut, Engagement, HireRequestOut, Page,
+  PatientCard, PatientCreateOut, PatientDetail, ProductCard, ProductDetail, ReceivedHireRequest, UserOut,
 } from "./types";
 
 export const AuthApi = {
@@ -33,6 +33,9 @@ export const CaregiverApi = {
   }>) => api.put<CaregiverProfileOut>("/caregiver/profile", body),
   contacts: () => api.get<Page<ContactMessage>>("/caregiver/contacts"),
   engagement: () => api.get<Engagement | null>("/caregiver/engagement"),
+  hireRequests: () => api.get<Page<ReceivedHireRequest>>("/caregiver/hire-requests"),
+  acceptRequest: (id: string) => api.post<Engagement>(`/caregiver/hire-requests/${id}/accept`),
+  declineRequest: (id: string) => api.post<void>(`/caregiver/hire-requests/${id}/decline`),
   myDocuments: () => api.get<CaregiverDocumentOut[]>("/caregiver/documents"),
   uploadDocument: (docType: CaregiverDocType, file: File) =>
     api.upload<CaregiverDocumentOut>("/caregiver/documents", file, { doc_type: docType }),
@@ -46,8 +49,9 @@ export const MarketplaceApi = {
     api.post<ContactOut>(`/marketplace/caregivers/${profileId}/contact`, { message }),
   review: (profileId: string, rating: number, comment?: string, patientId?: string) =>
     api.post<{ review_id: string }>(`/marketplace/caregivers/${profileId}/reviews`, { rating, comment, patient_id: patientId }),
-  hire: (profileId: string, patientId?: string) =>
-    api.post<Engagement>(`/marketplace/caregivers/${profileId}/hire`, { patient_id: patientId }),
+  requestHire: (profileId: string, patientId?: string, message?: string) =>
+    api.post<HireRequestOut>(`/marketplace/caregivers/${profileId}/hire-requests`, { patient_id: patientId, message }),
+  cancelRequest: (requestId: string) => api.post<void>(`/marketplace/hire-requests/${requestId}/cancel`),
   endEngagement: (engagementId: string) => api.post<void>(`/marketplace/engagements/${engagementId}/end`),
   products: (params: { category?: string; q?: string }) =>
     api.get<Page<ProductCard>>(`/marketplace/products${qs(params)}`),

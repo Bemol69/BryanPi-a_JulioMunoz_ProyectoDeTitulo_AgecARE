@@ -1,14 +1,18 @@
 """Perfil profesional de la cuidadora: base de su ficha en el marketplace."""
 from fastapi import APIRouter, File, Form, Request, UploadFile
+from datetime import date, timedelta
+from uuid import UUID
+
 from sqlalchemy import select
 
 from app import models, storage
 from app.deps import CurrentUser, Db
 from app.enums import CaregiverDocType
-from app.errors import ApiError, forbidden
+from app.errors import ApiError, conflict, forbidden, not_found
 from app.schemas.common import Page
 from app.schemas.marketplace import (CaregiverDocumentOut, CaregiverProfileOut,
-                                     CaregiverProfilePatchIn, ContactMessageOut, EngagementOut)
+                                     CaregiverProfilePatchIn, ContactMessageOut, EngagementOut,
+                                     ReceivedHireRequestOut)
 from app.security import now_utc
 from app.sync import sync_caregiver_to_admin, sync_document_to_admin
 
@@ -165,3 +169,95 @@ async def get_current_engagement(db: Db, user: CurrentUser):
         return None
     return EngagementOut(engagement_id=e.id, family_name=e.family.full_name,
                          patient_name=e.patient.full_name if e.patient else None, started_at=e.started_at)
+
+
+# ---------- Solicitudes de contratación ----------
+def _received_out(r: models.HireRequest, family_name: str, conversation_id=None) -> ReceivedHireRequestOut:
+    patient = r.patient
+    age = None
+    if patient is not None:
+        today = date.today()
+        b = patient.birth_date
+        age = max(today.year - b.year - ((today.month, today.day) < (b.month, b.day)), 0)
+    return ReceivedHireRequestOut(
+        request_id=r.id, status=r.status, created_at=r.created_at, responded_at=r.responded_at,
+        family_name=family_name, contact_name=r.family.full_name,
+        patient_name=patient.full_name if patient else None, patient_age=age,
+        conditions=(patient.conditions if patient else None) or [],
+        medication_allergies=(patient.medication_allergies if patient else None) or [],
+        food_allergies=(patient.food_allergies if patient else None) or [], message=r.message,
+        conversation_id=conversation_id)
+
+
+async def _family_label(db: Db, r: models.HireRequest) -> str:
+    surname = (r.patient.full_name if r.patient else r.family.full_name).split()[-1]
+    return f"Familia {surname}"
+
+
+@router.get("/hire-requests", response_model=Page[ReceivedHireRequestOut])
+async def list_hire_requests(db: Db, user: CurrentUser):
+    """Solicitudes recibidas: las pendientes primero y, después, las respondidas en el último mes."""
+    profile = await _get_own_profile(db, user)
+    since = now_utc() - timedelta(days=30)
+    rows = (await db.execute(select(models.HireRequest).where(
+        models.HireRequest.caregiver_profile_id == profile.id,
+        models.HireRequest.status != "cancelled",
+        models.HireRequest.created_at >= since))).scalars().all()
+    rows.sort(key=lambda r: (r.status != "pending", -r.created_at.timestamp()))
+    convs = {c.family_user_id: c.id for c in (await db.execute(select(models.ChatConversation).where(
+        models.ChatConversation.caregiver_profile_id == profile.id))).scalars().all()}
+    return Page(items=[_received_out(r, await _family_label(db, r), convs.get(r.family_user_id)) for r in rows],
+                total=len(rows))
+
+
+async def _pending_request(db: Db, user: models.User, request_id: UUID):
+    profile = await _get_own_profile(db, user)
+    r = await db.get(models.HireRequest, request_id)
+    if r is None or r.caregiver_profile_id != profile.id:
+        raise not_found()
+    if r.status != "pending":
+        raise conflict("REQUEST_NOT_PENDING", "Esta solicitud ya no está pendiente.")
+    return profile, r
+
+
+@router.post("/hire-requests/{request_id}/accept", response_model=EngagementOut)
+async def accept_hire_request(request_id: UUID, db: Db, user: CurrentUser):
+    from app.routers.chat import add_message, get_or_create_conversation
+
+    profile, r = await _pending_request(db, user, request_id)
+    if await _is_engaged(db, profile.id):
+        raise conflict("ALREADY_WORKING", "Ya tienes un trabajo activo. Termínalo antes de aceptar otro.")
+    now = now_utc()
+    engagement = models.CaregiverEngagement(caregiver_profile_id=profile.id, family_user_id=r.family_user_id,
+                                            patient_id=r.patient_id)
+    db.add(engagement)
+    r.status = "accepted"
+    r.responded_at = now
+    # Las demás solicitudes pendientes quedan sin efecto: ya tiene un trabajo.
+    others = (await db.execute(select(models.HireRequest).where(
+        models.HireRequest.caregiver_profile_id == profile.id,
+        models.HireRequest.status == "pending", models.HireRequest.id != r.id))).scalars().all()
+    for o in others:
+        o.status = "unavailable"
+        o.responded_at = now
+    await db.flush()
+    await db.refresh(engagement)
+
+    family_name = await _family_label(db, r)
+    conv, _ = await get_or_create_conversation(db, profile, r.family)
+    await add_message(db, conv, user, "¡Acepté tu solicitud de contratación! Coordinemos los detalles por aquí.")
+    await sync_caregiver_to_admin(profile, user, True)
+    return EngagementOut(engagement_id=engagement.id, family_name=family_name,
+                         patient_name=r.patient.full_name if r.patient else None,
+                         started_at=engagement.started_at or now)
+
+
+@router.post("/hire-requests/{request_id}/decline", status_code=204)
+async def decline_hire_request(request_id: UUID, db: Db, user: CurrentUser):
+    from app.routers.chat import add_message, get_or_create_conversation
+
+    profile, r = await _pending_request(db, user, request_id)
+    r.status = "declined"
+    r.responded_at = now_utc()
+    conv, _ = await get_or_create_conversation(db, profile, r.family)
+    await add_message(db, conv, user, "Gracias por tu solicitud. Por ahora no puedo aceptarla.")

@@ -11,6 +11,7 @@ import CaregiverDashboard from "./pages/CaregiverDashboard";
 import Products from "./pages/Products";
 import PatientProfile from "./pages/PatientProfile";
 import Messages from "./pages/Messages";
+import HireRequests from "./pages/HireRequests";
 import { Spinner } from "./components/ui";
 
 function AppHome() {
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/registro" element={<Register />} />
           <Route path="/familia" element={<Protected forAccountType="family"><AppLayout><FamilyHome /></AppLayout></Protected>} />
           <Route path="/familia/:id" element={<Protected forAccountType="family"><AppLayout><PatientProfile /></AppLayout></Protected>} />
+          <Route path="/solicitudes" element={<Protected forAccountType="caregiver"><AppLayout><HireRequests /></AppLayout></Protected>} />
           <Route path="/mensajes" element={<Protected><AppLayout><Messages /></AppLayout></Protected>} />
           <Route path="/mensajes/:id" element={<Protected><AppLayout><Messages /></AppLayout></Protected>} />
           <Route path="/marketplace" element={<Protected forAccountType="family"><AppLayout><Marketplace /></AppLayout></Protected>} />

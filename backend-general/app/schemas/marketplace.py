@@ -85,10 +85,43 @@ class CaregiverPublicOut(CaregiverProfileOut):
     is_engaged: bool = False
     can_review: bool = False  # la familia terminó un trabajo con ella y aún no lo reseñó
     conversation_id: UUID | None = None
+    my_request: MyHireRequestOut | None = None
 
 
-class HireIn(BaseModel):
+class HireRequestIn(BaseModel):
     patient_id: UUID | None = None
+    message: str | None = Field(default=None, max_length=500)
+
+
+class HireRequestOut(BaseModel):
+    request_id: UUID
+    status: str
+    created_at: datetime
+    conversation_id: UUID | None = None  # el chat donde se conversa la solicitud
+
+
+class MyHireRequestOut(BaseModel):
+    """Mi última solicitud a esta cuidadora (la familia ve su estado en el perfil)."""
+    request_id: UUID
+    status: str  # pending | declined | unavailable
+    created_at: datetime
+
+
+class ReceivedHireRequestOut(BaseModel):
+    """Solicitud que ve la cuidadora: quién la envía y a quién habría que cuidar."""
+    request_id: UUID
+    status: str  # pending | accepted | declined | cancelled | unavailable
+    created_at: datetime
+    responded_at: datetime | None
+    family_name: str  # "Familia <apellido>"
+    contact_name: str  # persona que envió la solicitud
+    patient_name: str | None
+    patient_age: int | None
+    conditions: list[str]
+    medication_allergies: list[str]
+    food_allergies: list[str]
+    message: str | None
+    conversation_id: UUID | None = None  # chat con la familia
 
 
 class EngagementOut(BaseModel):

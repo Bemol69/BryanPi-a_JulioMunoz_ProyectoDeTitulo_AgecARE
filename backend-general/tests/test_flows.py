@@ -244,22 +244,92 @@ async def register_family(client, email):
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
-async def test_a_working_caregiver_cannot_be_hired_by_another_family(client, family):
+async def ask(client, headers, pid, **body):
+    return await client.post(f"{API}/marketplace/caregivers/{pid}/hire-requests", json=body, headers=headers)
+
+
+async def test_a_working_caregiver_cannot_be_requested_by_another_family(client, family):
     other = await register_family(client, "otra@familia.cl")
     maria_id = await profile_id_of(client, other, "María Torres")  # ya trabaja con la familia demo
+    r = await ask(client, other, maria_id)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "CAREGIVER_BUSY"
+    # Ya no existe la contratación directa: solo solicitudes que la cuidadora acepta.
     r = await client.post(f"{API}/marketplace/caregivers/{maria_id}/hire", json={}, headers=other)
-    assert r.status_code == 409 and r.json()["error"]["code"] == "CAREGIVER_BUSY"
+    assert r.status_code in (404, 405)
 
-    # Una cuidadora libre sí se puede contratar... pero solo por una familia a la vez.
-    javiera_id = await profile_id_of(client, other, "Javiera Soto")
-    r = await client.post(f"{API}/marketplace/caregivers/{javiera_id}/hire", json={}, headers=other)
-    assert r.status_code == 201, r.text
-    r = await client.post(f"{API}/marketplace/caregivers/{javiera_id}/hire", json={}, headers=family)
-    assert r.status_code == 409 and r.json()["error"]["code"] == "CAREGIVER_BUSY"
+
+async def test_hire_request_is_accepted_by_the_caregiver(client, family, javiera):
+    pid = await profile_id_of(client, family, "Javiera Soto")
+    r = await ask(client, family, pid, message="Necesito apoyo de lunes a viernes")
+    assert r.status_code == 201 and r.json()["status"] == "pending", r.text
+    conv_id = r.json()["conversation_id"]
+    assert conv_id, "la solicitud abre el chat"
+
+    # La familia ve la solicitud pendiente y no puede enviar otra.
+    detail = (await client.get(f"{API}/marketplace/caregivers/{pid}", headers=family)).json()
+    assert detail["my_request"]["status"] == "pending" and detail["hired_by_me"] is False
+    assert (await ask(client, family, pid)).json()["error"]["code"] == "REQUEST_PENDING"
+    # Todavía no está en servicio: la solicitud no inicia el trabajo.
+    assert (await names_in_search(client, family))["Javiera Soto"]["is_engaged"] is False
+
+    # La cuidadora la ve con los datos de a quién cuidaría.
+    inbox = (await client.get(f"{API}/caregiver/hire-requests", headers=javiera)).json()["items"]
+    assert len(inbox) == 1 and inbox[0]["status"] == "pending"
+    assert inbox[0]["family_name"] == "Familia Muñoz" and inbox[0]["message"] == "Necesito apoyo de lunes a viernes"
+    assert inbox[0]["conversation_id"] == conv_id
+    msgs = (await client.get(f"{API}/chats/{conv_id}", headers=javiera)).json()["messages"]
+    assert msgs[0]["body"] == "Te envié una solicitud de contratación. Necesito apoyo de lunes a viernes"
+
+    # Al aceptar empieza el trabajo y se abre el chat.
+    r = await client.post(f"{API}/caregiver/hire-requests/{inbox[0]['request_id']}/accept", headers=javiera)
+    assert r.status_code == 200, r.text
+    detail = (await client.get(f"{API}/marketplace/caregivers/{pid}", headers=family)).json()
+    assert detail["hired_by_me"] is True and detail["is_engaged"] is True and detail["my_request"] is None
+    assert detail["conversation_id"]
+    msgs = (await client.get(f"{API}/chats/{conv_id}", headers=family)).json()["messages"]
+    assert msgs[-1]["mine"] is False and "Acepté tu solicitud" in msgs[-1]["body"]
     assert (await names_in_search(client, family))["Javiera Soto"]["is_engaged"] is True
+    again = await client.post(f"{API}/caregiver/hire-requests/{inbox[0]['request_id']}/accept", headers=javiera)
+    assert again.status_code == 409 and again.json()["error"]["code"] == "REQUEST_NOT_PENDING"
 
-    # Al terminar el trabajo vuelve a estar disponible.
-    eid = (await client.get(f"{API}/marketplace/caregivers/{javiera_id}", headers=other)).json()["my_engagement_id"]
-    assert (await client.post(f"{API}/marketplace/engagements/{eid}/end", headers=other)).status_code == 204
-    r = await client.post(f"{API}/marketplace/caregivers/{javiera_id}/hire", json={}, headers=family)
-    assert r.status_code == 201, r.text
+    # Mientras trabaja no se le puede solicitar; al terminar vuelve a estar disponible.
+    other = await register_family(client, "otra@familia.cl")
+    assert (await ask(client, other, pid)).json()["error"]["code"] == "CAREGIVER_BUSY"
+    eid = detail["my_engagement_id"]
+    assert (await client.post(f"{API}/marketplace/engagements/{eid}/end", headers=family)).status_code == 204
+    assert (await ask(client, other, pid)).status_code == 201
+
+
+async def test_caregiver_can_decline_and_family_can_cancel(client, family, javiera, maria):
+    pid = await profile_id_of(client, family, "Javiera Soto")
+    await ask(client, family, pid)
+    rid = (await client.get(f"{API}/caregiver/hire-requests", headers=javiera)).json()["items"][0]["request_id"]
+    assert (await client.post(f"{API}/caregiver/hire-requests/{rid}/decline", headers=javiera)).status_code == 204
+    detail = (await client.get(f"{API}/marketplace/caregivers/{pid}", headers=family)).json()
+    assert detail["my_request"]["status"] == "declined"
+    # Otra cuidadora no puede responder una solicitud ajena.
+    assert (await client.post(f"{API}/caregiver/hire-requests/{rid}/accept", headers=maria)).status_code == 404
+
+    # Se puede volver a solicitar, y la familia puede cancelarla mientras esté pendiente.
+    r = await ask(client, family, pid)
+    assert r.status_code == 201
+    new_id = r.json()["request_id"]
+    assert (await client.post(f"{API}/marketplace/hire-requests/{new_id}/cancel", headers=family)).status_code == 204
+    assert (await client.get(f"{API}/caregiver/hire-requests", headers=javiera)).json()["items"][0]["status"] == "declined"
+    assert (await client.post(f"{API}/marketplace/hire-requests/{new_id}/cancel", headers=family)).status_code == 409
+
+
+async def test_accepting_one_request_leaves_the_others_unavailable(client, family, javiera):
+    pid = await profile_id_of(client, family, "Javiera Soto")
+    other = await register_family(client, "otra@familia.cl")
+    await ask(client, family, pid)
+    await ask(client, other, pid)
+    inbox = (await client.get(f"{API}/caregiver/hire-requests", headers=javiera)).json()["items"]
+    assert len(inbox) == 2
+    await client.post(f"{API}/caregiver/hire-requests/{inbox[0]['request_id']}/accept", headers=javiera)
+    after = (await client.get(f"{API}/caregiver/hire-requests", headers=javiera)).json()["items"]
+    assert sorted(r["status"] for r in after) == ["accepted", "unavailable"]
+    # La segunda ya no se puede aceptar.
+    other_req = next(r for r in after if r["status"] == "unavailable")
+    r = await client.post(f"{API}/caregiver/hire-requests/{other_req['request_id']}/accept", headers=javiera)
+    assert r.status_code == 409

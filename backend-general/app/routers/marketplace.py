@@ -1,4 +1,5 @@
 """Sección 14 — Marketplace (vitrina de descubrimiento, sin transacciones)."""
+from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Query
@@ -11,9 +12,9 @@ from app.errors import conflict, forbidden, not_found
 from app.routers.chat import add_message, get_or_create_conversation
 from app.schemas.common import Page
 from app.schemas.marketplace import (CaregiverCardOut, CaregiverPublicOut, ContactIn, ContactOut,
-                                     EngagementOut, HireIn, ProductCardOut, ProductOut, ReviewCreateIn,
+                                     HireRequestIn, MyHireRequestOut, HireRequestOut, ProductCardOut, ProductOut, ReviewCreateIn,
                                      ReviewCreateOut, ReviewOut)
-from app.security import now_utc
+from app.security import as_utc, now_utc
 from app.sync import sync_caregiver_to_admin, sync_review_to_admin
 
 router = APIRouter(prefix="/marketplace", tags=["Marketplace"])
@@ -109,6 +110,16 @@ async def get_caregiver_public(profile_id: UUID, db: Db, user: CurrentUser):
         models.CaregiverEngagement.family_user_id == user.id,
         models.CaregiverEngagement.status == "ended",
         models.CaregiverEngagement.review_id.is_(None)).limit(1))).first() is not None
+    last_request = (await db.execute(select(models.HireRequest).where(
+        models.HireRequest.caregiver_profile_id == profile_id,
+        models.HireRequest.family_user_id == user.id)
+        .order_by(models.HireRequest.created_at.desc()).limit(1))).scalars().first()
+    my_request = None
+    if last_request is not None and not my_engagement:
+        recent = last_request.responded_at is None or as_utc(last_request.responded_at) > now_utc() - timedelta(days=7)
+        if last_request.status in ("pending", "declined", "unavailable") and recent:
+            my_request = MyHireRequestOut(request_id=last_request.id, status=last_request.status,
+                                          created_at=last_request.created_at)
     conversation = (await db.execute(select(models.ChatConversation.id).where(
         models.ChatConversation.caregiver_profile_id == profile_id,
         models.ChatConversation.family_user_id == user.id))).first()
@@ -120,16 +131,17 @@ async def get_caregiver_public(profile_id: UUID, db: Db, user: CurrentUser):
         photo_url=p.user.avatar_url, hired_by_me=my_engagement is not None,
         my_engagement_id=my_engagement.id if my_engagement else None,
         is_engaged=await _is_engaged(db, profile_id), can_review=can_review,
-        conversation_id=conversation[0] if conversation else None,
+        conversation_id=conversation[0] if conversation else None, my_request=my_request,
         reviews=[ReviewOut(review_id=r.id, rating=r.rating, comment=r.comment,
                           author_name=r.author_name, created_at=r.created_at) for r in reviews])
 
 
-# ---------- Contratar cuidadora ----------
-@router.post("/caregivers/{profile_id}/hire", response_model=EngagementOut, status_code=201)
-async def hire_caregiver(profile_id: UUID, body: HireIn, db: Db, user: CurrentUser):
+# ---------- Solicitar la contratación de una cuidadora ----------
+# La familia envía una solicitud; el trabajo solo empieza cuando la cuidadora la acepta.
+@router.post("/caregivers/{profile_id}/hire-requests", response_model=HireRequestOut, status_code=201)
+async def request_hire(profile_id: UUID, body: HireRequestIn, db: Db, user: CurrentUser):
     if user.account_type != "family":
-        raise forbidden("Solo una cuenta de familia puede contratar a una cuidadora.")
+        raise forbidden("Solo una cuenta de familia puede solicitar la contratación de una cuidadora.")
     p = await _get_listed(db, profile_id)
     already = (await db.execute(select(models.CaregiverEngagement).where(
         models.CaregiverEngagement.caregiver_profile_id == profile_id,
@@ -137,10 +149,16 @@ async def hire_caregiver(profile_id: UUID, body: HireIn, db: Db, user: CurrentUs
         models.CaregiverEngagement.status == "active"))).scalar_one_or_none()
     if already is not None:
         raise conflict("ALREADY_HIRED", "Ya tienes un trabajo activo con esta cuidadora.")
-    # Una cuidadora atiende a una familia a la vez: si ya está en servicio no se puede contratar.
+    pending = (await db.execute(select(models.HireRequest).where(
+        models.HireRequest.caregiver_profile_id == profile_id,
+        models.HireRequest.family_user_id == user.id,
+        models.HireRequest.status == "pending"))).scalars().first()
+    if pending is not None:
+        raise conflict("REQUEST_PENDING", "Ya enviaste una solicitud a esta cuidadora. Espera su respuesta.")
+    # Una cuidadora atiende a una familia a la vez: si ya está en servicio no se puede solicitar.
     if await _is_engaged(db, profile_id):
         raise conflict("CAREGIVER_BUSY",
-                       "Esta cuidadora ya está trabajando con otra familia. Podrás contratarla cuando termine ese trabajo.")
+                       "Esta cuidadora ya está trabajando con otra familia. Podrás solicitarla cuando termine ese trabajo.")
     if body.patient_id is not None:
         member = (await db.execute(select(models.PatientMember).where(
             models.PatientMember.patient_id == body.patient_id,
@@ -148,18 +166,31 @@ async def hire_caregiver(profile_id: UUID, body: HireIn, db: Db, user: CurrentUs
         if member is None:
             raise forbidden("No tienes acceso a ese perfil de adulto mayor.")
 
-    patient_name = None
-    if body.patient_id is not None:
-        patient = await db.get(models.Patient, body.patient_id)
-        patient_name = patient.full_name if patient else None
-
-    engagement = models.CaregiverEngagement(caregiver_profile_id=profile_id, family_user_id=user.id,
-                                            patient_id=body.patient_id)
-    db.add(engagement)
+    text = (body.message or "").strip() or None
+    req = models.HireRequest(caregiver_profile_id=profile_id, family_user_id=user.id,
+                             patient_id=body.patient_id, message=text)
+    db.add(req)
     await db.flush()
-    await sync_caregiver_to_admin(p, p.user, True)
-    return EngagementOut(engagement_id=engagement.id, family_name=await _family_display_name(db, user, body.patient_id),
-                         patient_name=patient_name, started_at=engagement.started_at)
+    await db.refresh(req)
+
+    # La solicitud abre el chat: así familia y cuidadora pueden conversar antes de decidir.
+    await purge_expired(db)
+    conv, _ = await get_or_create_conversation(db, p, user)
+    intro = "Te envié una solicitud de contratación."
+    await add_message(db, conv, user, f"{intro} {text}" if text else intro)
+    return HireRequestOut(request_id=req.id, status=req.status, created_at=req.created_at,
+                          conversation_id=conv.id)
+
+
+@router.post("/hire-requests/{request_id}/cancel", status_code=204)
+async def cancel_hire_request(request_id: UUID, db: Db, user: CurrentUser):
+    r = await db.get(models.HireRequest, request_id)
+    if r is None or r.family_user_id != user.id:
+        raise not_found()
+    if r.status != "pending":
+        raise conflict("REQUEST_NOT_PENDING", "Esta solicitud ya fue respondida.")
+    r.status = "cancelled"
+    r.responded_at = now_utc()
 
 
 # ---------- Finalizar el trabajo con una cuidadora ----------

@@ -1,25 +1,37 @@
 [
   {
     "fecha": "2026-10-12",
-    "titulo": "Una cuidadora solo puede tener un trabajo a la vez",
-    "resumen": "Se corrigió que cualquier cuidadora se podía contratar aunque ya estuviera trabajando con otra familia.",
+    "titulo": "Solicitud de contratación que la cuidadora acepta (y chat conectado)",
+    "resumen": "La contratación ya no es directa: la familia envía una solicitud y el trabajo comienza solo cuando la cuidadora la acepta. Cada solicitud abre un chat entre ambas.",
     "areas": [
       {
         "nombre": "Sitio de familias",
         "items": [
-          "Si una cuidadora ya está trabajando con otra familia, el botón \"Contratar\" queda bloqueado (\"En servicio\") y se explica el motivo. Sigue siendo posible escribirle por el chat.",
-          "Cuando la familia termina el trabajo (\"Finalizar trabajo\"), la cuidadora vuelve a estar disponible para contratar."
+          "El botón \"Contratar\" pasó a \"Solicitar contratación\": se elige el familiar y se puede dejar un mensaje. Se envía una solicitud, no se contrata de inmediato.",
+          "Con la solicitud pendiente se ve \"Solicitud enviada\", el acceso al chat y el botón \"Cancelar solicitud\". Si la cuidadora la rechaza o acepta otro trabajo, se informa y se puede enviar otra.",
+          "Si la cuidadora ya está trabajando con otra familia no se le puede solicitar (botón \"En servicio\"); queda libre cuando termina ese trabajo.",
+          "Al enviar la solicitud se abre el chat con la cuidadora (los mensajes se eliminan a los 7 días)."
         ]
       },
       {
-        "nombre": "Backend",
+        "nombre": "Sitio de cuidadoras",
         "items": [
-          "Contratar a una cuidadora con un trabajo activo responde un error claro (CAREGIVER_BUSY): \"Esta cuidadora ya está trabajando con otra familia\".",
-          "Prueba automática nueva que cubre el caso (ahora 15 en el sitio público)."
+          "Nueva sección \"Solicitudes\" con contador en el menú y aviso en su perfil. Cada solicitud muestra la familia, a quién cuidaría (nombre, edad, condiciones y alergias) y el mensaje.",
+          "Puede aceptar, rechazar o chatear con la familia. Al aceptar empieza el trabajo (aparece \"Trabajando\" en el buscador y en la Consola), se abre el chat con un aviso automático y las demás solicitudes pendientes quedan sin efecto.",
+          "Al rechazar se le avisa a la familia por el chat."
+        ]
+      },
+      {
+        "nombre": "Backend y base de datos",
+        "items": [
+          "Nueva tabla hire_requests y nuevos endpoints para solicitar, cancelar, listar, aceptar y rechazar. Reglas: una solicitud pendiente por familia y cuidadora, y una cuidadora atiende a una familia a la vez.",
+          "Prueba automática nueva para el flujo completo (ahora 18 en el sitio público)."
         ]
       }
     ],
-    "pasos_manuales": []
+    "pasos_manuales": [
+      "Ejecutar deploy/migracion_2026-10-12_solicitudes.sql en Supabase > SQL Editor (opcional: la API crea la tabla sola al arrancar)."
+    ]
   },
   {
     "fecha": "2026-10-12",
