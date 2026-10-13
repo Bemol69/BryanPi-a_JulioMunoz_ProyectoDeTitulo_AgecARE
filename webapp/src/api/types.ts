@@ -35,6 +35,7 @@ export interface PatientCard {
   photo_url: string | null;
   role: string;
   wellbeing_status: string;
+  caregiver_names: string[]; // cuidadoras con trabajo activo; vacío = sin cuidadora
 }
 
 export interface PatientCreateOut {

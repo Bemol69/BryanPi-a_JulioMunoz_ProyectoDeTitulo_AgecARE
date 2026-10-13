@@ -30,6 +30,7 @@ class PatientCardOut(BaseModel):
     photo_url: str | None
     role: str
     wellbeing_status: str = "ok"  # placeholder: el módulo de salud no está en este alcance
+    caregiver_names: list[str] = []  # cuidadoras con trabajo activo; vacío = aún sin cuidadora
 
 
 class PatientOut(BaseModel):

@@ -71,8 +71,21 @@ async def upload_patient_photo(patient_id: UUID, request: Request, db: Db, user:
 async def list_patients(db: Db, user: CurrentUser):
     rows = (await db.execute(select(models.PatientMember)
                              .where(models.PatientMember.user_id == user.id))).scalars().all()
+    caregivers: dict[UUID, list[str]] = {}
+    if rows:
+        active = (await db.execute(
+            select(models.CaregiverEngagement.patient_id, models.User.full_name)
+            .join(models.CaregiverProfile,
+                  models.CaregiverProfile.id == models.CaregiverEngagement.caregiver_profile_id)
+            .join(models.User, models.User.id == models.CaregiverProfile.user_id)
+            .where(models.CaregiverEngagement.patient_id.in_([m.patient_id for m in rows]),
+                   models.CaregiverEngagement.status == "active")
+            .order_by(models.CaregiverEngagement.started_at))).all()
+        for patient_id, name in active:
+            caregivers.setdefault(patient_id, []).append(name)
     items = [PatientCardOut(patient_id=m.patient_id, full_name=m.patient.full_name,
-                            photo_url=m.patient.photo_url, role=m.role) for m in rows]
+                            photo_url=m.patient.photo_url, role=m.role,
+                            caregiver_names=caregivers.get(m.patient_id, [])) for m in rows]
     return Page(items=items, total=len(items))
 
 

@@ -25,13 +25,23 @@ export default function FamilyHome() {
       {patients.loading && <Spinner />}
       {patients.data && (
         <div className="patient-grid">
-          {patients.data.items.map((p) => (
-            <Link key={p.patient_id} to={`/familia/${p.patient_id}`} className="patient-card">
-              <div className="patient-avatar"><Avatar name={p.full_name} photoUrl={p.photo_url} /></div>
-              <div className="name">{p.full_name}</div>
-              <div className="patient-card-foot">Ver perfil y estado <span>→</span></div>
-            </Link>
-          ))}
+          {patients.data.items.map((p) => {
+            const cared = p.caregiver_names.length > 0;
+            return (
+              <Link key={p.patient_id} to={`/familia/${p.patient_id}`} className={`patient-card${cared ? " cared" : ""}`}>
+                {cared && <span className="working-badge cared-badge"><i /> Con cuidadora</span>}
+                <div className="patient-avatar"><Avatar name={p.full_name} photoUrl={p.photo_url} /></div>
+                <div className="name">{p.full_name}</div>
+                {cared && (
+                  <div className="cared-by">
+                    Cuidado por {p.caregiver_names[0]}
+                    {p.caregiver_names.length > 1 && ` y ${p.caregiver_names.length - 1} más`}
+                  </div>
+                )}
+                <div className="patient-card-foot">Ver perfil y estado <span>→</span></div>
+              </Link>
+            );
+          })}
           <button className="dashed-card" onClick={() => setShowCreate(true)}>
             <span style={{ fontSize: 28 }}>+</span>
             <span>Crear perfil de un adulto mayor</span>
