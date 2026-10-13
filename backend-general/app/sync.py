@@ -34,6 +34,20 @@ async def _post_to_admin(path: str, payload: dict) -> bool:
     return False
 
 
+async def fetch_admin_documents(email: str) -> list[dict]:
+    """Estado de los documentos de la cuidadora según la Consola ([] si no responde)."""
+    settings = get_settings()
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            res = await client.get(f"{settings.admin_sync_url}/marketplace/caregivers/documents",
+                                   params={"email": email}, headers={"X-Internal-Key": settings.admin_sync_key})
+        if res.status_code == 200:
+            return res.json().get("items", [])
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning("No se pudo consultar los documentos en la Consola: %r", exc)
+    return []
+
+
 async def sync_caregiver_to_admin(profile: "models.CaregiverProfile", user: "models.User",
                                   is_engaged: bool = False) -> None:
     zones = profile.zones or []

@@ -1,6 +1,28 @@
 [
   {
     "fecha": "2026-10-12",
+    "titulo": "Los documentos aprobados en la Consola ahora se reflejan en el sitio de la cuidadora",
+    "resumen": "Si el aviso de la Consola no llegaba al sitio, la cuidadora seguía viendo sus documentos \"En revisión\" aunque ya estuvieran aprobados. Ahora el sitio consulta la decisión del staff y se actualiza solo.",
+    "areas": [
+      {
+        "nombre": "Sitio de cuidadoras",
+        "items": [
+          "Al abrir \"Mis documentos\", el sitio revisa en la Consola si el staff ya aprobó o rechazó cada archivo y actualiza el estado (y el motivo, si fue rechazado).",
+          "Solo adopta la decisión si se refiere al mismo archivo que la cuidadora tiene en el sitio; un archivo nuevo subido después sigue en revisión."
+        ]
+      },
+      {
+        "nombre": "Backend y base de datos",
+        "items": [
+          "Nuevo endpoint interno en la Consola para consultar el estado de los documentos de una cuidadora (solo servidor a servidor, con la clave interna).",
+          "Pruebas automáticas nuevas (sitio: 19, Consola: 30)."
+        ]
+      }
+    ],
+    "pasos_manuales": []
+  },
+  {
+    "fecha": "2026-10-12",
     "titulo": "Corrección: error al iniciar sesión (\"Failed to fetch\") tras la última actualización",
     "resumen": "Las dos APIs en Vercel dejaron de arrancar con el último despliegue y el login del sitio y de la Consola mostraba \"Failed to fetch\". Quedó corregido.",
     "areas": [

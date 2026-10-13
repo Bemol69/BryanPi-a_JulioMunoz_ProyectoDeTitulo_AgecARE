@@ -45,7 +45,12 @@ def no_network(monkeypatch, tmp_path):
     """Sin llamadas reales a la Consola y con archivos subidos en una carpeta temporal."""
     async def fake_post(path, payload):
         return True
+    async def fake_fetch(email):
+        return []
     monkeypatch.setattr(sync_module, "_post_to_admin", fake_post)
+    monkeypatch.setattr(sync_module, "fetch_admin_documents", fake_fetch)
+    import app.routers.caregiver as caregiver_router
+    monkeypatch.setattr(caregiver_router, "fetch_admin_documents", fake_fetch)
     monkeypatch.setattr(storage, "LOCAL_ROOT", tmp_path)
 
 

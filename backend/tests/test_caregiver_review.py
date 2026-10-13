@@ -141,3 +141,18 @@ async def test_statuses_endpoint_is_internal_only(client, admin_headers):
     assert r.status_code == 200
     assert EMAIL in {i["email"] for i in r.json()["items"]}  # (el estado depende de las pruebas previas)
     assert all(set(i) == {"email", "status"} for i in r.json()["items"])
+
+
+async def test_site_can_query_the_review_state_of_the_documents(client, admin_headers, pushed):
+    cid = await sync_profile(client)
+    await sync_doc(client, "id_card", "cedula.png")
+    await review(client, admin_headers, cid, "id_card", "approve")
+    r = await client.get(f"{BASE}/caregivers/documents", headers=INTERNAL, params={"email": EMAIL})
+    assert r.status_code == 200, r.text
+    item = r.json()["items"][0]
+    assert item["doc_type"] == "id_card" and item["status"] == "approved"
+    assert item["file_url"] == "https://files/cedula.png"
+    # solo el otro servicio puede consultarlo
+    assert (await client.get(f"{BASE}/caregivers/documents", params={"email": EMAIL})).status_code in (401, 403)
+    unknown = await client.get(f"{BASE}/caregivers/documents", headers=INTERNAL, params={"email": "nadie@x.cl"})
+    assert unknown.json() == {"items": []}

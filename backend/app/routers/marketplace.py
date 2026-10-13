@@ -211,6 +211,20 @@ async def caregiver_statuses(db: Db):
     return {"items": [CaregiverStatusItem(email=e, status=CaregiverStatus(st)).model_dump() for e, st in rows]}
 
 
+# El sitio público consulta aquí las decisiones del staff sobre los documentos, por si el aviso de
+# la Consola no le llegó (variable sin configurar, instancia dormida, error de red).
+@router.get("/caregivers/documents", dependencies=[Depends(require_internal_key)])
+async def caregiver_documents_for_site(db: Db, email: str = Query(max_length=254)):
+    c = (await db.execute(select(models.CaregiverProfile).where(
+        func.lower(models.CaregiverProfile.email) == email.lower()))).scalars().first()
+    if c is None:
+        return {"items": []}
+    docs = await _documents_for(db, c.id)
+    return {"items": [{"doc_type": d.doc_type, "file_url": d.file_url, "status": d.status,
+                       "pending_file_url": d.pending_file_url, "review_note": d.review_note}
+                      for d in docs]}
+
+
 # ---------- 10.1 Listar cuidadoras ----------
 @router.get("/caregivers", response_model=Page[CaregiverOut], dependencies=[require("marketplace")])
 async def list_caregivers(db: Db,

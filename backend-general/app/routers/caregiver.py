@@ -14,7 +14,7 @@ from app.schemas.marketplace import (CaregiverDocumentOut, CaregiverProfileOut,
                                      CaregiverProfilePatchIn, ContactMessageOut, EngagementOut,
                                      ReceivedHireRequestOut)
 from app.security import now_utc
-from app.sync import sync_caregiver_to_admin, sync_document_to_admin
+from app.sync import fetch_admin_documents, sync_caregiver_to_admin, sync_document_to_admin
 
 router = APIRouter(prefix="/caregiver", tags=["Perfil de cuidadora"])
 
@@ -89,12 +89,32 @@ def _doc_out(d: models.CaregiverDocument) -> CaregiverDocumentOut:
                                 reviewed_at=d.reviewed_at)
 
 
+async def _reconcile_with_admin(user: models.User, docs: list[models.CaregiverDocument]) -> None:
+    """Si el staff ya decidió en la Consola pero el aviso no llegó al sitio, toma su decisión.
+    Solo adopta una decisión cuando se refiere al mismo archivo que la cuidadora tiene aquí."""
+    from app.routers.internal import apply_review
+
+    if not any(d.status != "approved" or d.pending_file_url for d in docs):
+        return
+    remote = {r["doc_type"]: r for r in await fetch_admin_documents(user.email)}
+    for d in docs:
+        a = remote.get(d.doc_type)
+        if a is None or a.get("pending_file_url"):
+            continue  # la Consola tiene otro cambio en espera: aún no hay decisión final
+        if d.pending_file_url:
+            if a["status"] == "approved" and a["file_url"] == d.pending_file_url:
+                apply_review(d, "approve", a.get("review_note"))
+        elif a["file_url"] == d.file_url and a["status"] in ("approved", "rejected") and a["status"] != d.status:
+            apply_review(d, "approve" if a["status"] == "approved" else "reject", a.get("review_note"))
+
+
 @router.get("/documents", response_model=list[CaregiverDocumentOut])
 async def list_documents(db: Db, user: CurrentUser):
     profile = await _get_own_profile(db, user)
     rows = (await db.execute(select(models.CaregiverDocument)
                              .where(models.CaregiverDocument.caregiver_profile_id == profile.id)
                              )).scalars().all()
+    await _reconcile_with_admin(user, rows)
     return [_doc_out(d) for d in rows]
 
 

@@ -88,6 +88,28 @@ async def test_first_upload_is_pending_then_approved(client, maria):
     assert (await doc(client, maria))["status"] == "approved"
 
 
+async def test_site_adopts_console_decision_when_the_notice_never_arrived(client, maria, monkeypatch):
+    import app.routers.caregiver as caregiver_router
+    r = await upload(client, maria)
+    url = r.json()["file_url"]
+    assert (await doc(client, maria))["status"] == "pending"
+
+    async def console_says_approved(email):
+        return [{"doc_type": "id_card", "file_url": url, "status": "approved",
+                 "pending_file_url": None, "review_note": None}]
+    monkeypatch.setattr(caregiver_router, "fetch_admin_documents", console_says_approved)
+    assert (await doc(client, maria))["status"] == "approved"
+
+    # una decisión sobre otro archivo (la cuidadora ya subió uno nuevo) no se adopta
+    async def console_has_older_file(email):
+        return [{"doc_type": "id_card", "file_url": "https://otro/archivo-viejo.png", "status": "approved",
+                 "pending_file_url": None, "review_note": None}]
+    monkeypatch.setattr(caregiver_router, "fetch_admin_documents", console_has_older_file)
+    await upload(client, maria, name="otra.png")
+    d = await doc(client, maria)
+    assert d["status"] == "approved" and d["pending_file_url"] is not None
+
+
 async def test_rejected_document_can_be_replaced(client, maria):
     await upload(client, maria)
     await review(client, "id_card", "reject", "Se ve borrosa")
