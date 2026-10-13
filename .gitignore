@@ -23,3 +23,6 @@ Thumbs.db
 
 # Archivos subidos en desarrollo local (en producción van a Supabase Storage)
 backend-general/uploads/
+
+# imágenes intermedias que se regeneran al armar los documentos de la Fase 2
+Fase 2/capturas/_jpg/

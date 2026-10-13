@@ -1,0 +1,26 @@
+66211ad  2026-10-12  Bryan Alexander Piña Frias  La cuidadora puede ver las reseñas que le han dejado
+e9c8b4e  2026-10-12  Bryan Alexander Piña Frias  El sitio toma de la Consola las decisiones sobre documentos que no alcanzaron a llegar
+4f569b7  2026-10-12  Bryan Alexander Piña Frias  Arregla el arranque de las APIs en Vercel (orden de clase en esquema y httpx en API Admin)
+42cd902  2026-10-12  Bryan Alexander Piña Frias  Solicitud de contratación que la cuidadora acepta, con el chat conectado
+ddf27a3  2026-10-12  Bryan Alexander Piña Frias  Una cuidadora solo puede tener un trabajo activo a la vez
+7891945  2026-10-12  Bryan Alexander Piña Frias  Mejoras de la lista "Mejoras AgeCare": ficha del familiar, chat, revisión de documentos y perfiles
+058a9a8  2026-10-06  Bryan Alexander Piña Frias  Dependencia de Windows de rolldown pasa a optionalDependencies para que instale en Linux (Vercel)
+b56e06c  2026-10-06  Bryan Alexander Piña Frias  Vercel: usar routes (conserva la ruta original) en vez de rewrites para las APIs
+e4ee92d  2026-10-02  Bryan Alexander Piña Frias  RLS solo sobre las tablas de AgeCare y aviso al reutilizar un proyecto de Supabase
+07ecf51  2026-10-02  Bryan Alexander Piña Frias  Script para crear tablas en Supabase sin exponer la cadena de conexión
+0bd94a0  2026-10-02  Bryan Alexander Piña Frias  Preparar despliegue en Vercel + Supabase
+06341b5  2026-10-02  Bryan Alexander Piña Frias  Corrige espacio bajo los títulos de tarjeta en el panel de cuidadora
+1d6cf4a  2026-10-02  Bryan Alexander Piña Frias  Rediseño visual con paleta del logo y preparación para Vercel
+6e4a4db  2026-09-26  JulioMunozz  Agregar diario de reflexión Fase 1 de Julio
+6576c4b  2026-09-26  JulioMunozz  Agregar autoevaluación de competencias de Julio (Fase 1)
+b25cf91  2026-09-26  Bryan Alexander Piña Frias  Completar diario de reflexión Fase 1 de Bryan
+d1eda77  2026-09-26  Bryan Alexander Piña Frias  Agregar autoevaluación de competencias de Bryan (Fase 1)
+642fa55  2026-09-26  Bryan Alexander Piña Frias  Reorganizar evidencias de Fase 1 y completar README según formato solicitado por Duoc UC
+fa16547  2026-09-22  JulioMunozz  Mejora panel cuidadoras e integración de documentos
+d8e6218  2026-09-22  Bryan Alexander Piña Frias  Nuevos Cambios
+7812e9d  2026-09-16  JulioMunozz  mejora en formulario de mi perfil profesional
+0d4bd98  2026-09-15  JulioMunozz  Cambios en la homepage
+5c59097  2026-09-15  JulioMunozz  Agregando foto de perfil
+d06f581  2026-09-14  Bryan Alexander Piña Frias  Agregar Consola de Administracion y sitio publico de AgeCare
+c073ab7  2026-09-06  Bryan Alexander Piña Frias  Add files via upload
+93384ab  2026-09-06  Bryan Alexander Piña Frias  Initial commit
