@@ -93,6 +93,8 @@ export default function CaregiverDetail() {
               <button className="btn ghost" onClick={endEngagement} disabled={busyHire}>
                 {busyHire ? "Finalizando…" : "Finalizar trabajo"}
               </button>
+            ) : c.is_engaged ? (
+              <button className="btn ghost" disabled title="Ya está trabajando con otra familia">En servicio</button>
             ) : (
               <button className="btn ghost" onClick={() => setShowHire(true)}>Contratar</button>
             )}
@@ -104,7 +106,7 @@ export default function CaregiverDetail() {
             </div>
           )}
           {!c.hired_by_me && c.is_engaged && (
-            <div className="working-note"><i /> Está trabajando actualmente con otra familia. Puedes escribirle igual.</div>
+            <div className="working-note"><i /> Está trabajando actualmente con otra familia, por eso no se puede contratar por ahora. Puedes escribirle igual.</div>
           )}
           {!c.hired_by_me && !c.can_review && !c.is_engaged && (
             <div style={{ marginTop: 10, fontSize: 12, color: "var(--ac-text-tertiary)" }}>

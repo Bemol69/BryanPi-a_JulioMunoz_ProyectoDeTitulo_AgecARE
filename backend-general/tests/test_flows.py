@@ -234,3 +234,32 @@ async def test_patient_detail_shows_profile_and_care_status(client, family):
     await client.post(f"{API}/marketplace/engagements/{eid}/end", headers=family)
     d = (await client.get(f"{API}/patients/{elena['patient_id']}", headers=family)).json()
     assert d["caregiver"] is None
+
+
+# ---------- Una cuidadora, un trabajo a la vez ----------
+async def register_family(client, email):
+    r = await client.post(f"{API}/auth/register", json={
+        "full_name": "Otra Familia", "email": email, "password": "Familia123!", "account_type": "family"})
+    assert r.status_code == 201, r.text
+    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+async def test_a_working_caregiver_cannot_be_hired_by_another_family(client, family):
+    other = await register_family(client, "otra@familia.cl")
+    maria_id = await profile_id_of(client, other, "María Torres")  # ya trabaja con la familia demo
+    r = await client.post(f"{API}/marketplace/caregivers/{maria_id}/hire", json={}, headers=other)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "CAREGIVER_BUSY"
+
+    # Una cuidadora libre sí se puede contratar... pero solo por una familia a la vez.
+    javiera_id = await profile_id_of(client, other, "Javiera Soto")
+    r = await client.post(f"{API}/marketplace/caregivers/{javiera_id}/hire", json={}, headers=other)
+    assert r.status_code == 201, r.text
+    r = await client.post(f"{API}/marketplace/caregivers/{javiera_id}/hire", json={}, headers=family)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "CAREGIVER_BUSY"
+    assert (await names_in_search(client, family))["Javiera Soto"]["is_engaged"] is True
+
+    # Al terminar el trabajo vuelve a estar disponible.
+    eid = (await client.get(f"{API}/marketplace/caregivers/{javiera_id}", headers=other)).json()["my_engagement_id"]
+    assert (await client.post(f"{API}/marketplace/engagements/{eid}/end", headers=other)).status_code == 204
+    r = await client.post(f"{API}/marketplace/caregivers/{javiera_id}/hire", json={}, headers=family)
+    assert r.status_code == 201, r.text

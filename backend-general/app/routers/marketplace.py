@@ -137,6 +137,10 @@ async def hire_caregiver(profile_id: UUID, body: HireIn, db: Db, user: CurrentUs
         models.CaregiverEngagement.status == "active"))).scalar_one_or_none()
     if already is not None:
         raise conflict("ALREADY_HIRED", "Ya tienes un trabajo activo con esta cuidadora.")
+    # Una cuidadora atiende a una familia a la vez: si ya está en servicio no se puede contratar.
+    if await _is_engaged(db, profile_id):
+        raise conflict("CAREGIVER_BUSY",
+                       "Esta cuidadora ya está trabajando con otra familia. Podrás contratarla cuando termine ese trabajo.")
     if body.patient_id is not None:
         member = (await db.execute(select(models.PatientMember).where(
             models.PatientMember.patient_id == body.patient_id,

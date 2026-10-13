@@ -1,6 +1,28 @@
 [
   {
     "fecha": "2026-10-12",
+    "titulo": "Una cuidadora solo puede tener un trabajo a la vez",
+    "resumen": "Se corrigió que cualquier cuidadora se podía contratar aunque ya estuviera trabajando con otra familia.",
+    "areas": [
+      {
+        "nombre": "Sitio de familias",
+        "items": [
+          "Si una cuidadora ya está trabajando con otra familia, el botón \"Contratar\" queda bloqueado (\"En servicio\") y se explica el motivo. Sigue siendo posible escribirle por el chat.",
+          "Cuando la familia termina el trabajo (\"Finalizar trabajo\"), la cuidadora vuelve a estar disponible para contratar."
+        ]
+      },
+      {
+        "nombre": "Backend",
+        "items": [
+          "Contratar a una cuidadora con un trabajo activo responde un error claro (CAREGIVER_BUSY): \"Esta cuidadora ya está trabajando con otra familia\".",
+          "Prueba automática nueva que cubre el caso (ahora 15 en el sitio público)."
+        ]
+      }
+    ],
+    "pasos_manuales": []
+  },
+  {
+    "fecha": "2026-10-12",
     "titulo": "Mejoras de la lista \"Mejoras AgeCare\"",
     "resumen": "Ficha del familiar, chat dentro de la app, reseñas solo al terminar el trabajo, revisión de documentos y perfiles desde la Consola, tarjetas modernas con el estado \"Trabajando\" y limpieza del menú de la Consola.",
     "areas": [
