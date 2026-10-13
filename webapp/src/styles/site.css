@@ -543,3 +543,16 @@ footer.pub-footer { padding: 44px 0 36px; margin-top: 32px; }
 .hire-family { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
 .hire-patient { margin-top: 14px; padding: 12px 14px; border-radius: var(--ac-radius-l); background: var(--ac-surface-bg); border: 1px solid var(--ac-border); font-size: 13.5px; }
 .hire-message { margin-top: 12px; font-size: 14px; line-height: 1.55; font-style: italic; color: var(--ac-text-secondary); }
+
+/* ---------------- Verificación y avance del perfil ---------------- */
+.verified-tick { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; margin-left: 4px;
+  border-radius: 50%; background: var(--ac-ok-600); color: #fff; font-size: 10px; font-weight: 800; vertical-align: 2px; cursor: help; }
+.verified-pill { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; padding: 3px 10px; border-radius: var(--ac-radius-full);
+  background: var(--ac-ok-100); color: var(--ac-ok-700); font-size: 11.5px; font-weight: 800; }
+
+.completeness { margin: 16px 0 4px; padding: 14px 16px; border-radius: var(--ac-radius-l); background: var(--ac-brand-50); border: 1px solid var(--ac-brand-100); }
+.completeness.done { background: var(--ac-ok-100); border-color: transparent; color: var(--ac-ok-700); font-size: 13px; font-weight: 700; }
+.completeness-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; }
+.completeness-bar { height: 8px; margin: 10px 0 8px; border-radius: var(--ac-radius-full); background: var(--ac-brand-100); overflow: hidden; }
+.completeness-bar > div { height: 100%; border-radius: inherit; background: var(--ac-grad-brand); transition: width .4s ease; }
+.completeness-missing { font-size: 12.5px; color: var(--ac-text-secondary); line-height: 1.5; }

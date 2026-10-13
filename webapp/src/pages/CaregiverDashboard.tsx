@@ -328,6 +328,46 @@ function MyReviews({ profile }: { profile: CaregiverProfileOut }) {
   );
 }
 
+function ProfileCompleteness({ user, profile, docs, onEdit }: {
+  user: { avatar_url: string | null } | null;
+  profile: CaregiverProfileOut;
+  docs: DocsState;
+  onEdit: () => void;
+}) {
+  if (!docs.data) return null;
+  const uploaded = new Set(docs.data.map((d) => d.doc_type));
+  const steps = [
+    { label: "Foto de perfil", done: !!user?.avatar_url },
+    { label: "Título profesional", done: !!profile.headline },
+    { label: "Presentación", done: !!profile.bio },
+    { label: "Años de experiencia", done: profile.years_experience != null },
+    { label: "Especialidades", done: profile.specialties.length > 0 },
+    { label: "Idiomas", done: profile.languages.length > 0 },
+    { label: "Zonas de cobertura", done: profile.zones.length > 0 },
+    { label: "Los 3 documentos", done: DOCUMENT_TYPES.every((t) => uploaded.has(t.key)) },
+  ];
+  const missing = steps.filter((s) => !s.done);
+  const pct = Math.round(((steps.length - missing.length) / steps.length) * 100);
+
+  if (missing.length === 0) {
+    return <div className="completeness done">✓ Perfil completo: ya tienes todo lo necesario para que te elijan.</div>;
+  }
+  return (
+    <div className="completeness">
+      <div className="completeness-head">
+        <b>Tu perfil está completo al {pct}%</b>
+        <button type="button" className="btn small primary" onClick={onEdit}>Completar ahora</button>
+      </div>
+      <div className="completeness-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div style={{ width: `${pct}%` }} />
+      </div>
+      <div className="completeness-missing">
+        Te falta: {missing.map((s) => s.label).join(" · ")}
+      </div>
+    </div>
+  );
+}
+
 function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed, onEdit }: {
   user: { full_name: string; avatar_url: string | null } | null;
   profile: CaregiverProfileOut;
@@ -353,6 +393,7 @@ function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed
         </div>
 
         <ReviewStatusBanner status={profile.admin_status} />
+        <ProfileCompleteness user={user} profile={profile} docs={docs} onEdit={onEdit} />
 
         <div className="stat-tiles">
           <div className="stat-tile"><span>Experiencia</span><b>{profile.years_experience != null ? `${profile.years_experience} años` : "—"}</b></div>

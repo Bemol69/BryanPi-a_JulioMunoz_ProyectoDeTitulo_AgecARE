@@ -16,7 +16,7 @@ function CaregiverTile({ c }: { c: CaregiverCard }) {
           {c.is_featured && <Chip kind="gold">⭐ Destacada</Chip>}
         </div>
       </div>
-      <div className="name">{c.full_name}</div>
+      <div className="name">{c.full_name} <span className="verified-tick" title="Perfil verificado por el equipo de AgeCare">✓</span></div>
       <div className="headline">{c.headline ?? "—"}</div>
       <div className="cg-rating">
         {c.rating_avg != null ? (
