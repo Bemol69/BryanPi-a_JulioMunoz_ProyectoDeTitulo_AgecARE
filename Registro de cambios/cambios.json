@@ -1,6 +1,22 @@
 [
   {
     "fecha": "2026-10-12",
+    "titulo": "Corrección: error al iniciar sesión (\"Failed to fetch\") tras la última actualización",
+    "resumen": "Las dos APIs en Vercel dejaron de arrancar con el último despliegue y el login del sitio y de la Consola mostraba \"Failed to fetch\". Quedó corregido.",
+    "areas": [
+      {
+        "nombre": "Backend y base de datos",
+        "items": [
+          "API General: una clase del esquema se usaba antes de definirse; Python 3.12 (el de Vercel) lo rechaza al arrancar. Se reordenó.",
+          "API Admin: faltaba la dependencia httpx en requirements.txt (la usa la conexión con el sitio público). Se agregó.",
+          "Ambas APIs se probaron en un entorno limpio con Python 3.11 antes de subir."
+        ]
+      }
+    ],
+    "pasos_manuales": []
+  },
+  {
+    "fecha": "2026-10-12",
     "titulo": "Solicitud de contratación que la cuidadora acepta (y chat conectado)",
     "resumen": "La contratación ya no es directa: la familia envía una solicitud y el trabajo comienza solo cuando la cuidadora la acepta. Cada solicitud abre un chat entre ambas.",
     "areas": [

@@ -76,6 +76,13 @@ class ReviewOut(BaseModel):
     created_at: datetime
 
 
+class MyHireRequestOut(BaseModel):
+    """Mi última solicitud a esta cuidadora (la familia ve su estado en el perfil)."""
+    request_id: UUID
+    status: str  # pending | declined | unavailable
+    created_at: datetime
+
+
 class CaregiverPublicOut(CaregiverProfileOut):
     full_name: str
     photo_url: str | None
@@ -98,13 +105,6 @@ class HireRequestOut(BaseModel):
     status: str
     created_at: datetime
     conversation_id: UUID | None = None  # el chat donde se conversa la solicitud
-
-
-class MyHireRequestOut(BaseModel):
-    """Mi última solicitud a esta cuidadora (la familia ve su estado en el perfil)."""
-    request_id: UUID
-    status: str  # pending | declined | unavailable
-    created_at: datetime
 
 
 class ReceivedHireRequestOut(BaseModel):
