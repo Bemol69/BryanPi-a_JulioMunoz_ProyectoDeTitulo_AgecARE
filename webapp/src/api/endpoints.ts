@@ -2,7 +2,7 @@ import { api, qs } from "./client";
 import type {
   AuthOut, CaregiverCard, CaregiverDocType, CaregiverDocumentOut, CaregiverProfileOut,
   CaregiverPublic, ChatDetail, ChatMessage, ChatSummary, ContactMessage, ContactOut, Engagement, HireRequestOut, Page,
-  PatientCard, PatientCreateOut, PatientDetail, ProductCard, ProductDetail, ReceivedHireRequest, UserOut,
+  PatientCard, PatientCreateOut, PatientDetail, ProductCard, ProductDetail, ReceivedHireRequest, Review, UserOut,
 } from "./types";
 
 export const AuthApi = {
@@ -37,6 +37,7 @@ export const CaregiverApi = {
   acceptRequest: (id: string) => api.post<Engagement>(`/caregiver/hire-requests/${id}/accept`),
   declineRequest: (id: string) => api.post<void>(`/caregiver/hire-requests/${id}/decline`),
   myDocuments: () => api.get<CaregiverDocumentOut[]>("/caregiver/documents"),
+  myReviews: () => api.get<Review[]>("/caregiver/reviews"),
   uploadDocument: (docType: CaregiverDocType, file: File) =>
     api.upload<CaregiverDocumentOut>("/caregiver/documents", file, { doc_type: docType }),
 };

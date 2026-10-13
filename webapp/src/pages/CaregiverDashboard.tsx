@@ -295,6 +295,39 @@ function ReviewStatusBanner({ status }: { status: CaregiverProfileOut["admin_sta
   );
 }
 
+function MyReviews({ profile }: { profile: CaregiverProfileOut }) {
+  const reviews = useApi(() => CaregiverApi.myReviews(), []);
+  const items = reviews.data ?? [];
+  return (
+    <div className="card" id="mis-resenas">
+      <h3>Mis reseñas</h3>
+      <p style={{ fontSize: 12.5, color: "var(--ac-text-secondary)", marginTop: -6, marginBottom: 14 }}>
+        Lo que las familias opinaron después de trabajar contigo.
+        {profile.rating_avg != null && <> Tu valoración promedio es <b>{profile.rating_avg.toFixed(1)}</b> ({profile.reviews_count}).</>}
+      </p>
+      {reviews.error && <ErrorBanner message={reviews.error} />}
+      {reviews.loading && <Spinner />}
+      {!reviews.loading && !reviews.error && items.length === 0 && (
+        <p style={{ color: "var(--ac-text-tertiary)", fontSize: 13.5 }}>
+          Todavía no tienes reseñas. Aparecerán aquí cuando una familia termine un trabajo contigo y te evalúe.
+        </p>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {items.map((r) => (
+          <div key={r.review_id} style={{ borderBottom: "1px solid var(--ac-border)", paddingBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+              <b style={{ fontSize: 13.5 }}>{r.author_name}</b>
+              <Stars rating={r.rating} />
+            </div>
+            {r.comment && <div style={{ fontSize: 13, color: "var(--ac-text-secondary)", marginTop: 4 }}>{r.comment}</div>}
+            <div style={{ fontSize: 11, color: "var(--ac-text-tertiary)", marginTop: 4 }}>{fmtDate(r.created_at)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed, onEdit }: {
   user: { full_name: string; avatar_url: string | null } | null;
   profile: CaregiverProfileOut;
@@ -324,7 +357,9 @@ function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed
         <div className="stat-tiles">
           <div className="stat-tile"><span>Experiencia</span><b>{profile.years_experience != null ? `${profile.years_experience} años` : "—"}</b></div>
           <div className="stat-tile"><span>Valoración</span><b>{profile.rating_avg != null ? <><Stars rating={profile.rating_avg} /> {profile.rating_avg.toFixed(1)}</> : "Sin reseñas"}</b></div>
-          <div className="stat-tile"><span>Reseñas</span><b>{profile.reviews_count}</b></div>
+          <a className="stat-tile" href="#mis-resenas" style={{ textDecoration: "none", color: "inherit" }}>
+            <span>Reseñas</span><b>{profile.reviews_count}</b>
+          </a>
           <div className="stat-tile"><span>Idiomas</span><b>{profile.languages.join(", ") || "—"}</b></div>
         </div>
 
@@ -362,6 +397,8 @@ function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed
           </div>
         )}
       </div>
+
+      <MyReviews profile={profile} />
 
       <div className="card">
         <h3>Mis documentos</h3>

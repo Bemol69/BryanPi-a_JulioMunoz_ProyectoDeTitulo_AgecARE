@@ -1,6 +1,27 @@
 [
   {
     "fecha": "2026-10-12",
+    "titulo": "La cuidadora ve las reseñas que le han dejado",
+    "resumen": "En su perfil profesional hay una sección \"Mis reseñas\" con la opinión de cada familia.",
+    "areas": [
+      {
+        "nombre": "Sitio de cuidadoras",
+        "items": [
+          "Nueva tarjeta \"Mis reseñas\" en su perfil: promedio, cantidad y cada reseña con el nombre de la familia, las estrellas, el comentario y la fecha (la más nueva primero).",
+          "El contador \"Reseñas\" de su perfil lleva directo a esa sección. Si aún no tiene, se explica cuándo aparecerán."
+        ]
+      },
+      {
+        "nombre": "Backend y base de datos",
+        "items": [
+          "Nuevo endpoint GET /caregiver/reviews, que entrega solo las reseñas de la cuidadora que lo consulta. Prueba automática nueva (sitio: 20)."
+        ]
+      }
+    ],
+    "pasos_manuales": []
+  },
+  {
+    "fecha": "2026-10-12",
     "titulo": "Los documentos aprobados en la Consola ahora se reflejan en el sitio de la cuidadora",
     "resumen": "Si el aviso de la Consola no llegaba al sitio, la cuidadora seguía viendo sus documentos \"En revisión\" aunque ya estuvieran aprobados. Ahora el sitio consulta la decisión del staff y se actualiza solo.",
     "areas": [

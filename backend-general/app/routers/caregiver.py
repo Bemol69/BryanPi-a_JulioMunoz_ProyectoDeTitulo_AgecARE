@@ -12,7 +12,7 @@ from app.errors import ApiError, conflict, forbidden, not_found
 from app.schemas.common import Page
 from app.schemas.marketplace import (CaregiverDocumentOut, CaregiverProfileOut,
                                      CaregiverProfilePatchIn, ContactMessageOut, EngagementOut,
-                                     ReceivedHireRequestOut)
+                                     ReceivedHireRequestOut, ReviewOut)
 from app.security import now_utc
 from app.sync import fetch_admin_documents, sync_caregiver_to_admin, sync_document_to_admin
 
@@ -175,6 +175,18 @@ async def list_contacts(db: Db, user: CurrentUser):
     items = [ContactMessageOut(contact_id=c.id, family_name=u.full_name, family_email=u.email,
                                message=c.message, created_at=c.created_at) for c, u in rows]
     return Page(items=items, total=len(items))
+
+
+# ---------- Mis reseñas ----------
+@router.get("/reviews", response_model=list[ReviewOut])
+async def my_reviews(db: Db, user: CurrentUser):
+    """Las reseñas que las familias le han dejado a la cuidadora (de la más nueva a la más antigua)."""
+    profile = await _get_own_profile(db, user)
+    rows = (await db.execute(select(models.CaregiverReview)
+                             .where(models.CaregiverReview.caregiver_profile_id == profile.id)
+                             .order_by(models.CaregiverReview.created_at.desc()))).scalars().all()
+    return [ReviewOut(review_id=r.id, rating=r.rating, comment=r.comment, author_name=r.author_name,
+                      created_at=r.created_at) for r in rows]
 
 
 # ---------- Trabajo activo ----------

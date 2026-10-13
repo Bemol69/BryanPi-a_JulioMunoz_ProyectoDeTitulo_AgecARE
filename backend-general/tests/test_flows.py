@@ -171,6 +171,22 @@ async def test_review_only_after_the_job_ended(client, family):
     assert r.status_code == 409
 
 
+async def test_caregiver_sees_the_reviews_she_received(client, family, maria, javiera):
+    pid = await profile_id_of(client, family, "María Torres")
+    mine = (await client.get(f"{API}/caregiver/reviews", headers=maria)).json()
+    before = len(mine)
+    detail = (await client.get(f"{API}/marketplace/caregivers/{pid}", headers=family)).json()
+    await client.post(f"{API}/marketplace/engagements/{detail['my_engagement_id']}/end", headers=family)
+    await client.post(f"{API}/marketplace/caregivers/{pid}/reviews",
+                      json={"rating": 5, "comment": "Muy cariñosa"}, headers=family)
+    mine = (await client.get(f"{API}/caregiver/reviews", headers=maria)).json()
+    assert len(mine) == before + 1
+    assert mine[0]["comment"] == "Muy cariñosa" and mine[0]["author_name"] == "Familia Muñoz"
+    # cada cuidadora solo ve las suyas; las familias no tienen este endpoint
+    assert all(r["comment"] != "Muy cariñosa" for r in (await client.get(f"{API}/caregiver/reviews", headers=javiera)).json())
+    assert (await client.get(f"{API}/caregiver/reviews", headers=family)).status_code in (403, 404)
+
+
 async def test_never_hired_caregiver_cannot_be_reviewed(client, family):
     pid = await profile_id_of(client, family, "Javiera Soto")
     r = await client.post(f"{API}/marketplace/caregivers/{pid}/reviews", json={"rating": 4}, headers=family)
