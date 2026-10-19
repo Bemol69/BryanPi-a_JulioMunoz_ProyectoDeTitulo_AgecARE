@@ -6,7 +6,7 @@ Generado con `git log` el 19-10-2026 (`python "Fase 2/generar_aporte_equipo.py"`
 
 | Integrante | Commits | Primer commit | Último commit | Áreas donde trabajó (archivos modificados) |
 |---|---|---|---|---|
-| Bryan Piña | 21 | 2026-09-06 | 2026-10-12 | Sitio público (interfaz) (85); API del sitio público (83); API de la Consola de Administración (76); Evidencias académicas (50); Consola de Administración (interfaz) (50); Documentación (22) |
+| Bryan Piña | 22 | 2026-09-06 | 2026-10-19 | Sitio público (interfaz) (85); API del sitio público (83); API de la Consola de Administración (76); Evidencias académicas (54); Consola de Administración (interfaz) (50); Documentación (23) |
 | Julio Muñoz | 10 | 2026-09-15 | 2026-10-13 | Sitio público (interfaz) (27); API del sitio público (15); API de la Consola de Administración (9); Evidencias académicas (6); Consola de Administración (interfaz) (4) |
 
 El conteo de archivos incluye un mismo archivo cada vez que se modifica; no mide el esfuerzo, solo muestra dónde trabajó cada persona.
@@ -36,6 +36,7 @@ El conteo de archivos incluye un mismo archivo cada vez que se modifica; no mide
 | 2026-10-12 | `42cd902` | Solicitud de contratación que la cuidadora acepta, con el chat conectado |
 | 2026-10-12 | `ddf27a3` | Una cuidadora solo puede tener un trabajo activo a la vez |
 | 2026-10-12 | `7891945` | Mejoras de la lista "Mejoras AgeCare": ficha del familiar, chat, revisión de documentos y perfiles |
+| 2026-10-19 | `66f8802` | Informe de avance (rúbrica 2.5), aporte del equipo y enlaces para revisar el proyecto en línea |
 
 ## Commits de Julio Muñoz
 
