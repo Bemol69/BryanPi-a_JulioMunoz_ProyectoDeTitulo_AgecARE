@@ -23,7 +23,43 @@ frontend/           Consola de Administración (React + Vite + TypeScript)
 backend-general/    API pública: registro, pacientes y marketplace de cuidadoras
 webapp/             Sitio público (React + Vite + TypeScript)
 Fase 1/              Evidencias académicas de la Fase 1 (Duoc UC)
+Fase 2/              Evidencias académicas de la Fase 2 (informe de avance, presentación, capturas)
+Registro de cambios/ Cambios del sistema con fecha (JSON y PDF)
 ```
+
+## Revisar el proyecto en línea
+
+El proyecto está publicado y se puede probar sin instalar nada. Cada cambio en la rama `main` se
+despliega automáticamente.
+
+| Qué es | Enlace |
+|---|---|
+| **Sitio público** (familias y cuidadoras) | <https://bryan-pi-a-julio-munoz-proyecto-de-sigma.vercel.app/> |
+| **Consola de Administración** (staff de Wellq Co) | <https://bryan-pi-a-julio-munoz-proyecto-de-omega.vercel.app/login> |
+| Documentación de la API del sitio (Swagger) | <https://agecare-api-general.vercel.app/api/v1/docs> |
+| Documentación de la API de la Consola (Swagger) | <https://bryan-pi-a-julio-munoz-proyecto-de.vercel.app/api/v1/admin/docs> |
+
+**Cuentas de prueba** (son datos de demostración, no reales):
+
+| Dónde | Correo | Contraseña | Perfil |
+|---|---|---|---|
+| Sitio público | familia@demo.cl | Familia123! | Familia, con un adulto mayor ya creado |
+| Sitio público | maria@cuidado.cl | Cuidado123! | Cuidadora con perfil publicado |
+| Consola | admin@wellq.co.uk | Admin123! | Administrador (acceso completo) |
+
+Las demás cuentas de prueba están más abajo, en cada sección de ejecución local.
+
+**Recorrido sugerido (5 minutos):**
+
+1. En el sitio, entrar como **familia**, buscar cuidadoras y abrir el perfil de una: se puede enviar una
+   solicitud de contratación y conversar por el chat.
+2. Entrar como **cuidadora** (en otra ventana o en modo incógnito): en *Solicitudes* aparece la solicitud
+   para aceptarla o rechazarla, y en su perfil se ven sus documentos y las reseñas que recibe.
+3. Entrar a la **Consola** como administrador: en *Marketplace de cuidadoras* se revisan los documentos y se
+   aprueba o suspende un perfil, y en *Fidelización y ranking* se registra una reseña y se ve cómo cambian
+   los puntos y el ranking.
+
+> Los servicios gratuitos se "duermen" cuando no se usan: la primera carga puede tardar unos segundos.
 
 ## Tecnologías utilizadas
 
@@ -190,6 +226,10 @@ Guía completa paso a paso, variables de entorno y solución de problemas: **[DE
 - En Uso Comercial, el periodo "Este mes" puede aparecer en cero porque los
   datos históricos del seed están anclados a agosto de 2026; usa "30 días"
   para ver la serie completa.
-- La carpeta `Fase 1/` contiene las evidencias académicas solicitadas por
-  Duoc UC para la entrega de Fase 1. Los archivos marcados como pendientes en
-  `PENDIENTE.md` deben completarse antes de la fecha de entrega.
+- Las carpetas `Fase 1/` y `Fase 2/` contienen las evidencias académicas
+  solicitadas por Duoc UC. En `Fase 2/` están el informe de avance, la guía de
+  desarrollo, la presentación, las capturas del sistema y el archivo
+  `Aporte del equipo.md`, que muestra el aporte de cada integrante a partir
+  del historial de Git. Los archivos marcados como pendientes en
+  `PENDIENTE.md` de la Fase 1 deben completarse antes de la fecha de entrega.
+- Los cambios del sistema, con su fecha, están en `Registro de cambios/`.
