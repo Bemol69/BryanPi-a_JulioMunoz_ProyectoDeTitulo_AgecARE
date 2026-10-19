@@ -22,6 +22,7 @@ backend/            API de la Consola de Administración (FastAPI + PostgreSQL)
 frontend/           Consola de Administración (React + Vite + TypeScript)
 backend-general/    API pública: registro, pacientes y marketplace de cuidadoras
 webapp/             Sitio público (React + Vite + TypeScript)
+Avances del proyecto/ Cómo partimos y hasta dónde llegamos, etapa por etapa, con pantallazos
 Fase 1/              Evidencias académicas de la Fase 1 (Duoc UC)
 Fase 2/              Evidencias académicas de la Fase 2 (informe de avance, presentación, capturas)
 Registro de cambios/ Cambios del sistema con fecha (JSON y PDF)
@@ -233,3 +234,5 @@ Guía completa paso a paso, variables de entorno y solución de problemas: **[DE
   del historial de Git. Los archivos marcados como pendientes en
   `PENDIENTE.md` de la Fase 1 deben completarse antes de la fecha de entrega.
 - Los cambios del sistema, con su fecha, están en `Registro de cambios/`.
+- La carpeta `Avances del proyecto/` cuenta la evolución del programa desde el inicio hasta hoy, con
+  pantallazos de cada etapa tomados de las versiones reales del código.
