@@ -1,0 +1,34 @@
+erDiagram
+  chat_conversations {
+    uuid id PK
+    uuid caregiver_profile_id FK
+    uuid family_user_id FK
+    datetime created_at
+    datetime last_message_at
+  }
+  chat_messages {
+    uuid id PK
+    uuid conversation_id FK
+    uuid sender_user_id FK
+    varchar body
+    datetime created_at
+  }
+  contact_requests {
+    uuid id PK
+    uuid caregiver_profile_id FK
+    uuid family_user_id FK
+    varchar message
+    datetime created_at
+  }
+  users {
+    uuid id PK
+  }
+  caregiver_profiles {
+    uuid id PK
+  }
+  caregiver_profiles ||--o{ chat_conversations : "caregiver_profile_id"
+  users ||--o{ chat_conversations : "family_user_id"
+  chat_conversations ||--o{ chat_messages : "conversation_id"
+  users ||--o{ chat_messages : "sender_user_id"
+  caregiver_profiles ||--o{ contact_requests : "caregiver_profile_id"
+  users ||--o{ contact_requests : "family_user_id"

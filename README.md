@@ -234,5 +234,7 @@ Guía completa paso a paso, variables de entorno y solución de problemas: **[DE
   del historial de Git. Los archivos marcados como pendientes en
   `PENDIENTE.md` de la Fase 1 deben completarse antes de la fecha de entrega.
 - Los cambios del sistema, con su fecha, están en `Registro de cambios/`.
+- La estructura de las bases de datos (diagramas entidad-relación, diccionario de datos y scripts SQL)
+  está documentada en `Fase 2/Base de datos/`.
 - La carpeta `Avances del proyecto/` cuenta la evolución del programa desde el inicio hasta hoy, con
   pantallazos de cada etapa tomados de las versiones reales del código.

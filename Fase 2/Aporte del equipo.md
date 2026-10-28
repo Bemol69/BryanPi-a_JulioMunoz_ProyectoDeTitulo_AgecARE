@@ -1,12 +1,12 @@
 # Aporte de cada integrante al repositorio
 
-Generado con `git log` el 19-10-2026 (`python "Fase 2/generar_aporte_equipo.py"`). Cada fila sale del historial público del repositorio; no se edita a mano.
+Generado con `git log` el 27-10-2026 (`python "Fase 2/generar_aporte_equipo.py"`). Cada fila sale del historial público del repositorio; no se edita a mano.
 
 ## Resumen
 
 | Integrante | Commits | Primer commit | Último commit | Áreas donde trabajó (archivos modificados) |
 |---|---|---|---|---|
-| Bryan Piña | 23 | 2026-09-06 | 2026-10-19 | Sitio público (interfaz) (85); API del sitio público (83); API de la Consola de Administración (76); Evidencias académicas (57); Consola de Administración (interfaz) (50); Documentación (23) |
+| Bryan Piña | 24 | 2026-09-06 | 2026-10-19 | Sitio público (interfaz) (85); API del sitio público (83); Otros (80); API de la Consola de Administración (76); Evidencias académicas (58); Consola de Administración (interfaz) (50) |
 | Julio Muñoz | 10 | 2026-09-15 | 2026-10-13 | Sitio público (interfaz) (27); API del sitio público (15); API de la Consola de Administración (9); Evidencias académicas (6); Consola de Administración (interfaz) (4) |
 
 El conteo de archivos incluye un mismo archivo cada vez que se modifica; no mide el esfuerzo, solo muestra dónde trabajó cada persona.
@@ -36,6 +36,7 @@ El conteo de archivos incluye un mismo archivo cada vez que se modifica; no mide
 | 2026-10-12 | `42cd902` | Solicitud de contratación que la cuidadora acepta, con el chat conectado |
 | 2026-10-12 | `ddf27a3` | Una cuidadora solo puede tener un trabajo activo a la vez |
 | 2026-10-12 | `7891945` | Mejoras de la lista "Mejoras AgeCare": ficha del familiar, chat, revisión de documentos y perfiles |
+| 2026-10-19 | `6a3c8a8` | Carpeta Avances del proyecto: evolución desde el inicio con pantallazos de cada etapa |
 | 2026-10-19 | `40443dc` | Informe de avance: retroalimentación y secciones de Julio completas |
 | 2026-10-19 | `66f8802` | Informe de avance (rúbrica 2.5), aporte del equipo y enlaces para revisar el proyecto en línea |
 

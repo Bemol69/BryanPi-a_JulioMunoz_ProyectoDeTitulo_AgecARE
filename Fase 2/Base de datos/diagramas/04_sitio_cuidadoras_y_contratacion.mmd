@@ -1,0 +1,77 @@
+erDiagram
+  caregiver_profiles {
+    uuid id PK
+    uuid user_id FK
+    varchar headline
+    text bio
+    int years_experience
+    json specialties
+    json languages
+    json zones
+    json certifications
+    float rating_avg
+    int reviews_count
+    bool is_listed
+    bool is_featured
+    varchar admin_status
+    datetime created_at
+    datetime updated_at
+  }
+  caregiver_documents {
+    uuid id PK
+    uuid caregiver_profile_id FK
+    varchar doc_type
+    varchar file_url
+    varchar original_filename
+    varchar status
+    varchar pending_file_url
+    varchar pending_filename
+    text review_note
+    datetime reviewed_at
+    datetime uploaded_at
+  }
+  caregiver_reviews {
+    uuid id PK
+    uuid caregiver_profile_id FK
+    uuid author_user_id FK
+    varchar author_name
+    int rating
+    text comment
+    datetime created_at
+  }
+  caregiver_engagements {
+    uuid id PK
+    uuid caregiver_profile_id FK
+    uuid family_user_id FK
+    uuid patient_id FK
+    varchar status
+    datetime started_at
+    datetime ended_at
+    uuid review_id
+  }
+  hire_requests {
+    uuid id PK
+    uuid caregiver_profile_id FK
+    uuid family_user_id FK
+    uuid patient_id FK
+    varchar message
+    varchar status
+    datetime created_at
+    datetime responded_at
+  }
+  users {
+    uuid id PK
+  }
+  patients {
+    uuid id PK
+  }
+  users ||--o{ caregiver_profiles : "user_id"
+  caregiver_profiles ||--o{ caregiver_documents : "caregiver_profile_id"
+  caregiver_profiles ||--o{ caregiver_reviews : "caregiver_profile_id"
+  users ||--o{ caregiver_reviews : "author_user_id"
+  caregiver_profiles ||--o{ caregiver_engagements : "caregiver_profile_id"
+  users ||--o{ caregiver_engagements : "family_user_id"
+  patients |o--o{ caregiver_engagements : "patient_id"
+  caregiver_profiles ||--o{ hire_requests : "caregiver_profile_id"
+  users ||--o{ hire_requests : "family_user_id"
+  patients |o--o{ hire_requests : "patient_id"

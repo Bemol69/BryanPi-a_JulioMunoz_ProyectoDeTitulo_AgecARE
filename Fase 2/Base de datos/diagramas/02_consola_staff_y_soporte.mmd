@@ -1,0 +1,78 @@
+erDiagram
+  admin_users {
+    uuid id PK
+    varchar full_name
+    varchar email
+    varchar password_hash
+    varchar role
+    bool is_active
+    bool mfa_enabled
+    varchar mfa_secret
+    int failed_attempts
+    datetime locked_until
+    datetime invitation_expires_at
+    datetime last_login_at
+    datetime created_at
+  }
+  admin_sessions {
+    uuid id PK
+    uuid admin_id FK
+    varchar refresh_hash
+    datetime expires_at
+    datetime revoked_at
+    uuid rotated_to
+    datetime created_at
+  }
+  support_tickets {
+    uuid id PK
+    int number
+    varchar subject
+    text description
+    uuid requester_user_id
+    varchar requester_name
+    varchar requester_email
+    varchar requester_role
+    varchar requester_plan
+    varchar category
+    varchar priority
+    varchar status
+    varchar channel
+    uuid assigned_to FK
+    datetime first_response_at
+    datetime resolved_at
+    int csat_score
+    text csat_comment
+    json requester_context
+    datetime created_at
+    datetime updated_at
+  }
+  support_ticket_replies {
+    uuid id PK
+    uuid ticket_id FK
+    varchar author_type
+    uuid author_id
+    varchar author_name
+    text body
+    bool internal
+    datetime created_at
+  }
+  features {
+    varchar feature_key PK
+    varchar name
+    json applicable_roles
+    bool expected_low
+    varchar note
+    int sort_order
+  }
+  feature_usage_window {
+    uuid id PK
+    int days_window
+    varchar feature_key FK
+    varchar role
+    int users
+    datetime computed_at
+  }
+  admin_users ||--o{ admin_sessions : "admin_id"
+  admin_users |o--o{ support_tickets : "assigned_to"
+  support_tickets ||--o{ support_ticket_replies : "ticket_id"
+  features ||--o{ feature_usage_window : "feature_key"

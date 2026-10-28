@@ -1,0 +1,57 @@
+erDiagram
+  marketplace_caregivers {
+    uuid id PK
+    varchar name
+    varchar email
+    varchar zone
+    json specialties
+    json languages
+    int certifications_count
+    bool certifications_verified
+    float rating_avg
+    int reviews_count
+    bool is_engaged
+    varchar status
+    text status_reason
+    text internal_note
+    datetime submitted_at
+    uuid reviewed_by
+    varchar reviewed_by_name
+  }
+  marketplace_caregiver_documents {
+    uuid id PK
+    uuid caregiver_id FK
+    varchar doc_type
+    varchar file_url
+    varchar original_filename
+    varchar status
+    varchar pending_file_url
+    varchar pending_filename
+    text review_note
+    datetime reviewed_at
+    varchar reviewed_by_name
+    datetime uploaded_at
+  }
+  marketplace_caregiver_reviews {
+    uuid id PK
+    uuid caregiver_id FK
+    varchar family_name
+    int rating
+    text comment
+    varchar job_reference
+    datetime created_at
+  }
+  marketplace_caregiver_points_log {
+    uuid id PK
+    uuid caregiver_id FK
+    int points
+    varchar reason
+    varchar note
+    uuid review_id
+    uuid awarded_by
+    varchar awarded_by_name
+    datetime created_at
+  }
+  marketplace_caregivers ||--o{ marketplace_caregiver_documents : "caregiver_id"
+  marketplace_caregivers ||--o{ marketplace_caregiver_reviews : "caregiver_id"
+  marketplace_caregivers ||--o{ marketplace_caregiver_points_log : "caregiver_id"

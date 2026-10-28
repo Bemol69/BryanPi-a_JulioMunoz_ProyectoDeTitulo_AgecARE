@@ -1,0 +1,46 @@
+erDiagram
+  users {
+    uuid id PK
+    varchar full_name
+    varchar email
+    varchar password_hash
+    varchar phone
+    varchar avatar_url
+    varchar locale
+    varchar account_type
+    int failed_attempts
+    datetime locked_until
+    datetime created_at
+  }
+  refresh_sessions {
+    uuid id PK
+    uuid user_id FK
+    varchar refresh_hash
+    datetime expires_at
+    datetime revoked_at
+    uuid rotated_to
+    datetime created_at
+  }
+  patients {
+    uuid id PK
+    varchar full_name
+    date birth_date
+    varchar sex
+    varchar photo_url
+    json conditions
+    json medication_allergies
+    json food_allergies
+    text notes
+    datetime created_at
+  }
+  patient_members {
+    uuid id PK
+    uuid patient_id FK
+    uuid user_id FK
+    varchar role
+    bool is_owner
+    datetime joined_at
+  }
+  users ||--o{ refresh_sessions : "user_id"
+  patients ||--o{ patient_members : "patient_id"
+  users ||--o{ patient_members : "user_id"
