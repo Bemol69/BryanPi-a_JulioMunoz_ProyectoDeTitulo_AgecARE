@@ -36,7 +36,7 @@ export default function AppNav() {
           {isFamily ? (
             <>
               <NavLink to="/familia" className={({ isActive }) => (isActive ? "active" : "")}>Mis familiares</NavLink>
-              <NavLink to="/marketplace" className={({ isActive }) => (isActive ? "active" : "")}>Buscar cuidadoras</NavLink>
+              <NavLink to="/marketplace" end className={({ isActive }) => (isActive ? "active" : "")}>Buscar cuidadoras</NavLink>
               <NavLink to="/marketplace/productos" className={({ isActive }) => (isActive ? "active" : "")}>Artículos de apoyo</NavLink>
               <NavLink to="/mensajes" className={({ isActive }) => (isActive ? "active" : "")}>Mensajes</NavLink>
             </>

@@ -1,5 +1,37 @@
 [
   {
+    "fecha": "2026-11-05",
+    "titulo": "Rediseño visual profesional del sitio y de la Consola",
+    "resumen": "Todo el front se rehízo con un estilo de «vidrio» sobre un lienzo pastel, inspirado en una plataforma CRM: barra superior en píldora, paneles translúcidos, tarjetas de color e indicadores en píldora.",
+    "areas": [
+      {
+        "nombre": "Diseño",
+        "items": [
+          "Nueva paleta: azul real, negro tinta, amarillo y verde azulado, manteniendo los colores del logo. El modo oscuro automático se quitó para que todo se vea igual en cualquier equipo.",
+          "Paneles de vidrio de esquinas amplias sobre un fondo pastel; botones principales en negro; títulos grandes de cada pantalla.",
+          "Funciona en computador y en celular: en pantallas chicas las pestañas de la barra se deslizan en una sola fila."
+        ]
+      },
+      {
+        "nombre": "Sitio de familias y cuidadoras",
+        "items": [
+          "Barra superior en píldora con la pestaña activa en negro (se corrigió que «Buscar cuidadoras» y «Artículos de apoyo» aparecieran activas a la vez).",
+          "Tarjetas de cuidadoras de color: azul para las destacadas, amarillo para las que están trabajando y blanco para el resto. Los familiares con cuidadora van en verde azulado.",
+          "Indicadores en píldora en los encabezados de Mis familiares, Buscar cuidadoras y Solicitudes. El aviso «Próximamente» quedó como una franja simple."
+        ]
+      },
+      {
+        "nombre": "Consola de administración",
+        "items": [
+          "La barra lateral se reemplazó por una barra superior en píldora con las secciones, el usuario y el cierre de sesión.",
+          "Los indicadores de cada pantalla son tarjetas de color (azul, amarillo, negro y verde azulado).",
+          "Tablas, filtros, pestañas, panel lateral e inicio de sesión con el mismo estilo de vidrio."
+        ]
+      }
+    ],
+    "pasos_manuales": []
+  },
+  {
     "fecha": "2026-10-12",
     "titulo": "La cuidadora ve las reseñas que le han dejado",
     "resumen": "En su perfil profesional hay una sección \"Mis reseñas\" con la opinión de cada familia.",

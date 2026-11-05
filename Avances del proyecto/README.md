@@ -34,6 +34,7 @@ El estado actual se puede revisar en línea:
 | 6 oct | Publicación en Vercel | Las cuatro piezas quedan publicadas en Vercel con la base de datos en Supabase | Bryan | [`b56e06c`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/b56e06c), [`058a9a8`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/058a9a8) |
 | 12 oct | 5 · Mejoras de la Fase 2 | Ficha del familiar, chat, solicitudes de contratación, revisión de documentos y reseñas, entre otras | Bryan y Julio | [`7891945`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/7891945), [`ddf27a3`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/ddf27a3), [`42cd902`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/42cd902), [`4f569b7`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/4f569b7), [`e9c8b4e`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/e9c8b4e), [`66211ad`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/66211ad), [`7068020`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/7068020), [`7431901`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/7431901) |
 | 12–19 oct | Evidencias de Fase 2 | Informe de avance, guías, presentación, capturas y enlaces para revisar el proyecto | Bryan y Julio | [`8f2039b`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/8f2039b), [`86b214d`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/86b214d), [`6e98f25`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/6e98f25), [`66f8802`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/66f8802), [`40443dc`](https://github.com/Bemol69/BryanPi-a_JulioMunoz_ProyectoDeTitulo_AgecARE/commit/40443dc) |
+| 5 nov | 6 · Rediseño profesional | Nuevo estilo de «vidrio» inspirado en una plataforma CRM, en el sitio y en la Consola | Bryan | _(ver el historial de `main`)_ |
 
 El detalle de cada cambio del sistema, con su fecha, está en [`Registro de cambios/`](../Registro%20de%20cambios/).
 El aporte de cada integrante está en [`Fase 2/Aporte del equipo.md`](../Fase%202/Aporte%20del%20equipo.md).
@@ -151,12 +152,30 @@ Es la etapa con más cambios. Los principales, todos registrados con fecha en el
 
 ---
 
+## Etapa 6 · Rediseño visual profesional (5 de noviembre)
+
+Se rehízo el aspecto de todo el front con un estilo de **«vidrio» sobre un lienzo pastel**, inspirado en una
+plataforma CRM de referencia: paneles translúcidos de esquinas amplias, barra superior en píldora con la pestaña
+activa en negro, botones en tinta negra, **tarjetas de color** (azul, amarillo, verde azulado y negro) e
+indicadores en píldora en los encabezados. Los colores del logo se mantienen y todo funciona en computador y en
+celular. En la Consola, la barra lateral se reemplazó por una barra superior.
+
+<table>
+<tr><td align="center" valign="top"><a href="capturas/06_2026-11-05_rediseno_profesional/sitio_01_inicio.png"><img src="capturas/06_2026-11-05_rediseno_profesional/sitio_01_inicio.png" width="440" alt="Sitio público: página de inicio"></a><br><sub>Sitio público: página de inicio</sub></td><td align="center" valign="top"><a href="capturas/06_2026-11-05_rediseno_profesional/sitio_02_familia_inicio.png"><img src="capturas/06_2026-11-05_rediseno_profesional/sitio_02_familia_inicio.png" width="440" alt="Familia: Mis familiares, con indicadores"></a><br><sub>Familia: Mis familiares, con indicadores</sub></td></tr>
+<tr><td align="center" valign="top"><a href="capturas/06_2026-11-05_rediseno_profesional/sitio_03_familia_buscar_cuidadoras.png"><img src="capturas/06_2026-11-05_rediseno_profesional/sitio_03_familia_buscar_cuidadoras.png" width="440" alt="Familia: tarjetas de color (azul, amarillo y blanco)"></a><br><sub>Familia: tarjetas de color (azul, amarillo y blanco)</sub></td><td align="center" valign="top"><a href="capturas/06_2026-11-05_rediseno_profesional/sitio_04_chat.png"><img src="capturas/06_2026-11-05_rediseno_profesional/sitio_04_chat.png" width="440" alt="Chat entre familia y cuidadora"></a><br><sub>Chat entre familia y cuidadora</sub></td></tr>
+<tr><td align="center" valign="top"><a href="capturas/06_2026-11-05_rediseno_profesional/sitio_05_cuidadora_perfil_profesional.png"><img src="capturas/06_2026-11-05_rediseno_profesional/sitio_05_cuidadora_perfil_profesional.png" width="440" alt="Cuidadora: perfil profesional"></a><br><sub>Cuidadora: perfil profesional</sub></td><td align="center" valign="top"><a href="capturas/06_2026-11-05_rediseno_profesional/sitio_06_cuidadora_solicitudes.png"><img src="capturas/06_2026-11-05_rediseno_profesional/sitio_06_cuidadora_solicitudes.png" width="440" alt="Cuidadora: solicitudes de contratación"></a><br><sub>Cuidadora: solicitudes de contratación</sub></td></tr>
+<tr><td align="center" valign="top"><a href="capturas/06_2026-11-05_rediseno_profesional/consola_01_marketplace_cuidadoras.png"><img src="capturas/06_2026-11-05_rediseno_profesional/consola_01_marketplace_cuidadoras.png" width="440" alt="Consola: marketplace de cuidadoras"></a><br><sub>Consola: marketplace de cuidadoras</sub></td><td align="center" valign="top"><a href="capturas/06_2026-11-05_rediseno_profesional/consola_02_fidelizacion_ranking.png"><img src="capturas/06_2026-11-05_rediseno_profesional/consola_02_fidelizacion_ranking.png" width="440" alt="Consola: fidelización y ranking"></a><br><sub>Consola: fidelización y ranking</sub></td></tr>
+<tr><td align="center" valign="top"><a href="capturas/06_2026-11-05_rediseno_profesional/consola_03_moderacion.png"><img src="capturas/06_2026-11-05_rediseno_profesional/consola_03_moderacion.png" width="440" alt="Consola: moderación"></a><br><sub>Consola: moderación</sub></td><td align="center" valign="top"><a href="capturas/06_2026-11-05_rediseno_profesional/consola_04_revision_de_documentos.png"><img src="capturas/06_2026-11-05_rediseno_profesional/consola_04_revision_de_documentos.png" width="440" alt="Consola: revisión de documentos"></a><br><sub>Consola: revisión de documentos</sub></td></tr>
+</table>
+
+---
+
 ## Qué cambió de la primera versión a hoy
 
 | Aspecto | 14 de septiembre | Hoy |
 |---|---|---|
 | Publicación | Solo en computadores del equipo (Docker) | Publicado en Vercel, con base de datos en Supabase y despliegue automático |
-| Imagen | Primera versión funcional | Rediseño completo con la paleta del logo |
+| Imagen | Primera versión funcional, en verde azulado | Estilo profesional de vidrio con tarjetas de color y barra superior, en computador y celular |
 | Contratación | Contacto directo | Solicitud que la cuidadora acepta o rechaza, con chat |
 | Perfiles de cuidadoras | Aprobación del perfil | Aprobación del perfil y de sus documentos por el equipo, con suspensión y reactivación |
 | Reseñas | Registro de reseñas en la Consola | Reseñas del sitio solo al terminar un trabajo, visibles para la cuidadora |

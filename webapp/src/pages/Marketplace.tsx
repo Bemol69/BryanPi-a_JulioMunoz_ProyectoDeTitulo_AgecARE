@@ -2,12 +2,12 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { MarketplaceApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
-import { Avatar, Chip, EmptyState, ErrorBanner, Spinner, Stars } from "../components/ui";
+import { Avatar, Chip, EmptyState, ErrorBanner, Spinner, StatChip, Stars } from "../components/ui";
 import type { CaregiverCard } from "../api/types";
 
 function CaregiverTile({ c }: { c: CaregiverCard }) {
   return (
-    <Link to={`/marketplace/cuidadoras/${c.profile_id}`} className={`cg-card${c.is_engaged ? " working" : ""}`}>
+    <Link to={`/marketplace/cuidadoras/${c.profile_id}`} className={`cg-card${c.is_engaged ? " working" : c.is_featured ? " featured" : ""}`}>
       <div className="cg-card-banner" />
       <div className="cg-card-top">
         <div className="cg-avatar ring"><Avatar name={c.full_name} photoUrl={c.photo_url} /></div>
@@ -50,7 +50,13 @@ export default function Marketplace() {
           <h1>Buscar cuidadoras</h1>
           <p>Cuidadoras verificadas por el equipo de AgeCare. Las que están en servicio aparecen marcadas.</p>
         </div>
-        {list.data && <span className="result-count">{list.data.total} {list.data.total === 1 ? "cuidadora" : "cuidadoras"}</span>}
+        {list.data && (
+          <div className="head-chips">
+            <StatChip icon="👥" label="Cuidadoras" value={list.data.total} tone="ink" />
+            <StatChip icon="✓" label="Disponibles" value={list.data.items.filter((c) => !c.is_engaged).length} tone="blue" />
+            <StatChip icon="●" label="Trabajando" value={list.data.items.filter((c) => c.is_engaged).length} tone="yellow" />
+          </div>
+        )}
       </div>
 
       <div className="filters-row">

@@ -2,7 +2,7 @@ import { useRef, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { PatientsApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
-import { Avatar, EmptyState, ErrorBanner, Modal, Spinner } from "../components/ui";
+import { Avatar, EmptyState, ErrorBanner, Modal, Spinner, StatChip } from "../components/ui";
 
 const PHOTO_MAX_BYTES = 4 * 1024 * 1024;
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -18,7 +18,16 @@ export default function FamilyHome() {
           <h1>Mis familiares</h1>
           <p>Los adultos mayores que tienes a tu cargo en AgeCare.</p>
         </div>
-        <Link to="/marketplace" className="btn primary">Buscar cuidadoras</Link>
+        <div className="head-chips">
+          {patients.data && (
+            <>
+              <StatChip icon="👵" label="Familiares" value={patients.data.items.length} tone="ink" />
+              <StatChip icon="✓" label="Con cuidadora" value={patients.data.items.filter((p) => p.caregiver_names.length > 0).length} tone="teal" />
+              <StatChip icon="○" label="Sin cuidadora" value={patients.data.items.filter((p) => p.caregiver_names.length === 0).length} tone="yellow" />
+            </>
+          )}
+          <Link to="/marketplace" className="btn primary">Buscar cuidadoras</Link>
+        </div>
       </div>
 
       {patients.error && <ErrorBanner message={patients.error} />}
@@ -52,13 +61,9 @@ export default function FamilyHome() {
         <EmptyState label="Aún no has creado ningún perfil. Empieza creando el de tu ser querido." />
       )}
 
-      <div className="card" style={{ marginTop: 28 }}>
-        <h3 style={{ margin: "0 0 8px" }}>Próximamente</h3>
-        <p style={{ fontSize: 13, color: "var(--ac-text-secondary)", margin: 0 }}>
-          El semáforo de bienestar, las alertas, el plan de medicamentos y el chat de coordinación
-          son parte de otros módulos del proyecto AgeCare, fuera del alcance de este prototipo
-          (marketplace y fidelización).
-        </p>
+      <div className="soon-strip">
+        <span className="soon-tag">Próximamente</span>
+        <span>Semáforo de bienestar, alertas y plan de medicamentos de tus familiares.</span>
       </div>
 
       {showCreate && <CreatePatientModal onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); patients.reload(); }} />}

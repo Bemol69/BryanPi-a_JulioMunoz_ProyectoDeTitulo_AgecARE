@@ -3,14 +3,14 @@
    crema (fondo del logo). Los nombres --ac-* se mantienen entre consola y sitio. */
 :root {
   /* Marca: índigo del logo */
-  --ac-brand-900: #0E1347;
-  --ac-brand-800: #172066;
-  --ac-brand-700: #1E2D96;
-  --ac-brand-600: #3649C8;
-  --ac-brand-500: #5468E0;
-  --ac-brand-400: #7C8CEB;
-  --ac-brand-100: #E4E8FC;
-  --ac-brand-50: #F2F4FF;
+  --ac-brand-900: #0B1238;
+  --ac-brand-800: #14205F;
+  --ac-brand-700: #1F3AD1;
+  --ac-brand-600: #2D4EF5;
+  --ac-brand-500: #4F6CFF;
+  --ac-brand-400: #86A0FF;
+  --ac-brand-100: #E1E8FF;
+  --ac-brand-50: #F0F4FF;
   /* Lavanda del logo */
   --ac-violet-700: #5B45C9;
   --ac-violet-600: #7C66EE;
@@ -18,9 +18,9 @@
   --ac-violet-100: #EDE8FF;
   /* Sol del logo */
   --ac-gold-700: #8A6300;
-  --ac-gold-500: #FFC700;
-  --ac-gold-400: #FFD84D;
-  --ac-gold-100: #FFF1BF;
+  --ac-gold-500: #FFD234;
+  --ac-gold-400: #FFDD5C;
+  --ac-gold-100: #FFF3C4;
   /* Naranja (severidad "seria") */
   --ac-orange-700: #A8480F;
   --ac-orange-100: #FDE6D3;
@@ -32,13 +32,13 @@
   --ac-navy-100: #DDE1F7;
 
   /* Neutros: crema del logo con tinte índigo */
-  --ac-surface-bg: #FDFBF3;
+  --ac-surface-bg: #EEF2FB;
   --ac-surface-card: #FFFFFF;
-  --ac-surface-sunken: #F4F1E8;
-  --ac-border: #E7E4F0;
-  --ac-text-primary: #12164A;
-  --ac-text-secondary: #4F5580;
-  --ac-text-tertiary: #7B81A6;
+  --ac-surface-sunken: #EAEEF8;
+  --ac-border: #DCE2F0;
+  --ac-text-primary: #0E1230;
+  --ac-text-secondary: #474E70;
+  --ac-text-tertiary: #7A82A2;
 
   /* Semánticos: fuerte / tinte / texto-sobre-tinte */
   --ac-ok-700: #1F6B42;  --ac-ok-600: #247A4A;   --ac-ok-100: #DFF5E7;
@@ -47,10 +47,25 @@
   --ac-info-700: #245B95; --ac-info-600: #2F6FB3; --ac-info-100: #DDE9F7;
 
   /* Degradados de marca */
-  --ac-grad-brand: linear-gradient(120deg, #3649C8 0%, #7C66EE 62%, #B3A1FF 100%);
-  --ac-grad-sun: linear-gradient(120deg, #FFC700 0%, #FF9E5E 100%);
-  --ac-grad-ink: linear-gradient(160deg, #0A0F3D 0%, #172066 55%, #2A2F9E 100%);
-  --ac-grad-page: linear-gradient(135deg, #3649C8 0%, #7C66EE 45%, #B3A1FF 72%, #FFC700 118%);
+  --ac-grad-brand: linear-gradient(135deg, #2D4EF5 0%, #4F6CFF 100%);
+  --ac-grad-sun: linear-gradient(135deg, #FFD234 0%, #FFB547 100%);
+  --ac-grad-ink: linear-gradient(160deg, #0B0E1C 0%, #151B3A 100%);
+  --ac-grad-page: linear-gradient(135deg, #EEF2FB 0%, #EFEAFD 50%, #E3F4EE 100%);
+
+  /* Rediseño «vidrio»: tinta negra, verde azulado y superficies translúcidas */
+  --ac-ink: #0B0E1C;
+  --ac-ink-2: #1B2038;
+  --ac-teal-600: #3D8FA6;
+  --ac-teal-100: #DCEEF3;
+  --ac-mint-100: #DDF3EA;
+  --ac-glass: rgba(255, 255, 255, .62);
+  --ac-glass-strong: rgba(255, 255, 255, .82);
+  --ac-glass-border: rgba(255, 255, 255, .95);
+  --ac-canvas:
+    radial-gradient(1100px 620px at 6% -12%, #D9E4FF 0%, transparent 62%),
+    radial-gradient(900px 620px at 100% 8%, #EEE8FF 0%, transparent 60%),
+    radial-gradient(1000px 700px at 72% 108%, #D9F2E7 0%, transparent 62%),
+    #EEF2FB;
 
   /* Tipografía */
   --ac-font: "Plus Jakarta Sans", "Segoe UI", Roboto, -apple-system, sans-serif;
@@ -60,59 +75,17 @@
   --ac-space-5: 20px; --ac-space-6: 24px; --ac-space-8: 32px; --ac-space-12: 48px;
 
   /* Forma */
-  --ac-radius-s: 8px; --ac-radius-m: 12px; --ac-radius-l: 14px;
-  --ac-radius-xl: 20px; --ac-radius-2xl: 28px; --ac-radius-full: 999px;
+  --ac-radius-s: 8px; --ac-radius-m: 12px; --ac-radius-l: 16px;
+  --ac-radius-xl: 24px; --ac-radius-2xl: 32px; --ac-radius-full: 999px;
 
   /* Elevación: sombras suaves teñidas de índigo */
-  --ac-shadow-card: 0 1px 2px rgba(30, 45, 150, .05), 0 10px 28px -12px rgba(30, 45, 150, .16);
-  --ac-shadow-lift: 0 2px 4px rgba(30, 45, 150, .06), 0 22px 44px -16px rgba(54, 73, 200, .30);
-  --ac-shadow-glow: 0 10px 28px -6px rgba(54, 73, 200, .55);
+  --ac-shadow-card: 0 1px 0 rgba(255,255,255,.9) inset, 0 20px 40px -26px rgba(37, 58, 140, .30);
+  --ac-shadow-lift: 0 1px 0 rgba(255,255,255,.9) inset, 0 28px 50px -22px rgba(37, 58, 140, .38);
+  --ac-shadow-glow: 0 12px 26px -10px rgba(11, 14, 28, .55);
   --ac-shadow-sheet: 0 24px 60px -12px rgba(18, 26, 92, .35);
   --ac-shadow-dropdown: 0 12px 32px -10px rgba(18, 26, 92, .22);
 
   --ac-ease: cubic-bezier(.22, 1, .36, 1);
-}
-
-/* Modo oscuro: sigue el sistema salvo elección explícita (data-theme) */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --ac-surface-bg: #0A0E2E;
-    --ac-surface-card: #131947;
-    --ac-surface-sunken: #0F1439;
-    --ac-border: #252D6B;
-    --ac-text-primary: #F4F2FF;
-    --ac-text-secondary: #B6BBE0;
-    --ac-text-tertiary: #8087B5;
-    --ac-brand-600: #5468E0; --ac-brand-700: #A5B1F7; --ac-brand-100: #1F2766; --ac-brand-50: #171E58;
-    --ac-violet-700: #CDBFFF; --ac-violet-100: #2A2370;
-    --ac-gold-700: #FFD84D; --ac-gold-100: #3A3110;
-    --ac-orange-700: #FFB27D; --ac-orange-100: #3A2214;
-    --ac-ok-600: #5CC08A; --ac-ok-700: #8fdcae; --ac-ok-100: #163826;
-    --ac-warn-500: #F0B24A; --ac-warn-700: #f6cd85; --ac-warn-100: #3a2b0f;
-    --ac-attention-600: #F0776B; --ac-attention-700: #f6a89f; --ac-attention-100: #3a1714;
-    --ac-info-600: #6ea8e0; --ac-info-700: #a0c7ee; --ac-info-100: #14263a;
-    --ac-shadow-card: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px -12px rgba(0,0,0,.5);
-    --ac-shadow-lift: 0 22px 44px -16px rgba(0,0,0,.6);
-  }
-}
-:root[data-theme="dark"] {
-  --ac-surface-bg: #0A0E2E;
-  --ac-surface-card: #131947;
-  --ac-surface-sunken: #0F1439;
-  --ac-border: #252D6B;
-  --ac-text-primary: #F4F2FF;
-  --ac-text-secondary: #B6BBE0;
-  --ac-text-tertiary: #8087B5;
-  --ac-brand-600: #5468E0; --ac-brand-700: #A5B1F7; --ac-brand-100: #1F2766; --ac-brand-50: #171E58;
-  --ac-violet-700: #CDBFFF; --ac-violet-100: #2A2370;
-  --ac-gold-700: #FFD84D; --ac-gold-100: #3A3110;
-  --ac-orange-700: #FFB27D; --ac-orange-100: #3A2214;
-  --ac-ok-600: #5CC08A; --ac-ok-700: #8fdcae; --ac-ok-100: #163826;
-  --ac-warn-500: #F0B24A; --ac-warn-700: #f6cd85; --ac-warn-100: #3a2b0f;
-  --ac-attention-600: #F0776B; --ac-attention-700: #f6a89f; --ac-attention-100: #3a1714;
-  --ac-info-600: #6ea8e0; --ac-info-700: #a0c7ee; --ac-info-100: #14263a;
-  --ac-shadow-card: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px -12px rgba(0,0,0,.5);
-  --ac-shadow-lift: 0 22px 44px -16px rgba(0,0,0,.6);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -120,7 +93,7 @@ html { scroll-behavior: smooth; }
 html, body, #root { min-height: 100%; }
 body {
   font-family: var(--ac-font);
-  background: var(--ac-surface-bg); color: var(--ac-text-primary); font-size: 14px;
+  background: var(--ac-canvas); background-attachment: fixed; color: var(--ac-text-primary); font-size: 14px;
   -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
 }
 button, input, select, textarea { font-family: inherit; font-size: inherit; }

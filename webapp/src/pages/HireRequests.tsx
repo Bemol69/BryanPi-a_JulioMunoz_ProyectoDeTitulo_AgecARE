@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CaregiverApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
-import { Chip, EmptyState, ErrorBanner, OkBanner, Spinner, fmtDate } from "../components/ui";
+import { Chip, EmptyState, ErrorBanner, OkBanner, Spinner, StatChip, fmtDate } from "../components/ui";
 import type { HireRequestStatus, ReceivedHireRequest } from "../api/types";
 
 const STATUS_LABEL: Record<HireRequestStatus, { text: string; cls: string }> = {
@@ -91,7 +91,11 @@ export default function HireRequests() {
           <h1>Solicitudes de contratación</h1>
           <p>Familias que quieren contratarte. El trabajo comienza cuando aceptas la solicitud.</p>
         </div>
-        <Link to="/mensajes" className="btn ghost">💬 Mis mensajes</Link>
+        <div className="head-chips">
+          <StatChip icon="📩" label="Por responder" value={items.filter((r) => r.status === "pending").length} tone="yellow" />
+          <StatChip icon="✓" label="Aceptadas" value={items.filter((r) => r.status === "accepted").length} tone="blue" />
+          <Link to="/mensajes" className="btn ghost">💬 Mis mensajes</Link>
+        </div>
       </div>
 
       {working.data && (

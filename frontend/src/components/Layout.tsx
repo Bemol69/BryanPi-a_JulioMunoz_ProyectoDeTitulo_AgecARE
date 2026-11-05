@@ -6,29 +6,29 @@ const ROLE_LABEL: Record<string, string> = {
   editor: "Editor de contenido", moderator: "Moderador",
 };
 
-const NAV: { group: string; hidden?: boolean; items: { to: string; icon: string; label: string; module: string; badge?: string }[] }[] = [
+const NAV: { group: string; hidden?: boolean; items: { to: string; icon: string; label: string; short: string; module: string; badge?: string }[] }[] = [
   {
     group: "Marketing y fidelización",
     items: [
-      { to: "/marketplace", icon: "🧑‍⚕️", label: "Marketplace de cuidadoras", module: "marketplace" },
-      { to: "/fidelizacion", icon: "🏆", label: "Fidelización y ranking", module: "marketing", badge: "nuevo" },
+      { to: "/marketplace", icon: "🧑‍⚕️", label: "Marketplace de cuidadoras", short: "Marketplace", module: "marketplace" },
+      { to: "/fidelizacion", icon: "🏆", label: "Fidelización y ranking", short: "Fidelización", module: "marketing", badge: "nuevo" },
     ],
   },
   {
     group: "Analítica",
     hidden: true, // módulos no visibles por ahora (se conservan las rutas y el código)
     items: [
-      { to: "/comercial", icon: "📈", label: "Uso comercial", module: "metrics" },
-      { to: "/operativo", icon: "🖥️", label: "Estado operativo", module: "ops" },
-      { to: "/usuarios", icon: "👥", label: "Usuarios y soporte", module: "support" },
-      { to: "/funcional", icon: "🧩", label: "Uso por funcionalidad", module: "metrics" },
+      { to: "/comercial", icon: "📈", label: "Uso comercial", short: "Uso comercial", module: "metrics" },
+      { to: "/operativo", icon: "🖥️", label: "Estado operativo", short: "Operativo", module: "ops" },
+      { to: "/usuarios", icon: "👥", label: "Usuarios y soporte", short: "Soporte", module: "support" },
+      { to: "/funcional", icon: "🧩", label: "Uso por funcionalidad", short: "Funcionalidades", module: "metrics" },
     ],
   },
   {
     group: "Operación",
     items: [
-      { to: "/contenido", icon: "📰", label: "Curación de contenido", module: "content" },
-      { to: "/moderacion", icon: "🛡️", label: "Moderación", module: "moderation" },
+      { to: "/contenido", icon: "📰", label: "Curación de contenido", short: "Contenido", module: "content" },
+      { to: "/moderacion", icon: "🛡️", label: "Moderación", short: "Moderación", module: "moderation" },
     ],
   },
 ];
@@ -49,56 +49,44 @@ export default function Layout() {
   const location = useLocation();
   const meta = TITLES[location.pathname] ?? { title: "AgeCare", crumb: "" };
 
+  const items = NAV.filter((group) => !group.hidden).flatMap((group) => group.items.filter((i) => can(i.module)));
+
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="logo">
-          <div className="logo-mark"><img src="/logo-mark.png" alt="AgeCare" /></div>
-          <div>
-            <div className="logo-name">AgeCare</div>
-            <div className="logo-sub">Consola de administración</div>
+    <div className="c-shell">
+      <header className="c-nav">
+        <div className="c-nav-inner">
+          <NavLink to="/marketplace" className="c-brand">
+            <span className="c-brand-mark"><img src="/logo-mark.png" alt="AgeCare" /></span>
+            <span className="c-brand-text"><b>AgeCare</b><i>Consola</i></span>
+          </NavLink>
+          <nav className="c-tabs">
+            {items.map((item) => (
+              <NavLink key={item.to} to={item.to} className={({ isActive }) => `c-tab${isActive ? " active" : ""}`}>
+                {item.short}
+                {item.badge && <span className="c-tab-new">{item.badge}</span>}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="c-user">
+            <span className="c-env">{import.meta.env.PROD ? "Producción" : "Local"} · datos de prueba</span>
+            <div className="c-avatar">{me ? initials(me.full_name) : "?"}</div>
+            <div className="c-user-text">
+              <b>{me?.full_name}</b>
+              <i>{me ? ROLE_LABEL[me.role] ?? me.role : ""}</i>
+            </div>
+            <button className="c-logout" title="Cerrar sesión" onClick={logout}>⏻</button>
           </div>
         </div>
-        <nav className="nav">
-          {NAV.filter((group) => !group.hidden).map((group) => {
-            const visible = group.items.filter((i) => can(i.module));
-            if (!visible.length) return null;
-            return (
-              <div key={group.group}>
-                <div className="nav-group">{group.group}</div>
-                {visible.map((item) => (
-                  <NavLink key={item.to} to={item.to} className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}>
-                    <span className="ico">{item.icon}</span>
-                    {item.label}
-                    {item.badge && <span className="new">{item.badge}</span>}
-                  </NavLink>
-                ))}
-              </div>
-            );
-          })}
-        </nav>
-        <div className="sidebar-foot">
-          <div className="sf-avatar">{me ? initials(me.full_name) : "?"}</div>
+      </header>
+      <main className="c-main">
+        <div className="c-head">
           <div>
-            <div className="sf-name">{me?.full_name}</div>
-            <div className="sf-role">{me ? ROLE_LABEL[me.role] ?? me.role : ""} · Wellq Co</div>
+            <div className="c-crumb">{meta.crumb}</div>
+            <h1>{meta.title}</h1>
           </div>
-          <button className="sf-logout" title="Cerrar sesión" onClick={logout}>⏻</button>
         </div>
-      </aside>
-      <div className="main">
-        <header className="topbar">
-          <div>
-            <div className="tb-title">{meta.title}</div>
-            <div className="tb-crumb">{meta.crumb}</div>
-          </div>
-          <div className="tb-spacer" />
-          <span className="env-badge">{import.meta.env.PROD ? "Producción" : "Entorno local"} · datos de prueba</span>
-        </header>
-        <main className="content">
-          <Outlet />
-        </main>
-      </div>
+        <Outlet />
+      </main>
     </div>
   );
 }

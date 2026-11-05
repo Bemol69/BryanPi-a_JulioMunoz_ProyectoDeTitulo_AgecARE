@@ -1,0 +1,224 @@
+/* Rediseño «vidrio» del sitio público: lienzo pastel, paneles translúcidos de esquinas amplias, barra en píldora con
+   la pestaña activa en negro, botones en tinta negra y tarjetas de color sólido (azul, amarillo y blanco).
+   Va al final de la cascada: sobrescribe lo de site.css con los mismos nombres de clase. */
+
+body { background: var(--ac-canvas); background-attachment: fixed; color: var(--ac-text-primary); }
+
+/* ---------- Marco de las páginas públicas ---------- */
+.site-bg { background: var(--ac-canvas); background-attachment: fixed; padding: 20px; }
+.site-frame {
+  background: rgba(255, 255, 255, .5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4); backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid var(--ac-glass-border); border-radius: 44px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .9) inset, 0 50px 90px -60px rgba(37, 58, 140, .45);
+}
+
+/* ---------- Barras de navegación en píldora ---------- */
+.pub-nav-inner, .app-nav-inner {
+  background: var(--ac-glass-strong); border: 1px solid var(--ac-glass-border);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6);
+  box-shadow: var(--ac-shadow-card);
+}
+.pub-links a, .app-tabs a { color: var(--ac-text-secondary); border-radius: 999px; }
+.pub-links a:hover, .app-tabs a:hover:not(.active) { background: rgba(11, 14, 28, .06); color: var(--ac-ink); }
+.app-tabs a.active { background: var(--ac-ink); color: #fff; box-shadow: 0 10px 20px -10px rgba(11, 14, 28, .65); }
+.app-avatar { background: var(--ac-ink); }
+.nav-badge { background: var(--ac-gold-500); color: #2B2100; }
+
+/* ---------- Botones ---------- */
+.btn.primary { background: var(--ac-ink); color: #fff; box-shadow: 0 14px 26px -14px rgba(11, 14, 28, .7); border-color: transparent; }
+.btn.primary:hover:not(:disabled) { background: var(--ac-ink-2); filter: none; box-shadow: 0 18px 30px -14px rgba(11, 14, 28, .75); }
+.btn.ghost { background: var(--ac-glass) !important; border-color: rgba(11, 14, 28, .14); color: var(--ac-ink); }
+.btn.ghost:hover:not(:disabled) { background: #fff !important; border-color: rgba(11, 14, 28, .3); }
+.btn.link { color: var(--ac-brand-700); }
+.btn:not(.primary):not(.danger):not(.ghost):not(.gold):not(.light):not(.dark):not(.link):not(.outline-light) {
+  background: var(--ac-glass-strong); border: 1px solid rgba(11, 14, 28, .12); color: var(--ac-ink);
+}
+.btn:not(.primary):not(.danger):not(.ghost):not(.gold):not(.light):not(.dark):not(.link):not(.outline-light):hover:not(:disabled) {
+  background: #fff; border-color: rgba(11, 14, 28, .28);
+}
+.btn.gold { background: var(--ac-gold-500) !important; color: #2B2100 !important; box-shadow: 0 12px 22px -12px rgba(190, 140, 0, .7); }
+
+/* ---------- Paneles de vidrio ---------- */
+.card, .hire-card, .patient-card, .dashed-card {
+  background: var(--ac-glass); border: 1px solid var(--ac-glass-border); border-radius: 28px;
+  -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5);
+  box-shadow: var(--ac-shadow-card);
+}
+.card { padding: 26px; }
+.card > h3 { font-size: 19px; letter-spacing: -.02em; }
+.chat-list, .chat-thread, .modal {
+  background: var(--ac-glass-strong); border: 1px solid var(--ac-glass-border); border-radius: 28px;
+  -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5);
+}
+.modal { border-radius: 32px; box-shadow: 0 50px 90px -40px rgba(11, 14, 28, .55); }
+.modal-backdrop { background: rgba(11, 14, 28, .35); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+
+/* ---------- Encabezado de página: título grande y etiquetas ---------- */
+.page { max-width: 1240px; padding-top: 32px; }
+.page-head h1 { font-size: 42px; font-weight: 800; letter-spacing: -.045em; line-height: 1.05; }
+.page-head p { font-size: 15px; max-width: 640px; margin-top: 8px; }
+.result-count {
+  background: var(--ac-ink); color: #fff; border-radius: 999px; padding: 8px 16px; font-size: 12.5px; font-weight: 700;
+}
+
+/* ---------- Filtros ---------- */
+.filters-row {
+  background: var(--ac-glass); border: 1px solid var(--ac-glass-border); border-radius: 999px; padding: 8px;
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); box-shadow: var(--ac-shadow-card);
+}
+.filters-row input, .filters-row select { background: rgba(255, 255, 255, .8); border-radius: 999px; }
+.field input, .field select, .field textarea { background: rgba(255, 255, 255, .85); border-radius: 18px; }
+
+/* ---------- Tarjetas de cuidadoras: azul (destacada), amarillo (trabajando) o blanco ---------- */
+.cg-grid { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 20px; }
+.cg-card {
+  position: relative; padding: 22px; gap: 8px; border-radius: 30px; color: var(--ac-text-primary);
+  background: var(--ac-glass-strong); border: 1px solid var(--ac-glass-border);
+  box-shadow: var(--ac-shadow-card);
+  transition: transform .3s var(--ac-ease), box-shadow .3s var(--ac-ease);
+}
+.cg-card:hover { transform: translateY(-6px); box-shadow: var(--ac-shadow-lift); }
+.cg-card-banner { display: none; }
+.cg-card > *:not(.cg-card-banner) { margin-left: 0; margin-right: 0; }
+.cg-card-top { margin-top: 0; align-items: flex-start; }
+.cg-avatar.ring { width: 66px; height: 66px; box-shadow: 0 0 0 4px rgba(255, 255, 255, .9), 0 12px 24px -10px rgba(37, 58, 140, .45); }
+.cg-card .name { font-size: 20px; letter-spacing: -.03em; margin-top: 10px; }
+.cg-card .headline { font-size: 13px; }
+.exp-pill { background: rgba(11, 14, 28, .07); color: var(--ac-ink); }
+.cg-card-foot {
+  margin-top: 12px; padding-top: 14px; border-top: 1px solid rgba(11, 14, 28, .08);
+  align-items: center; font-size: 13px; font-weight: 700; color: var(--ac-ink); gap: 12px;
+}
+.cg-card-foot span {
+  width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--ac-ink); color: #fff; font-size: 15px;
+}
+.cg-card .chip.brand { background: var(--ac-brand-100); color: var(--ac-brand-700); }
+.cg-card .chip.neutral { background: rgba(11, 14, 28, .06); color: var(--ac-text-secondary); }
+
+.cg-card.featured {
+  background: linear-gradient(150deg, #3358F7 0%, #2342D6 100%); color: #fff; border-color: rgba(255, 255, 255, .25);
+  box-shadow: 0 30px 50px -28px rgba(45, 78, 245, .8);
+}
+.cg-card.featured .headline, .cg-card.featured .muted, .cg-card.featured .cg-rating { color: rgba(255, 255, 255, .85); }
+.cg-card.featured .exp-pill { background: rgba(255, 255, 255, .2); color: #fff; }
+.cg-card.featured .chip.brand, .cg-card.featured .chip.neutral { background: rgba(255, 255, 255, .18); color: #fff; }
+.cg-card.featured .chip.gold { background: var(--ac-gold-500); color: #2B2100; }
+.cg-card.featured .cg-card-foot { color: #fff; border-top-color: rgba(255, 255, 255, .25); }
+.cg-card.featured .cg-card-foot span { background: #fff; color: var(--ac-brand-700); }
+.cg-card.featured .stars { color: var(--ac-gold-400); }
+
+.cg-card.working { background: linear-gradient(150deg, #FFDB4D 0%, #FFC933 100%); color: #2B2100; border-color: rgba(255, 255, 255, .5);
+  box-shadow: 0 30px 50px -30px rgba(230, 160, 0, .75); }
+.cg-card.working .headline, .cg-card.working .muted, .cg-card.working .cg-rating { color: rgba(43, 33, 0, .78); }
+.cg-card.working .cg-card-foot { color: #2B2100; border-top-color: rgba(43, 33, 0, .15); }
+.cg-card.working .cg-card-foot span { background: #2B2100; color: #FFDB4D; }
+.cg-card.working .chip.brand, .cg-card.working .chip.neutral, .cg-card.working .chip.gold { background: rgba(255, 255, 255, .55); color: #2B2100; }
+.cg-card.working .exp-pill { background: rgba(43, 33, 0, .12); color: #2B2100; }
+.working-badge { background: #2B2100; color: #FFDB4D; }
+.cg-card.featured .working-badge { background: #fff; color: var(--ac-ink); }
+
+/* ---------- Indicadores en pastilla ---------- */
+.stat-tiles { gap: 12px; }
+.stat-tile {
+  background: var(--ac-glass-strong); border: 1px solid var(--ac-glass-border); border-radius: 22px; padding: 14px 18px;
+  box-shadow: var(--ac-shadow-card);
+}
+.stat-tile b { font-size: 20px; letter-spacing: -.03em; }
+.stat-tile span { color: var(--ac-text-tertiary); }
+
+/* ---------- Chips ---------- */
+.chip.brand { background: var(--ac-brand-100); color: var(--ac-brand-700); }
+.chip.gold { background: var(--ac-gold-100); color: #6B4E00; }
+.chip.neutral { background: rgba(11, 14, 28, .06); color: var(--ac-text-secondary); }
+.tag-pill { background: var(--ac-brand-100); color: var(--ac-brand-700); }
+
+/* ---------- Chat ---------- */
+.chat-item:hover { background: rgba(255, 255, 255, .75); }
+.chat-item.active { background: var(--ac-ink); color: #fff; }
+.chat-item.active .chat-item-last, .chat-item.active .chat-item-top span { color: rgba(255, 255, 255, .7); }
+
+/* ---------- Interruptores y detalles ---------- */
+.switch input:checked + .track { background: var(--ac-ink); }
+.progress-bar > div { background: var(--ac-grad-brand); }
+.verified-tick { background: var(--ac-brand-600); }
+
+/* ---------- Pantallas de acceso ---------- */
+.auth-wrap { background: var(--ac-canvas); background-attachment: fixed; }
+.auth-wrap::before, .auth-wrap::after { opacity: .35; }
+.auth-card {
+  background: var(--ac-glass-strong); border: 1px solid var(--ac-glass-border); border-radius: 36px;
+  -webkit-backdrop-filter: blur(26px) saturate(1.6); backdrop-filter: blur(26px) saturate(1.6);
+  box-shadow: 0 60px 100px -50px rgba(37, 58, 140, .5);
+}
+.auth-card::before { background: var(--ac-ink); }
+.role-pick button.on { border-color: var(--ac-ink); background: rgba(11, 14, 28, .04); }
+
+/* ---------- Encabezados con indicadores en píldora ---------- */
+.cg-card-top { margin-top: 0 !important; }
+.page-head { align-items: flex-end; flex-wrap: wrap; gap: 20px; margin-bottom: 26px; }
+.head-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.stat-chip {
+  display: flex; align-items: center; gap: 12px; padding: 10px 18px 10px 10px; border-radius: 999px;
+  background: var(--ac-glass-strong); border: 1px solid var(--ac-glass-border); box-shadow: var(--ac-shadow-card);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+}
+.stat-chip-ico {
+  width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0; background: var(--ac-ink); color: #fff;
+}
+.stat-chip-ico.blue { background: var(--ac-brand-600); }
+.stat-chip-ico.yellow { background: var(--ac-gold-500); color: #2B2100; }
+.stat-chip-ico.teal { background: var(--ac-teal-600); }
+.stat-chip-label { font-size: 11px; font-weight: 700; color: var(--ac-text-tertiary); line-height: 1.1; }
+.stat-chip-value { font-size: 22px; font-weight: 800; letter-spacing: -.04em; line-height: 1.1; }
+.stat-chip-tag { font-size: 10.5px; font-weight: 800; border-radius: 999px; padding: 3px 9px; background: var(--ac-gold-500); color: #2B2100; }
+.stat-chip-tag.blue { background: var(--ac-brand-600); color: #fff; }
+
+/* ---------- Tarjetas de familiares: la que tiene cuidadora va en verde azulado ---------- */
+.patient-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+.patient-card { border-radius: 30px; padding: 24px; background: var(--ac-glass-strong); }
+.patient-card.cared {
+  background: linear-gradient(150deg, #4A9FB8 0%, #347D93 100%); color: #fff; border-color: rgba(255, 255, 255, .3);
+  box-shadow: 0 30px 50px -30px rgba(52, 125, 147, .8);
+}
+.patient-card.cared .cared-by, .patient-card.cared .patient-card-foot { color: rgba(255, 255, 255, .92); }
+.patient-card.cared .working-badge { background: #fff; color: var(--ac-ink); }
+.patient-card.cared .patient-avatar { background: var(--ac-gold-500); }
+.patient-card-foot span {
+  width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--ac-ink); color: #fff;
+}
+.patient-card.cared .patient-card-foot span { background: #fff; color: #347D93; }
+.dashed-card { border: 2px dashed rgba(11, 14, 28, .18); border-radius: 30px; background: rgba(255, 255, 255, .35); }
+.dashed-card:hover { border-color: var(--ac-ink); background: rgba(255, 255, 255, .7); color: var(--ac-ink); }
+
+.soon-strip {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 28px; padding: 14px 20px; border-radius: 999px;
+  background: var(--ac-glass); border: 1px solid var(--ac-glass-border); font-size: 13.5px; color: var(--ac-text-secondary);
+}
+.soon-tag { background: var(--ac-ink); color: #fff; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+
+/* ---------- Perfil de la cuidadora: portada con degradado ---------- */
+.profile-hero-card { overflow: hidden; }
+.profile-cover {
+  height: 118px;
+  background:
+    radial-gradient(240px 160px at 88% 0%, rgba(255, 210, 52, .55), transparent 70%),
+    linear-gradient(120deg, #2D4EF5 0%, #4F6CFF 52%, #4A9FB8 100%);
+}
+.profile-hero-card .profile-view-top { padding-top: 62px; }
+
+/* ---------- Celular: la barra pasa a dos filas y las pestañas se deslizan ---------- */
+@media (max-width: 760px) {
+  .app-nav-inner, .pub-nav-inner { border-radius: 28px; flex-wrap: wrap; gap: 10px; padding: 10px 12px; }
+  .app-tabs { order: 3; width: 100%; flex: none; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .app-tabs::-webkit-scrollbar { display: none; }
+  .app-tabs a { white-space: nowrap; flex-shrink: 0; }
+  .app-user { margin-left: auto; }
+  .app-user > span { display: none; }
+  .filters-row { border-radius: 28px; }
+  .page-head h1 { font-size: 34px; }
+  .site-frame { border-radius: 30px; }
+}

@@ -25,6 +25,22 @@ export function Chip({ kind, children }: { kind: "gold" | "brand" | "neutral"; c
   return <span className={`chip ${kind}`}>{children}</span>;
 }
 
+/** Indicador en píldora para los encabezados: ícono redondo, etiqueta, valor y una marca opcional. */
+export function StatChip({ icon, label, value, tag, tone = "ink" }: {
+  icon: string; label: string; value: string | number; tag?: string; tone?: "ink" | "blue" | "yellow" | "teal";
+}) {
+  return (
+    <div className="stat-chip">
+      <span className={`stat-chip-ico ${tone}`}>{icon}</span>
+      <div>
+        <div className="stat-chip-label">{label}</div>
+        <div className="stat-chip-value">{value}</div>
+      </div>
+      {tag && <span className={`stat-chip-tag ${tone}`}>{tag}</span>}
+    </div>
+  );
+}
+
 export function Initials({ name }: { name: string }) {
   return <>{name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("")}</>;
 }
