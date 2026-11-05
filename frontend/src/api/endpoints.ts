@@ -18,6 +18,7 @@ export const MarketplaceApi = {
   listCaregivers: (params: { status?: string; zone?: string; q?: string; page?: number }) =>
     api.get<Page<CaregiverOut>>(`/marketplace/caregivers${qs({ ...params, page_size: 100 })}`),
   getCaregiver: (id: string) => api.get<CaregiverOut>(`/marketplace/caregivers/${id}`),
+  deleteCaregiver: (id: string) => api.del<void>(`/marketplace/caregivers/${id}`),
   patchCaregiver: (id: string, body: { status?: string; reason?: string; internal_note?: string }) =>
     api.patch<CaregiverOut>(`/marketplace/caregivers/${id}`, body),
   reviewDocument: (id: string, docType: string, action: "approve" | "reject", note?: string) =>

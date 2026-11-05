@@ -1,6 +1,37 @@
 [
   {
     "fecha": "2026-11-05",
+    "titulo": "Eliminar familiares, cuentas y perfiles de cuidadoras",
+    "resumen": "Ahora se pueden eliminar los perfiles de familiares y las cuentas, y el equipo puede eliminar el perfil de una cuidadora desde la Consola.",
+    "areas": [
+      {
+        "nombre": "Sitio de cuidadoras y familias",
+        "items": [
+          "Cada familiar tiene un botón para eliminarlo (en la tarjeta y en su ficha), con confirmación. Si tiene una cuidadora trabajando, primero hay que cerrar ese trabajo.",
+          "Nueva página «Mi cuenta» (se abre desde el nombre en el menú): permite eliminar la cuenta confirmando con la contraseña. Se borran familiares, chats, solicitudes, reseñas y, en cuidadoras, perfil y documentos."
+        ]
+      },
+      {
+        "nombre": "Consola de administración",
+        "items": [
+          "En la ficha de cada cuidadora hay un botón «Eliminar perfil»: borra el perfil de la Consola y la cuenta en el sitio. Si el sitio no responde no se borra nada.",
+          "Si una cuidadora elimina su cuenta en el sitio, desaparece también de la Consola."
+        ]
+      },
+      {
+        "nombre": "Backend y base de datos",
+        "items": [
+          "Nuevas rutas: DELETE /patients/{id}, DELETE /users/me (con contraseña), DELETE /internal/caregivers y, en la Consola, DELETE /marketplace/caregivers/{id} y POST /marketplace/caregivers/remove.",
+          "Se borran también las fotos y documentos subidos. Se recalcula la valoración de las cuidadoras que perdieron reseñas. 10 pruebas automáticas nuevas."
+        ]
+      }
+    ],
+    "pasos_manuales": [
+      "Ninguno: Vercel despliega los cambios solo. Para borrar de golpe las cuentas de prueba que ya existen sigue sirviendo deploy/limpiar_cuentas_de_prueba.sql."
+    ]
+  },
+  {
+    "fecha": "2026-11-05",
     "titulo": "Corrección de las pruebas automáticas de la Consola (zonas horarias y ruta de módulos)",
     "resumen": "Las pruebas automáticas de la Consola fallaban en GitHub por dos motivos: faltaba la base de zonas horarias y la herramienta de pruebas no encontraba el código de la aplicación.",
     "areas": [

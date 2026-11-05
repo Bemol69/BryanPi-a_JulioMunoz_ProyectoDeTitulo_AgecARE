@@ -405,3 +405,92 @@ async def test_caregiver_photo_is_sent_to_the_console(client, maria, monkeypatch
     assert r.status_code == 200, r.text
     profile_syncs = [p for path, p in sent if path.endswith("/caregivers/sync")]
     assert profile_syncs and "/avatars/" in (profile_syncs[-1]["photo_url"] or "")
+
+
+# ---------- Eliminar familiares y cuentas ----------
+async def new_patient(client, headers, name="Abuela de prueba"):
+    r = await client.post(f"{API}/patients", headers=headers, json={"full_name": name, "birth_date": "1945-03-02"})
+    assert r.status_code == 201, r.text
+    return r.json()["patient_id"]
+
+
+async def test_family_can_delete_a_relative(client):
+    other = await register_family(client, "borrar@familia.cl")
+    pid = await new_patient(client, other)
+    assert len((await client.get(f"{API}/patients", headers=other)).json()["items"]) == 1
+    assert (await client.delete(f"{API}/patients/{pid}", headers=other)).status_code == 204
+    assert (await client.get(f"{API}/patients", headers=other)).json()["items"] == []
+    assert (await client.get(f"{API}/patients/{pid}", headers=other)).status_code in (403, 404)
+
+
+async def test_a_relative_with_a_working_caregiver_cannot_be_deleted(client, family):
+    patients = (await client.get(f"{API}/patients", headers=family)).json()["items"]
+    elena = next(p for p in patients if p["full_name"] == "Elena Muñoz")["patient_id"]
+    r = await client.delete(f"{API}/patients/{elena}", headers=family)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "ACTIVE_ENGAGEMENT"
+    # Al cerrar el trabajo ya se puede eliminar.
+    pid = await profile_id_of(client, family, "María Torres")
+    eid = (await client.get(f"{API}/marketplace/caregivers/{pid}", headers=family)).json()["my_engagement_id"]
+    await client.post(f"{API}/marketplace/engagements/{eid}/end", headers=family)
+    assert (await client.delete(f"{API}/patients/{elena}", headers=family)).status_code == 204
+
+
+async def test_only_members_can_delete_a_relative(client, family):
+    other = await register_family(client, "intruso@familia.cl")
+    patients = (await client.get(f"{API}/patients", headers=family)).json()["items"]
+    r = await client.delete(f"{API}/patients/{patients[0]['patient_id']}", headers=other)
+    assert r.status_code == 403
+    assert len((await client.get(f"{API}/patients", headers=family)).json()["items"]) == len(patients)
+
+
+async def test_family_account_deletion_removes_everything_it_owned(client, javiera):
+    other = await register_family(client, "adios@familia.cl")
+    await new_patient(client, other)
+    pid = await profile_id_of(client, other, "Javiera Soto")
+    assert (await ask(client, other, pid, message="Hola")).status_code == 201
+    assert len((await client.get(f"{API}/caregiver/hire-requests", headers=javiera)).json()["items"]) == 1
+
+    wrong = await client.request("DELETE", f"{API}/users/me", headers=other, json={"password": "incorrecta"})
+    assert wrong.status_code == 403 and wrong.json()["error"]["code"] == "WRONG_PASSWORD"
+    ok = await client.request("DELETE", f"{API}/users/me", headers=other, json={"password": "Familia123!"})
+    assert ok.status_code == 204, ok.text
+
+    login_try = await client.post(f"{API}/auth/login", json={"email": "adios@familia.cl", "password": "Familia123!"})
+    assert login_try.status_code == 401
+    assert (await client.get(f"{API}/caregiver/hire-requests", headers=javiera)).json()["items"] == []
+    async with database.get_session_factory()() as db:
+        assert (await db.execute(select(models.Patient).where(models.Patient.full_name == "Abuela de prueba"))).first() is None
+
+
+async def test_account_with_a_job_in_progress_cannot_be_deleted(client, family, maria):
+    r = await client.request("DELETE", f"{API}/users/me", headers=family, json={"password": "Familia123!"})
+    assert r.status_code == 409 and r.json()["error"]["code"] == "ACTIVE_ENGAGEMENT"
+    r = await client.request("DELETE", f"{API}/users/me", headers=maria, json={"password": "Cuidado123!"})
+    assert r.status_code == 409
+
+
+async def test_caregiver_account_deletion_also_removes_her_from_the_console(client, family, javiera, monkeypatch):
+    import app.sync as sync_module
+    sent = []
+
+    async def capture(path, payload):
+        sent.append((path, payload))
+        return True
+    monkeypatch.setattr(sync_module, "_post_to_admin", capture)
+    assert "Javiera Soto" in await names_in_search(client, family)
+    r = await client.request("DELETE", f"{API}/users/me", headers=javiera, json={"password": "Cuidado123!"})
+    assert r.status_code == 204, r.text
+    assert "Javiera Soto" not in await names_in_search(client, family)
+    assert ("/marketplace/caregivers/remove", {"email": "javiera@cuidado.cl"}) in sent
+
+
+async def test_console_can_delete_a_caregiver_account_even_while_working(client, family):
+    url = f"{API}/internal/caregivers"
+    assert (await client.delete(url, params={"email": "maria@cuidado.cl"})).status_code == 401
+    r = await client.delete(url, params={"email": "maria@cuidado.cl"}, headers=INTERNAL)
+    assert r.status_code == 204, r.text
+    assert "María Torres" not in await names_in_search(client, family)
+    # La familia y su familiar siguen, ya sin cuidadora.
+    patients = (await client.get(f"{API}/patients", headers=family)).json()["items"]
+    assert any(p["full_name"] == "Elena Muñoz" and p["caregiver_names"] == [] for p in patients)
+    assert (await client.delete(url, params={"email": "maria@cuidado.cl"}, headers=INTERNAL)).status_code == 404

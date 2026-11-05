@@ -1,7 +1,8 @@
-import { Link, useParams } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { PatientsApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
-import { Avatar, Chip, EmptyState, ErrorBanner, Spinner, fmtDate } from "../components/ui";
+import { Avatar, Chip, ConfirmModal, EmptyState, ErrorBanner, Spinner, fmtDate } from "../components/ui";
 import type { PatientDetail } from "../api/types";
 
 const SEX_LABEL: Record<string, string> = { female: "Mujer", male: "Hombre", other: "Otro" };
@@ -42,6 +43,22 @@ function CareStatus({ p }: { p: PatientDetail }) {
 export default function PatientProfile() {
   const { id } = useParams<{ id: string }>();
   const patient = useApi(() => PatientsApi.detail(id!), [id]);
+  const navigate = useNavigate();
+  const [confirming, setConfirming] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+
+  async function remove() {
+    setRemoving(true);
+    setRemoveError(null);
+    try {
+      await PatientsApi.remove(id!);
+      navigate("/familia", { replace: true });
+    } catch (e) {
+      setRemoveError(e instanceof Error ? e.message : "No se pudo eliminar el perfil.");
+      setRemoving(false);
+    }
+  }
 
   if (patient.loading) return <div className="page"><Spinner /></div>;
   if (patient.error) return <div className="page"><Link to="/familia" className="btn link">← Mis familiares</Link><ErrorBanner message={patient.error} /></div>;
@@ -101,6 +118,22 @@ export default function PatientProfile() {
         <h3>Notas generales</h3>
         {p.notes ? <p className="notes">{p.notes}</p> : <EmptyState label="Todavía no hay notas sobre este perfil." />}
       </div>
+
+      <div className="danger-zone">
+        <div>
+          <b>Eliminar el perfil de {firstName}</b>
+          <span>Se borran sus datos de salud, su foto y las solicitudes enviadas. No se puede deshacer.</span>
+        </div>
+        <button className="btn danger-ghost" onClick={() => { setRemoveError(null); setConfirming(true); }}>Eliminar perfil</button>
+      </div>
+
+      {confirming && (
+        <ConfirmModal title={`¿Eliminar a ${p.full_name}?`} confirmLabel="Sí, eliminar" busy={removing}
+                      error={removeError} onConfirm={remove} onClose={() => setConfirming(false)}>
+          <p>Se eliminará el perfil completo, con su foto, sus alergias y sus notas. Esta acción no se puede deshacer.</p>
+          {p.caregiver && <p><b>Tiene una cuidadora asignada.</b> Primero debes cerrar ese trabajo desde la ficha de la cuidadora.</p>}
+        </ConfirmModal>
+      )}
     </div>
   );
 }

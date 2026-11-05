@@ -174,3 +174,46 @@ async def test_caregiver_photo_travels_from_the_site_to_the_console(client, admi
     assert detail.json()["photo_url"].endswith("nueva.png")
     ranking = await client.get(f"{BASE}/caregivers/ranking", headers=admin_headers)
     assert all("photo_url" in item for item in ranking.json()["items"])
+
+
+# ---------- Eliminar el perfil de una cuidadora ----------
+async def test_staff_deletes_a_caregiver_and_the_site_is_told(client, admin_headers, analyst_headers, monkeypatch):
+    deleted = []
+
+    async def push_delete(email):
+        deleted.append(email)
+
+    monkeypatch.setattr(general_client, "push_caregiver_delete", push_delete)
+    cid = await sync_profile(client)
+    await sync_doc(client, "id_card")
+
+    # Quien solo puede leer no elimina.
+    assert (await client.delete(f"{BASE}/caregivers/{cid}", headers=analyst_headers)).status_code == 403
+    assert deleted == []
+
+    assert (await client.delete(f"{BASE}/caregivers/{cid}", headers=admin_headers)).status_code == 204
+    assert deleted == [EMAIL]
+    assert (await client.get(f"{BASE}/caregivers/{cid}", headers=admin_headers)).status_code == 404
+    assert (await client.delete(f"{BASE}/caregivers/{cid}", headers=admin_headers)).status_code == 404
+
+
+async def test_nothing_is_deleted_if_the_site_cannot_be_told(client, admin_headers, monkeypatch):
+    from app.errors import ApiError
+
+    async def fails(email):
+        raise ApiError(502, "GENERAL_SYNC_FAILED", "No se pudo avisar al sitio público.")
+
+    monkeypatch.setattr(general_client, "push_caregiver_delete", fails)
+    cid = await sync_profile(client)
+    assert (await client.delete(f"{BASE}/caregivers/{cid}", headers=admin_headers)).status_code == 502
+    assert (await client.get(f"{BASE}/caregivers/{cid}", headers=admin_headers)).status_code == 200
+
+
+async def test_caregiver_who_deleted_her_account_disappears_from_the_console(client, admin_headers):
+    cid = await sync_profile(client)
+    assert (await client.post(f"{BASE}/caregivers/remove", json={"email": EMAIL})).status_code in (401, 403)
+    r = await client.post(f"{BASE}/caregivers/remove", headers=INTERNAL, json={"email": EMAIL})
+    assert r.status_code == 204
+    assert (await client.get(f"{BASE}/caregivers/{cid}", headers=admin_headers)).status_code == 404
+    # Repetirlo no falla.
+    assert (await client.post(f"{BASE}/caregivers/remove", headers=INTERNAL, json={"email": EMAIL})).status_code == 204

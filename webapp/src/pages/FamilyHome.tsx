@@ -2,7 +2,7 @@ import { useRef, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { PatientsApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
-import { Avatar, EmptyState, ErrorBanner, Modal, Spinner, StatChip } from "../components/ui";
+import { Avatar, ConfirmModal, EmptyState, ErrorBanner, Modal, Spinner, StatChip } from "../components/ui";
 
 const PHOTO_MAX_BYTES = 4 * 1024 * 1024;
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -10,6 +10,24 @@ const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export default function FamilyHome() {
   const patients = useApi(() => PatientsApi.list(), []);
   const [showCreate, setShowCreate] = useState(false);
+  const [toRemove, setToRemove] = useState<{ id: string; name: string } | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+
+  async function remove() {
+    if (!toRemove) return;
+    setRemoving(true);
+    setRemoveError(null);
+    try {
+      await PatientsApi.remove(toRemove.id);
+      setToRemove(null);
+      patients.reload();
+    } catch (e) {
+      setRemoveError(e instanceof Error ? e.message : "No se pudo eliminar el perfil.");
+    } finally {
+      setRemoving(false);
+    }
+  }
 
   return (
     <div className="page">
@@ -39,6 +57,10 @@ export default function FamilyHome() {
             return (
               <Link key={p.patient_id} to={`/familia/${p.patient_id}`} className={`patient-card${cared ? " cared" : ""}`}>
                 {cared && <span className="working-badge cared-badge"><i /> Con cuidadora</span>}
+                <button type="button" className="card-remove" title={`Eliminar a ${p.full_name}`} aria-label={`Eliminar a ${p.full_name}`}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setRemoveError(null); setToRemove({ id: p.patient_id, name: p.full_name }); }}>
+                  ✕
+                </button>
                 <div className="patient-avatar"><Avatar name={p.full_name} photoUrl={p.photo_url} /></div>
                 <div className="name">{p.full_name}</div>
                 {cared && (
@@ -65,6 +87,13 @@ export default function FamilyHome() {
         <span className="soon-tag">Próximamente</span>
         <span>Semáforo de bienestar, alertas y plan de medicamentos de tus familiares.</span>
       </div>
+
+      {toRemove && (
+        <ConfirmModal title={`¿Eliminar a ${toRemove.name}?`} confirmLabel="Sí, eliminar" busy={removing}
+                      error={removeError} onConfirm={remove} onClose={() => setToRemove(null)}>
+          <p>Se eliminará su perfil con su foto, sus alergias y sus notas. Esta acción no se puede deshacer.</p>
+        </ConfirmModal>
+      )}
 
       {showCreate && <CreatePatientModal onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); patients.reload(); }} />}
     </div>

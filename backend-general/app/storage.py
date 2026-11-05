@@ -4,6 +4,7 @@
   Supabase Storage (necesario en Vercel, donde el disco es de solo lectura).
 - Sin ellas, se guardan en la carpeta local `uploads/` y los sirve la propia API (desarrollo).
 """
+import logging
 from pathlib import Path
 
 import httpx
@@ -37,6 +38,39 @@ def check_signature(data: bytes, content_type: str) -> None:
         ok = False
     if not ok:
         raise ApiError(422, "INVALID_FILE_TYPE", "El archivo no corresponde al formato indicado (PDF, JPG, PNG o WEBP).")
+
+
+def path_from_url(url: str | None) -> str | None:
+    """Ruta dentro del almacenamiento (p. ej. "avatars/<id>.png") a partir de la URL pública guardada."""
+    if not url:
+        return None
+    url = url.split("?")[0]
+    for marker in ("/object/public/", "/uploads/"):
+        i = url.find(marker)
+        if i >= 0:
+            rest = url[i + len(marker):]
+            if marker == "/object/public/":  # el primer tramo es el nombre del bucket
+                rest = rest.split("/", 1)[1] if "/" in rest else ""
+            return rest or None
+    return None
+
+
+async def delete(paths: list[str]) -> None:
+    """Borra archivos subidos. Es un esfuerzo razonable: si falla no se detiene lo que la persona pidió."""
+    paths = [p for p in paths if p and ".." not in p]
+    if not paths:
+        return
+    if not remote_enabled():
+        for p in paths:
+            (LOCAL_ROOT / p).unlink(missing_ok=True)
+        return
+    s = get_settings()
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            await client.request("DELETE", f"{s.supabase_url.rstrip('/')}/storage/v1/object/{s.storage_bucket}",
+                                 headers=_auth_headers(), json={"prefixes": paths})
+    except httpx.HTTPError as exc:
+        logging.getLogger("agecare.storage").warning("No se pudieron borrar archivos: %r", exc)
 
 
 def remote_enabled() -> bool:

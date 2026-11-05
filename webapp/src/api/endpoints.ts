@@ -12,6 +12,7 @@ export const AuthApi = {
   me: () => api.get<UserOut>("/users/me"),
   logout: (refresh_token: string) => api.post<void>("/auth/logout", { refresh_token }),
   uploadAvatar: (file: File) => api.upload<UserOut>("/users/me/avatar", file),
+  deleteAccount: (password: string) => api.delete<void>("/users/me", { password }),
 };
 
 export const PatientsApi = {
@@ -22,6 +23,7 @@ export const PatientsApi = {
     medication_allergies?: string[]; food_allergies?: string[]; notes?: string;
   }) => api.post<PatientCreateOut>("/patients", body),
   uploadPhoto: (patientId: string, file: File) => api.upload<PatientCreateOut>(`/patients/${patientId}/photo`, file),
+  remove: (patientId: string) => api.delete<void>(`/patients/${patientId}`),
 };
 
 export const CaregiverApi = {

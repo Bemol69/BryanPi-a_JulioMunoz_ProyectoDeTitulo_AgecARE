@@ -4,13 +4,13 @@ from datetime import timedelta
 from fastapi import APIRouter, File, Request, UploadFile
 from sqlalchemy import select
 
-from app import models, storage
+from app import accounts, models, storage
 from app.deps import CurrentUser, Db
 from app.config import get_settings
 from app.errors import ApiError, conflict, unauthorized
-from app.schemas.auth import (AuthOut, LoginIn, MembershipOut, RefreshIn, RefreshOut,
+from app.schemas.auth import (AuthOut, DeleteAccountIn, LoginIn, MembershipOut, RefreshIn, RefreshOut,
                               RegisterIn, UserOut, UserPatchIn)
-from app.sync import sync_caregiver_to_admin
+from app.sync import remove_caregiver_from_admin, sync_caregiver_to_admin
 from app.security import (as_utc, create_access_token, hash_password, hash_refresh,
                           new_refresh_token, now_utc, verify_password)
 
@@ -160,6 +160,20 @@ async def patch_me(body: UserPatchIn, db: Db, user: CurrentUser):
         user.locale = body.locale
     memberships = await _memberships_for(db, user.id)
     return _user_out(user, memberships)
+
+
+# ---------- Eliminar mi cuenta ----------
+@router.delete("/users/me", status_code=204)
+async def delete_me(body: DeleteAccountIn, db: Db, user: CurrentUser):
+    """Elimina la cuenta con todo lo que cuelga de ella. Pide la contraseña para evitar errores."""
+    if not verify_password(body.password, user.password_hash):
+        raise ApiError(403, "WRONG_PASSWORD", "La contraseña no es correcta.")
+    email, was_caregiver = user.email, user.account_type == "caregiver"
+    paths = await accounts.purge_user(db, user)
+    await db.flush()
+    await storage.delete(paths)
+    if was_caregiver:  # también desaparece de la Consola
+        await remove_caregiver_from_admin(email)
 
 
 # ---------- Foto de perfil ----------

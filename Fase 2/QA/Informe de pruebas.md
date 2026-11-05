@@ -6,8 +6,8 @@ Entorno: copia local del sistema con bases de datos nuevas y datos de demostraci
 
 | Prueba | Resultado |
 |---|---|
-| Pruebas automáticas de la Consola (`backend`) | 31 aprobadas |
-| Pruebas automáticas del sitio (`backend-general`) | 23 aprobadas |
+| Pruebas automáticas de la Consola (`backend`) | 34 aprobadas |
+| Pruebas automáticas del sitio (`backend-general`) | 30 aprobadas |
 | Compilación de la Consola y del sitio | Sin errores |
 | Recorrido de punta a punta con la interfaz (`e2e/run_e2e.py`) | 33 de 34 pasos correctos; el paso restante falló por una espera demasiado corta en la propia prueba y se corrigió |
 
@@ -31,6 +31,7 @@ Entorno: copia local del sistema con bases de datos nuevas y datos de demostraci
 - Datos de ejemplo con fotos (ilustraciones) y dos cuidadores hombres.
 - Integración continua en GitHub y correcciones de las dependencias de prueba.
 - `lang="es"` y descripción en las páginas base.
+- Eliminar familiares y cuentas: ver «Eliminación de datos» más abajo.
 
 ## Pendiente antes de recibir personas reales
 
@@ -39,3 +40,10 @@ Entorno: copia local del sistema con bases de datos nuevas y datos de demostraci
 - Documentos de identidad en un bucket privado con URLs firmadas.
 - Decidir si el repositorio debe seguir público (incluye código del cliente y cuentas de demostración).
 - Detalles en la lista de verificación de `DESPLIEGUE.md`.
+
+## Eliminación de datos (agregada el 5 de noviembre de 2026)
+
+- La familia puede eliminar el perfil de un familiar (desde la tarjeta o desde su ficha). Si tiene una cuidadora trabajando, se bloquea hasta cerrar ese trabajo.
+- Cualquier persona puede eliminar su cuenta desde «Mi cuenta», confirmando con su contraseña. Se borran sus familiares, chats, solicitudes, reseñas y, en las cuidadoras, el perfil y los documentos. Con un trabajo en curso se bloquea.
+- Desde la Consola, el equipo puede eliminar el perfil de una cuidadora, y con él su cuenta del sitio. Si el sitio no responde, no se borra nada, para no dejar ambos sistemas distintos.
+- Cubierto con 7 pruebas nuevas del sitio y 3 de la Consola, y con una prueba en el navegador que recorre el flujo completo.

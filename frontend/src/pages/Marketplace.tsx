@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MarketplaceApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
 import {
-  Card, CardHead, Chip, Drawer, EmptyState, ErrorBanner, Person, PersonAvatar, Spinner, StatusChip, Stars, fmtDate, fmtCLP,
+  Card, CardHead, Chip, Drawer, EmptyState, ErrorBanner, Modal, Person, PersonAvatar, Spinner, StatusChip, Stars, fmtDate, fmtCLP,
 } from "../components/ui";
 import type { CaregiverDocType, CaregiverDocumentOut, CaregiverOut, ProductOut } from "../api/types";
 
@@ -102,6 +102,22 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
   const [error, setError] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<CaregiverDocType | null>(null);
   const [rejectNote, setRejectNote] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  async function deleteProfile() {
+    setBusy(true);
+    setError(null);
+    try {
+      await MarketplaceApi.deleteCaregiver(id);
+      onChanged();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo eliminar el perfil.");
+      setDeleting(false);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function reviewDoc(docType: CaregiverDocType, action: "approve" | "reject") {
     if (action === "reject" && rejectNote.trim().length < 5) {
@@ -276,6 +292,26 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
               <input className="input" style={{ width: "100%" }} value={reason} onChange={(e) => setReason(e.target.value)}
                     placeholder="Ej: reiteradas ausencias reportadas por familias" />
             </div>
+          )}
+          <div className="danger-row">
+            <div>
+              <b>Eliminar perfil</b>
+              <span>Borra a la cuidadora de la Consola y su cuenta del sitio, con documentos, reseñas y puntos.</span>
+            </div>
+            <button className="btn danger" disabled={busy} onClick={() => setDeleting(true)}>Eliminar</button>
+          </div>
+          {deleting && (
+            <Modal title={`¿Eliminar a ${c.name}?`} onClose={() => setDeleting(false)}>
+              <p style={{ fontSize: 14, color: "var(--ac-text-secondary)", lineHeight: 1.5, marginTop: 0 }}>
+                Se elimina su perfil y también su cuenta en el sitio público, con sus documentos, reseñas, chats y puntos.
+                {c.is_engaged && " Hoy figura trabajando con una familia: ese trabajo también se borra."} No se puede deshacer.
+              </p>
+              {error && <ErrorBanner message={error} />}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
+                <button className="btn" onClick={() => setDeleting(false)} disabled={busy}>Cancelar</button>
+                <button className="btn danger" onClick={deleteProfile} disabled={busy}>{busy ? "Eliminando…" : "Sí, eliminar"}</button>
+              </div>
+            </Modal>
           )}
         </div>
       )}

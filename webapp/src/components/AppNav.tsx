@@ -51,8 +51,10 @@ export default function AppNav() {
           )}
         </div>
         <div className="app-user">
-          <div className="app-avatar"><Avatar name={user.full_name} photoUrl={user.avatar_url} /></div>
-          <span>{user.full_name}</span>
+          <NavLink to="/cuenta" className="app-account" title="Mi cuenta">
+            <div className="app-avatar"><Avatar name={user.full_name} photoUrl={user.avatar_url} /></div>
+            <span>{user.full_name}</span>
+          </NavLink>
           <button className="btn ghost small" onClick={logout}>Salir</button>
         </div>
       </div>

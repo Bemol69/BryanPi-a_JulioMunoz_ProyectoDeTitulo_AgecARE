@@ -64,6 +64,11 @@ async def sync_caregiver_to_admin(profile: "models.CaregiverProfile", user: "mod
     })
 
 
+async def remove_caregiver_from_admin(email: str) -> None:
+    """Quita a la cuidadora de la Consola cuando elimina su cuenta."""
+    await _post_to_admin("/marketplace/caregivers/remove", {"email": email})
+
+
 async def sync_review_to_admin(caregiver_email: str, family_name: str, rating: int,
                                comment: str | None) -> None:
     """Reenvía una reseña a la Consola para que otorgue puntos de fidelización."""

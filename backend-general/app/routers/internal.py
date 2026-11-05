@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
-from app import models
+from app import accounts, models, storage
 from app.deps import Db, require_internal_key
 from app.errors import not_found
 from app.security import now_utc
@@ -70,6 +70,18 @@ def apply_review(d: models.CaregiverDocument, action: str, note: str | None) -> 
 async def set_caregiver_status(body: StatusIn, db: Db):
     """Estado de revisión del perfil: solo 'approved' permite aparecer en el marketplace."""
     (await _profile_by_email(db, body.email)).admin_status = body.status
+
+
+@router.delete("/caregivers", status_code=204)
+async def delete_caregiver_account(db: Db, email: str = Query(max_length=254)):
+    """La Consola elimina el perfil de una cuidadora: se borra su cuenta del sitio con todos sus datos."""
+    user = (await db.execute(select(models.User).where(func.lower(models.User.email) == email.lower(),
+                                                      models.User.account_type == "caregiver"))).scalars().first()
+    if user is None:
+        raise not_found("No existe una cuidadora con ese correo.")
+    paths = await accounts.purge_user(db, user, force=True)
+    await db.flush()
+    await storage.delete(paths)
 
 
 @router.post("/documents/review", status_code=204)

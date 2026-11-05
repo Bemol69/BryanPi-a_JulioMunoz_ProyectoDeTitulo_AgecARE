@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, File, Request, UploadFile
 from sqlalchemy import select
 
-from app import models, storage
+from app import accounts, models, storage
 from app.deps import CurrentUser, Db
 from app.errors import ApiError, forbidden, not_found
 from app.schemas.common import Page
@@ -65,6 +65,20 @@ async def upload_patient_photo(patient_id: UUID, request: Request, db: Db, user:
                       sex=patient.sex, photo_url=patient.photo_url, conditions=patient.conditions or [],
                       medication_allergies=patient.medication_allergies or [],
                       food_allergies=patient.food_allergies or [], notes=patient.notes)
+
+
+# ---------- Eliminar un familiar ----------
+@router.delete("/patients/{patient_id}", status_code=204)
+async def delete_patient(patient_id: UUID, db: Db, user: CurrentUser):
+    patient = await _member_patient(db, patient_id, user)
+    owner = (await db.execute(select(models.PatientMember).where(
+        models.PatientMember.patient_id == patient_id, models.PatientMember.user_id == user.id,
+        models.PatientMember.is_owner.is_(True)))).scalar_one_or_none()
+    if owner is None:
+        raise forbidden("Solo quien creó el perfil puede eliminarlo.")
+    paths = await accounts.purge_patient(db, patient)
+    await db.flush()
+    await storage.delete(paths)
 
 
 # ---------- 4.2 Listar mis pacientes ----------

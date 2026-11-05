@@ -3,7 +3,8 @@ reseñas, puntos de fidelización y ranking."""
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import func, select
+from pydantic import BaseModel, Field
+from sqlalchemy import delete, func, select
 
 from app import general_client, models
 from app.audit import audit
@@ -293,6 +294,40 @@ async def patch_caregiver(caregiver_id: UUID, body: CaregiverPatchIn, request: R
         # De esto depende quién aparece en el marketplace: si no se puede avisar, no se guarda.
         await general_client.push_status(c.email, c.status)
     return _cg_out(c, include_note=True)
+
+
+# ---------- Eliminar el perfil de una cuidadora ----------
+async def _delete_caregiver_rows(db: Db, caregiver_id: UUID) -> None:
+    for table in (models.CaregiverDocument, models.CaregiverReview, models.CaregiverPointsLog):
+        await db.execute(delete(table).where(table.caregiver_id == caregiver_id))
+    await db.execute(delete(models.CaregiverProfile).where(models.CaregiverProfile.id == caregiver_id))
+
+
+@router.delete("/caregivers/{caregiver_id}", status_code=204)
+async def delete_caregiver(caregiver_id: UUID, request: Request, db: Db,
+                           admin: models.AdminUser = require("marketplace", write=True)):
+    """El equipo elimina un perfil: primero se borra la cuenta en el sitio (si no se puede, no se toca
+    nada aquí) y después el perfil con sus documentos, reseñas y puntos."""
+    c = await db.get(models.CaregiverProfile, caregiver_id)
+    if c is None:
+        raise not_found()
+    await general_client.push_caregiver_delete(c.email)
+    await audit(db, request, "marketplace.caregiver_delete", "caregiver_profile", c.id,
+                before={"name": c.name, "email": c.email, "status": c.status})
+    await _delete_caregiver_rows(db, c.id)
+
+
+class CaregiverRemoveIn(BaseModel):
+    email: str = Field(max_length=254)
+
+
+@router.post("/caregivers/remove", status_code=204, dependencies=[Depends(require_internal_key)])
+async def remove_caregiver(body: CaregiverRemoveIn, db: Db):
+    """La cuidadora eliminó su cuenta en el sitio: desaparece también de la Consola."""
+    c = (await db.execute(select(models.CaregiverProfile)
+                          .where(func.lower(models.CaregiverProfile.email) == body.email.lower()))).scalar_one_or_none()
+    if c is not None:
+        await _delete_caregiver_rows(db, c.id)
 
 
 # ---------- Fidelización 1: ranking de cuidadoras por puntos ----------
