@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { PatientsApi } from "../api/endpoints";
+import { MarketplaceApi, PatientsApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
-import { Avatar, Chip, ConfirmModal, EmptyState, ErrorBanner, Spinner, fmtDate } from "../components/ui";
+import { Avatar, Chip, ConfirmModal, EmptyState, ErrorBanner, OkBanner, Spinner, fmtDate } from "../components/ui";
 import type { PatientDetail } from "../api/types";
 
 const SEX_LABEL: Record<string, string> = { female: "Mujer", male: "Hombre", other: "Otro" };
@@ -12,9 +12,10 @@ function TagList({ items, kind, empty }: { items: string[]; kind: "brand" | "gol
   return <div className="chip-row">{items.map((x) => <Chip key={x} kind={kind}>{x}</Chip>)}</div>;
 }
 
-function CareStatus({ p }: { p: PatientDetail }) {
+function CareStatus({ p, onEnd }: { p: PatientDetail; onEnd: () => void }) {
   if (p.caregiver) {
     return (
+      <>
       <div className="care-status on">
         <div className="care-dot" />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -26,6 +27,11 @@ function CareStatus({ p }: { p: PatientDetail }) {
         </div>
         <div className="cg-avatar mini"><Avatar name={p.caregiver.full_name} photoUrl={p.caregiver.photo_url} /></div>
       </div>
+      <div className="care-actions">
+        <Link to={`/marketplace/cuidadoras/${p.caregiver.profile_id}`} className="btn ghost small">Ver perfil de la cuidadora</Link>
+        <button className="btn danger-ghost small" onClick={onEnd}>Terminar trabajo</button>
+      </div>
+      </>
     );
   }
   return (
@@ -47,6 +53,27 @@ export default function PatientProfile() {
   const [confirming, setConfirming] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [ending, setEnding] = useState(false);
+  const [endBusy, setEndBusy] = useState(false);
+  const [endError, setEndError] = useState<string | null>(null);
+  const [finished, setFinished] = useState<{ name: string; profileId: string } | null>(null);
+
+  async function endJob() {
+    const c = patient.data?.caregiver;
+    if (!c) return;
+    setEndBusy(true);
+    setEndError(null);
+    try {
+      await MarketplaceApi.endEngagement(c.engagement_id);
+      setFinished({ name: c.full_name, profileId: c.profile_id });
+      setEnding(false);
+      patient.reload();
+    } catch (e) {
+      setEndError(e instanceof Error ? e.message : "No se pudo terminar el trabajo.");
+    } finally {
+      setEndBusy(false);
+    }
+  }
 
   async function remove() {
     setRemoving(true);
@@ -70,6 +97,13 @@ export default function PatientProfile() {
     <div className="page">
       <Link to="/familia" className="btn link">← Mis familiares</Link>
 
+      {finished && (
+        <div className="finished-note">
+          <OkBanner message={`Terminaste el trabajo con ${finished.name}. Puedes dejarle una reseña desde su perfil.`} />
+          <Link to={`/marketplace/cuidadoras/${finished.profileId}`} className="btn gold small">⭐ Dejar reseña</Link>
+        </div>
+      )}
+
       <div className="patient-hero">
         <div className="patient-hero-avatar"><Avatar name={p.full_name} photoUrl={p.photo_url} /></div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -85,7 +119,7 @@ export default function PatientProfile() {
       <div className="grid2" style={{ marginTop: 20 }}>
         <div className="card">
           <h3>Estado actual</h3>
-          <CareStatus p={p} />
+          <CareStatus p={p} onEnd={() => { setEndError(null); setEnding(true); }} />
           <div className="wellbeing">
             <div>
               <div className="field-label" style={{ margin: 0 }}>Semáforo de bienestar</div>
@@ -131,7 +165,14 @@ export default function PatientProfile() {
         <ConfirmModal title={`¿Eliminar a ${p.full_name}?`} confirmLabel="Sí, eliminar" busy={removing}
                       error={removeError} onConfirm={remove} onClose={() => setConfirming(false)}>
           <p>Se eliminará el perfil completo, con su foto, sus alergias y sus notas. Esta acción no se puede deshacer.</p>
-          {p.caregiver && <p><b>Tiene una cuidadora asignada.</b> Primero debes cerrar ese trabajo desde la ficha de la cuidadora.</p>}
+          {p.caregiver && <p><b>Tiene una cuidadora asignada.</b> Primero termina el trabajo con el botón «Terminar trabajo» de arriba.</p>}
+        </ConfirmModal>
+      )}
+
+      {ending && p.caregiver && (
+        <ConfirmModal title={`¿Terminar el trabajo con ${p.caregiver.full_name}?`} confirmLabel="Sí, terminar" tone="neutral"
+                      busyLabel="Terminando…" busy={endBusy} error={endError} onConfirm={endJob} onClose={() => setEnding(false)}>
+          <p>{p.caregiver.full_name} dejará de figurar con {firstName} y quedará disponible para otras familias. Después podrás dejarle una reseña.</p>
         </ConfirmModal>
       )}
     </div>

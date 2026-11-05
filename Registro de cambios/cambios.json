@@ -1,6 +1,24 @@
 [
   {
     "fecha": "2026-11-05",
+    "titulo": "Terminar el trabajo y ver a la cuidadora desde la ficha del familiar",
+    "resumen": "Desde la ficha de cada familiar ahora se puede ir al perfil de su cuidadora y terminar el trabajo, sin tener que buscarla en otra pantalla.",
+    "areas": [
+      {
+        "nombre": "Sitio de cuidadoras y familias",
+        "items": [
+          "Bajo «Con cuidadora asignada» hay dos botones: «Ver perfil de la cuidadora» y «Terminar trabajo» (con confirmación).",
+          "Al terminar, el familiar queda «Sin cuidadora asignada», la cuidadora vuelve a estar disponible y aparece un acceso directo a «Dejar reseña».",
+          "El aviso de eliminar un familiar con cuidadora ahora indica usar el botón «Terminar trabajo» de la misma ficha."
+        ]
+      }
+    ],
+    "pasos_manuales": [
+      "Ninguno."
+    ]
+  },
+  {
+    "fecha": "2026-11-05",
     "titulo": "Eliminar familiares, cuentas y perfiles de cuidadoras",
     "resumen": "Ahora se pueden eliminar los perfiles de familiares y las cuentas, y el equipo puede eliminar el perfil de una cuidadora desde la Consola.",
     "areas": [

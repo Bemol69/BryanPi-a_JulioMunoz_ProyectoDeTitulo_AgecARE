@@ -67,8 +67,8 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 }
 
 /** Pide confirmar una acción que no se puede deshacer. */
-export function ConfirmModal({ title, confirmLabel, busy, error, onConfirm, onClose, children }: {
-  title: string; confirmLabel: string; busy: boolean; error: string | null;
+export function ConfirmModal({ title, confirmLabel, busy, error, onConfirm, onClose, children, tone = "danger", busyLabel = "Eliminando…" }: {
+  title: string; confirmLabel: string; busy: boolean; error: string | null; tone?: "danger" | "neutral"; busyLabel?: string;
   onConfirm: () => void; onClose: () => void; children: ReactNode;
 }) {
   return (
@@ -77,7 +77,7 @@ export function ConfirmModal({ title, confirmLabel, busy, error, onConfirm, onCl
       {error && <ErrorBanner message={error} />}
       <div className="confirm-actions">
         <button className="btn ghost" onClick={onClose} disabled={busy}>Cancelar</button>
-        <button className="btn danger" onClick={onConfirm} disabled={busy}>{busy ? "Eliminando…" : confirmLabel}</button>
+        <button className={tone === "danger" ? "btn danger" : "btn primary"} onClick={onConfirm} disabled={busy}>{busy ? busyLabel : confirmLabel}</button>
       </div>
     </Modal>
   );

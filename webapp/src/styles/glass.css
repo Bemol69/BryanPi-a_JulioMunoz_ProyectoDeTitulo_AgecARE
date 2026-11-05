@@ -258,3 +258,8 @@ body { background: var(--ac-canvas); background-attachment: fixed; color: var(--
 .app-account:hover span, .app-account.active span { text-decoration: underline; }
 .account-id { display: flex; align-items: center; gap: 18px; }
 @media (max-width: 640px) { .danger-zone { flex-direction: column; align-items: stretch; } }
+
+/* Acciones sobre la cuidadora asignada (ficha del familiar) */
+.care-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.finished-note { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 14px 0 4px; }
+.finished-note > :first-child { flex: 1; min-width: 240px; }
