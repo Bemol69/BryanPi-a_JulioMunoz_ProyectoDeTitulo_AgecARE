@@ -1,6 +1,23 @@
 [
   {
     "fecha": "2026-11-05",
+    "titulo": "Corrección de las pruebas automáticas y de las zonas horarias de la Consola",
+    "resumen": "Las pruebas automáticas de la Consola fallaban en GitHub porque faltaba la base de zonas horarias. Es la misma que usa el código real para calcular los periodos de las métricas.",
+    "areas": [
+      {
+        "nombre": "Backend y base de datos",
+        "items": [
+          "Se agregó tzdata a las dependencias de la Consola: sin él, el cálculo de periodos con la hora de Chile (America/Santiago) fallaba en servidores que no traen esa base.",
+          "Las 31 pruebas de la Consola pasan en un entorno limpio instalado solo con requirements-dev.txt."
+        ]
+      }
+    ],
+    "pasos_manuales": [
+      "Ninguno: Vercel instala la dependencia sola en el próximo despliegue."
+    ]
+  },
+  {
+    "fecha": "2026-11-05",
     "titulo": "Revisión previa al lanzamiento: pruebas completas, fotos de cuidadoras y seguridad",
     "resumen": "Se probó todo el recorrido con cuentas nuevas y se corrigió lo encontrado. La Consola muestra las fotos y se quitaron secciones que no se usan.",
     "areas": [
