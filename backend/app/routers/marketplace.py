@@ -69,7 +69,7 @@ async def _register_review(db: Db, c: models.CaregiverProfile, family_name: str,
 
 
 def _cg_out(c: models.CaregiverProfile, include_note: bool = False) -> CaregiverOut:
-    return CaregiverOut(caregiver_id=c.id, name=c.name, zone=c.zone,
+    return CaregiverOut(caregiver_id=c.id, name=c.name, photo_url=c.photo_url, zone=c.zone,
                         specialties=c.specialties or [], languages=c.languages or [],
                         certifications_count=c.certifications_count, rating_avg=c.rating_avg,
                         reviews_count=c.reviews_count, is_engaged=c.is_engaged,
@@ -162,6 +162,7 @@ async def sync_caregiver(body: CaregiverSyncIn, db: Db):
         # Solo se actualizan los datos descriptivos; el estado (aprobada/
         # suspendida) lo decide el staff y no se pisa desde el sitio público.
         existing.name = body.name
+        existing.photo_url = body.photo_url
         existing.zone = body.zone
         existing.specialties = body.specialties
         existing.languages = body.languages
@@ -169,7 +170,7 @@ async def sync_caregiver(body: CaregiverSyncIn, db: Db):
         existing.is_engaged = body.is_engaged
         return _cg_out(existing)
 
-    profile = models.CaregiverProfile(name=body.name, email=body.email, zone=body.zone,
+    profile = models.CaregiverProfile(name=body.name, email=body.email, zone=body.zone, photo_url=body.photo_url,
                                       specialties=body.specialties, languages=body.languages,
                                       certifications_count=body.certifications_count,
                                       certifications_verified=False, status="pending",
@@ -315,6 +316,7 @@ async def caregiver_ranking(db: Db,
     rows = (await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))).all()
     items = [
         CaregiverRankingItem(rank=(page - 1) * page_size + i + 1, caregiver_id=c.id, name=c.name,
+                             photo_url=c.photo_url,
                              zone=c.zone, points=int(pts), rating_avg=c.rating_avg,
                              reviews_count=c.reviews_count, status=CaregiverStatus(c.status))
         for i, (c, pts) in enumerate(rows)

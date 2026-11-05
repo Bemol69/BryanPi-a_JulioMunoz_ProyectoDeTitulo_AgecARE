@@ -368,6 +368,43 @@ function ProfileCompleteness({ user, profile, docs, onEdit }: {
   );
 }
 
+/** Foto del perfil con un botón de cámara para cambiarla sin entrar a editar el perfil. */
+function QuickAvatar({ user }: { user: { full_name: string; avatar_url: string | null } | null }) {
+  const { uploadAvatar } = useAuth();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onPick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!AVATAR_TYPES.includes(file.type)) { setError("La foto debe ser JPG, PNG o WEBP."); return; }
+    if (file.size > AVATAR_MAX_BYTES) { setError("La foto no puede superar los 4 MB."); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      await uploadAvatar(file);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo subir la foto.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="quick-avatar">
+      <div className="cg-avatar profile-view-avatar ring">{user ? <Avatar name={user.full_name} photoUrl={user.avatar_url} /> : "?"}</div>
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={onPick} hidden />
+      <button type="button" className="quick-avatar-btn" title={user?.avatar_url ? "Cambiar foto" : "Agregar foto"}
+              aria-label="Cambiar foto de perfil" onClick={() => inputRef.current?.click()} disabled={busy}>
+        {busy ? "…" : "📷"}
+      </button>
+      {error && <div className="quick-avatar-error">⚠ {error}</div>}
+    </div>
+  );
+}
+
 function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed, onEdit }: {
   user: { full_name: string; avatar_url: string | null } | null;
   profile: CaregiverProfileOut;
@@ -384,7 +421,7 @@ function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed
       <div className="card profile-view profile-hero-card">
         <div className="profile-cover" />
         <div className="profile-view-top">
-          <div className="cg-avatar profile-view-avatar ring">{user ? <Avatar name={user.full_name} photoUrl={user.avatar_url} /> : "?"}</div>
+          <QuickAvatar user={user} />
           <div className="profile-view-id">
             <div className="profile-view-name">{user?.full_name ?? "Tu perfil"}</div>
             <div className="profile-view-headline">{profile.headline || "Todavía no agregas un título profesional."}</div>

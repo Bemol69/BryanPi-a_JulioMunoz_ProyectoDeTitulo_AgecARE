@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Ilustración de María">
+  <rect width="240" height="240" fill="#FFE2B8"/>
+  <circle cx="200" cy="40" r="46" fill="#fff" opacity=".28"/>
+  <circle cx="30" cy="210" r="56" fill="#fff" opacity=".22"/>
+  <path d="M60 108 C60 40 180 40 180 108 L184 178 C150 190 90 190 56 178 Z" fill="#3B2A22"/>
+  <path d="M26 240 C26 190 72 170 120 170 C168 170 214 190 214 240 Z" fill="#3D8FA6"/>
+  <path d="M100 172 L120 200 L140 172 Z" fill="#FFFFFF" opacity=".92"/>
+  <rect x="104" y="136" width="32" height="40" rx="14" fill="#D0A07C"/>
+  <ellipse cx="120" cy="100" rx="40" ry="46" fill="#E8B28A"/>
+  <ellipse cx="80" cy="104" rx="6" ry="9" fill="#DAA781"/><ellipse cx="160" cy="104" rx="6" ry="9" fill="#DAA781"/>
+  <circle cx="96" cy="116" r="7" fill="#FF8C8C" opacity=".22"/><circle cx="144" cy="116" r="7" fill="#FF8C8C" opacity=".22"/><circle cx="105" cy="102" r="3.4" fill="#2B2230"/><circle cx="135" cy="102" r="3.4" fill="#2B2230"/><path d="M97 93 q8 -5 16 0 M127 93 q8 -5 16 0" stroke="#2B2230" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".55"/><path d="M107 122 Q120 134 133 122" stroke="#8A3D3D" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+  <path d="M76 100 C68 34 172 30 166 100 C152 72 124 60 102 66 C90 72 82 84 76 100 Z" fill="#3B2A22"/>
+</svg>

@@ -278,6 +278,7 @@ class CaregiverProfile(Base):
     id: Mapped[uuid.UUID] = pk()
     name: Mapped[str] = mapped_column(String(120))
     email: Mapped[str] = mapped_column(String(254))
+    photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     zone: Mapped[str] = mapped_column(String(80), index=True)
     specialties: Mapped[list] = mapped_column(PortableJSON, default=list)
     languages: Mapped[list] = mapped_column(PortableJSON, default=list)

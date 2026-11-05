@@ -2,8 +2,7 @@ import { useMemo, useState } from "react";
 import { MarketingApi, MarketplaceApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
 import {
-  Card, CardHead, Chip, EmptyState, ErrorBanner, Kpi, Modal, Spinner, Stars, fmtDateTime, fmtNumber,
-} from "../components/ui";
+  Card, CardHead, Chip, EmptyState, ErrorBanner, Kpi, Modal, Spinner, Stars, fmtDateTime, fmtNumber, Person } from "../components/ui";
 import type { CaregiverRankingItem } from "../api/types";
 
 export default function Fidelizacion() {
@@ -80,7 +79,7 @@ export default function Fidelizacion() {
                     <td>
                       <span className={`rank-badge${c.rank <= 3 ? ` top${c.rank}` : ""}`}>{c.rank}</span>
                     </td>
-                    <td className="clickable" onClick={() => setSelected(c)} style={{ fontWeight: 600 }}>{c.name}</td>
+                    <td className="clickable" onClick={() => setSelected(c)}><Person name={c.name} photoUrl={c.photo_url} /></td>
                     <td>{c.zone}</td>
                     <td className="num" style={{ fontWeight: 700 }}>{fmtNumber(c.points)}</td>
                     <td className="num">{c.rating_avg != null ? <Stars rating={c.rating_avg} /> : "—"}</td>

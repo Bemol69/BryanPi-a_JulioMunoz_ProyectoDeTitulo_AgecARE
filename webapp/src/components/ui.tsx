@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 export function Spinner({ label = "Cargando…" }: { label?: string }) {
   return <div className="spinner-row">{label}</div>;
@@ -46,7 +46,9 @@ export function Initials({ name }: { name: string }) {
 }
 
 export function Avatar({ name, photoUrl }: { name: string; photoUrl?: string | null }) {
-  if (photoUrl) return <img className="avatar-img" src={photoUrl} alt={name} />;
+  // Si la foto no carga (archivo borrado o dirección caída) se muestran las iniciales en vez de una imagen rota.
+  const [failed, setFailed] = useState(false);
+  if (photoUrl && !failed) return <img className="avatar-img" src={photoUrl} alt={name} onError={() => setFailed(true)} />;
   return <Initials name={name} />;
 }
 

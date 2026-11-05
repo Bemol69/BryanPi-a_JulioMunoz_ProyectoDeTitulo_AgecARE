@@ -1,8 +1,8 @@
 import { api, qs } from "./client";
 import type {
   AdoptionOut, AlertsOut, CaregiverDocumentOut, CaregiverOut, CaregiverRankingItem, CaregiverReviewOut,
-  CommercialSummaryOut, ContentItemOut, FunnelOut, IncidentOut, LoginOutT, MarketingDashboardOut,
-  MeOut, ModerationItemOut, OpsStatusOut, Page, PlansOut, ProductOut, RolesSummaryOut,
+  CommercialSummaryOut, FunnelOut, IncidentOut, LoginOutT, MarketingDashboardOut,
+  MeOut, OpsStatusOut, Page, PlansOut, ProductOut, RolesSummaryOut,
   SupportSummaryOut, TicketOut,
 } from "./types";
 
@@ -16,7 +16,7 @@ export const AuthApi = {
 // ---- Marketplace / Fidelizacion (nuestro modulo) ----
 export const MarketplaceApi = {
   listCaregivers: (params: { status?: string; zone?: string; q?: string; page?: number }) =>
-    api.get<Page<CaregiverOut>>(`/marketplace/caregivers${qs(params)}`),
+    api.get<Page<CaregiverOut>>(`/marketplace/caregivers${qs({ ...params, page_size: 100 })}`),
   getCaregiver: (id: string) => api.get<CaregiverOut>(`/marketplace/caregivers/${id}`),
   patchCaregiver: (id: string, body: { status?: string; reason?: string; internal_note?: string }) =>
     api.patch<CaregiverOut>(`/marketplace/caregivers/${id}`, body),
@@ -67,15 +67,3 @@ export const FeaturesApi = {
 };
 
 // ---- Moderacion ----
-export const ModerationApi = {
-  queue: (status = "pending") => api.get<Page<ModerationItemOut>>(`/moderation/queue${qs({ status })}`),
-  approve: (id: string, note?: string) => api.post<ModerationItemOut>(`/moderation/queue/${id}/approve`, { note }),
-  reject: (id: string, reason_code: string, note?: string) =>
-    api.post<ModerationItemOut>(`/moderation/queue/${id}/reject`, { reason_code, note }),
-};
-
-// ---- Contenido ----
-export const ContentApi = {
-  list: (params: { status?: string; type?: string; page?: number }) =>
-    api.get<Page<ContentItemOut>>(`/content/items${qs(params)}`),
-};

@@ -1,4 +1,6 @@
 """Perfil profesional de la cuidadora: base de su ficha en el marketplace."""
+import secrets
+
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from datetime import date, timedelta
 from uuid import UUID
@@ -128,8 +130,10 @@ async def upload_document(request: Request, db: Db, user: CurrentUser,
     data = await file.read()
     if len(data) > storage.MAX_UPLOAD_BYTES:
         raise ApiError(422, "FILE_TOO_LARGE", f"El documento no puede superar los {storage.MAX_UPLOAD_LABEL}.")
+    storage.check_signature(data, file.content_type)
 
-    filename = f"{doc_type.value}-{int(now_utc().timestamp())}{ext}"
+    # Nombre con un código al azar: los documentos de identidad no deben poder adivinarse por su dirección.
+    filename = f"{doc_type.value}-{secrets.token_hex(8)}{ext}"
     file_url = await storage.save(f"documents/{profile.id}/{filename}", data, file.content_type,
                                   str(request.base_url))
     original_name = file.filename or filename

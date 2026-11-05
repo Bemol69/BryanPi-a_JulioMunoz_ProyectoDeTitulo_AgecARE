@@ -56,6 +56,7 @@ async def upload_patient_photo(patient_id: UUID, request: Request, db: Db, user:
     data = await file.read()
     if len(data) > storage.MAX_UPLOAD_BYTES:
         raise ApiError(422, "FILE_TOO_LARGE", f"La foto no puede superar los {storage.MAX_UPLOAD_LABEL}.")
+    storage.check_signature(data, file.content_type)
 
     url = await storage.save(f"patients/{patient.id}{ext}", data, file.content_type, str(request.base_url),
                              stale=[f"patients/{patient.id}{e}" for e in PHOTO_CONTENT_TYPES.values() if e != ext])

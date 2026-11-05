@@ -8,6 +8,7 @@ from sqlalchemy import text
 
 # (tabla, columna, definición). Agregar aquí cada columna nueva de un modelo existente.
 COLUMN_PATCHES: list[tuple[str, str, str]] = [
+    ("marketplace_caregivers", "photo_url", "VARCHAR(500)"),
     ("marketplace_caregiver_documents", "status", "VARCHAR(16) NOT NULL DEFAULT 'pending'"),
     ("marketplace_caregiver_documents", "pending_file_url", "VARCHAR(500)"),
     ("marketplace_caregiver_documents", "pending_filename", "VARCHAR(255)"),

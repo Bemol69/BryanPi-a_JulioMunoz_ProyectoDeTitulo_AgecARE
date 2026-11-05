@@ -53,6 +53,7 @@ export interface CaregiverDocumentOut {
 export interface CaregiverOut {
   caregiver_id: string;
   name: string;
+  photo_url?: string | null;
   zone: string;
   specialties: string[];
   languages: string[];
@@ -73,6 +74,7 @@ export interface CaregiverRankingItem {
   rank: number;
   caregiver_id: string;
   name: string;
+  photo_url?: string | null;
   zone: string;
   points: number;
   rating_avg: number | null;
@@ -190,16 +192,3 @@ export interface AdoptionAlert {
 export interface AlertsOut { threshold: number; alerts: AdoptionAlert[]; computed_at: string }
 
 // ---- Moderacion ----
-export interface ModerationItemOut {
-  id: string; type: string; content: Record<string, unknown>; author: Record<string, unknown>;
-  reported_by: Record<string, unknown> | null; report_reason: string | null;
-  status: "pending" | "approved" | "rejected"; decided_by_name: string | null;
-  decided_at: string | null; created_at: string;
-}
-
-// ---- Contenido ----
-export interface ContentItemOut {
-  id: string; type: string; title: string; body: string; audio_available: boolean;
-  tags: string[]; status: string; publish_at: string | null; published_at: string | null;
-  created_by_name: string | null; updated_at: string;
-}

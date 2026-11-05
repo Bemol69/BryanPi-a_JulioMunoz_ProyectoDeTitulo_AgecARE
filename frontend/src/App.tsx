@@ -8,8 +8,6 @@ import Comercial from "./pages/Comercial";
 import Operativo from "./pages/Operativo";
 import Usuarios from "./pages/Usuarios";
 import Funcional from "./pages/Funcional";
-import Moderacion from "./pages/Moderacion";
-import Contenido from "./pages/Contenido";
 import { Card, Spinner } from "./components/ui";
 
 const PATH_MODULE: Record<string, string> = {
@@ -19,10 +17,8 @@ const PATH_MODULE: Record<string, string> = {
   "/operativo": "ops",
   "/usuarios": "support",
   "/funcional": "metrics",
-  "/moderacion": "moderation",
-  "/contenido": "content",
 };
-const FALLBACK_ORDER = ["/fidelizacion", "/marketplace", "/comercial", "/operativo", "/usuarios", "/funcional", "/contenido", "/moderacion"];
+const FALLBACK_ORDER = ["/marketplace", "/fidelizacion", "/comercial", "/operativo", "/usuarios", "/funcional"];
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { me, loading } = useAuth();
@@ -70,8 +66,6 @@ export default function App() {
             <Route path="/operativo" element={<RequireModule><Operativo /></RequireModule>} />
             <Route path="/usuarios" element={<RequireModule><Usuarios /></RequireModule>} />
             <Route path="/funcional" element={<RequireModule><Funcional /></RequireModule>} />
-            <Route path="/moderacion" element={<RequireModule><Moderacion /></RequireModule>} />
-            <Route path="/contenido" element={<RequireModule><Contenido /></RequireModule>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

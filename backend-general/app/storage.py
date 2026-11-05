@@ -18,6 +18,27 @@ MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 MAX_UPLOAD_LABEL = "4 MB"
 
 
+_PNG = bytes.fromhex("89504e470d0a1a0a")
+_JPEG = bytes.fromhex("ffd8ff")
+
+
+def check_signature(data: bytes, content_type: str) -> None:
+    """El tipo que declara el navegador no es de fiar: se comprueba que el contenido sea realmente
+    una imagen PNG, JPG o WEBP, o un PDF, antes de guardarlo."""
+    if content_type == "image/png":
+        ok = data.startswith(_PNG)
+    elif content_type == "image/jpeg":
+        ok = data.startswith(_JPEG)
+    elif content_type == "image/webp":
+        ok = data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+    elif content_type == "application/pdf":
+        ok = data.startswith(b"%PDF-")
+    else:
+        ok = False
+    if not ok:
+        raise ApiError(422, "INVALID_FILE_TYPE", "El archivo no corresponde al formato indicado (PDF, JPG, PNG o WEBP).")
+
+
 def remote_enabled() -> bool:
     s = get_settings()
     return bool(s.supabase_url and s.supabase_service_key)

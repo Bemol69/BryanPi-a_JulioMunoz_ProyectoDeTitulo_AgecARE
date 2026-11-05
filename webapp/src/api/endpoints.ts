@@ -44,7 +44,7 @@ export const CaregiverApi = {
 
 export const MarketplaceApi = {
   search: (params: { q?: string; zone?: string; specialty?: string; language?: string; min_rating?: number }) =>
-    api.get<Page<CaregiverCard>>(`/marketplace/caregivers${qs(params)}`),
+    api.get<Page<CaregiverCard>>(`/marketplace/caregivers${qs({ ...params, page_size: 100 })}`),
   detail: (profileId: string) => api.get<CaregiverPublic>(`/marketplace/caregivers/${profileId}`),
   contact: (profileId: string, message?: string) =>
     api.post<ContactOut>(`/marketplace/caregivers/${profileId}/contact`, { message }),

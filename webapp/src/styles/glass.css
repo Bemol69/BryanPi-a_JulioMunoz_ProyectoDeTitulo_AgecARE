@@ -117,6 +117,7 @@ body { background: var(--ac-canvas); background-attachment: fixed; color: var(--
 .cg-card.working .chip.brand, .cg-card.working .chip.neutral, .cg-card.working .chip.gold { background: rgba(255, 255, 255, .55); color: #2B2100; }
 .cg-card.working .exp-pill { background: rgba(43, 33, 0, .12); color: #2B2100; }
 .working-badge { background: #2B2100; color: #FFDB4D; }
+.cg-card.working .stars { color: #8A5A00; }
 .cg-card.featured .working-badge { background: #fff; color: var(--ac-ink); }
 
 /* ---------- Indicadores en pastilla ---------- */
@@ -222,3 +223,13 @@ body { background: var(--ac-canvas); background-attachment: fixed; color: var(--
   .page-head h1 { font-size: 34px; }
   .site-frame { border-radius: 30px; }
 }
+
+/* ---------- Cambiar la foto desde el perfil ---------- */
+.quick-avatar { position: relative; flex-shrink: 0; }
+.quick-avatar-btn {
+  position: absolute; right: -4px; bottom: -4px; width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff;
+  background: var(--ac-ink); color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 16px -8px rgba(11, 14, 28, .7); transition: transform .2s var(--ac-ease);
+}
+.quick-avatar-btn:hover:not(:disabled) { transform: scale(1.1); }
+.quick-avatar-error { position: absolute; top: 100%; left: 0; margin-top: 8px; width: 220px; font-size: 12px; color: var(--ac-warn-700); }

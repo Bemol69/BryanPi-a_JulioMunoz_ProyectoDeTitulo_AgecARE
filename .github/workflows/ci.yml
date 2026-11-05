@@ -1,0 +1,57 @@
+name: CI
+
+# Corre en cada push y en cada pull request: pruebas de las dos APIs (con la misma versión de Python que usa
+# Vercel) y compilación de las dos webs. Si algo falla, no debería llegar a producción.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  apis:
+    name: API ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [backend, backend-general]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ${{ matrix.app }}/requirements*.txt
+      - name: Instalar dependencias
+        run: pip install -r requirements-dev.txt
+      - name: Pruebas automáticas
+        run: pytest -q
+      - name: La API arranca como en Vercel
+        env:
+          ADMIN_DATABASE_URL: postgresql://usuario:clave@localhost:5432/prueba
+          GENERAL_DATABASE_URL: postgresql://usuario:clave@localhost:5432/prueba
+        run: python -c "import api.index; print('importación correcta')"
+
+  webs:
+    name: Web ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [frontend, webapp]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - run: npm ci
+      - name: Compilar
+        run: npm run build

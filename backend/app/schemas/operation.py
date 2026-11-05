@@ -75,6 +75,7 @@ class CaregiverStatusItem(BaseModel):
 class CaregiverOut(BaseModel):
     caregiver_id: UUID
     name: str
+    photo_url: str | None = None
     zone: str
     specialties: list[str]
     languages: list[str]
@@ -107,6 +108,7 @@ class CaregiverSyncIn(BaseModel):
     languages: list[str] = Field(default_factory=list)
     certifications_count: int = 0
     is_engaged: bool = False
+    photo_url: str | None = Field(default=None, max_length=500)
 
 
 class CaregiverReviewIn(BaseModel):
@@ -154,6 +156,7 @@ class CaregiverRankingItem(BaseModel):
     rank: int
     caregiver_id: UUID
     name: str
+    photo_url: str | None = None
     zone: str
     points: int
     rating_avg: float | None

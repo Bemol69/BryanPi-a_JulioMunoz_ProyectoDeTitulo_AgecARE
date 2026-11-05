@@ -11,7 +11,7 @@ const NAV: { group: string; hidden?: boolean; items: { to: string; icon: string;
     group: "Marketing y fidelización",
     items: [
       { to: "/marketplace", icon: "🧑‍⚕️", label: "Marketplace de cuidadoras", short: "Marketplace", module: "marketplace" },
-      { to: "/fidelizacion", icon: "🏆", label: "Fidelización y ranking", short: "Fidelización", module: "marketing", badge: "nuevo" },
+      { to: "/fidelizacion", icon: "🏆", label: "Fidelización y ranking", short: "Fidelización", module: "marketing" },
     ],
   },
   {
@@ -24,13 +24,6 @@ const NAV: { group: string; hidden?: boolean; items: { to: string; icon: string;
       { to: "/funcional", icon: "🧩", label: "Uso por funcionalidad", short: "Funcionalidades", module: "metrics" },
     ],
   },
-  {
-    group: "Operación",
-    items: [
-      { to: "/contenido", icon: "📰", label: "Curación de contenido", short: "Contenido", module: "content" },
-      { to: "/moderacion", icon: "🛡️", label: "Moderación", short: "Moderación", module: "moderation" },
-    ],
-  },
 ];
 
 const TITLES: Record<string, { title: string; crumb: string }> = {
@@ -40,8 +33,6 @@ const TITLES: Record<string, { title: string; crumb: string }> = {
   "/operativo": { title: "Estado operativo", crumb: "Analítica · Salud de la plataforma" },
   "/usuarios": { title: "Usuarios y soporte", crumb: "Analítica · Perfiles y soporte" },
   "/funcional": { title: "Uso por funcionalidad", crumb: "Analítica · Adopción de funciones" },
-  "/contenido": { title: "Curación de contenido", crumb: "Operación · Chistes y noticias del adulto mayor" },
-  "/moderacion": { title: "Moderación", crumb: "Operación · Cola de revisión" },
 };
 
 export default function Layout() {
@@ -85,7 +76,14 @@ export default function Layout() {
             <h1>{meta.title}</h1>
           </div>
         </div>
-        <Outlet />
+        {items.length === 0 ? (
+          <div className="card">
+            <div className="card-title">Tu rol todavía no tiene secciones habilitadas</div>
+            <div className="card-sub" style={{ marginTop: 6 }}>
+              Pide al administrador que revise los permisos de tu cuenta.
+            </div>
+          </div>
+        ) : <Outlet />}
       </main>
     </div>
   );

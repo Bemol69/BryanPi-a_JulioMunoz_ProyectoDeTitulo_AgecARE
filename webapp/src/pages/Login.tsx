@@ -3,11 +3,15 @@ import { Link, useNavigate } from "react-router-dom";
 import PublicNav from "../components/PublicNav";
 import { useAuth } from "../auth/AuthContext";
 
+/** Muestra las cuentas de ejemplo bajo el formulario. En producción se apaga con VITE_SHOW_DEMO_ACCESS=false. */
+const SHOW_DEMO_ACCESS = import.meta.env.VITE_SHOW_DEMO_ACCESS !== "false";
+
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("familia@demo.cl");
-  const [password, setPassword] = useState("Familia123!");
+  // Las credenciales de ejemplo solo se precargan en desarrollo; en la web publicada el formulario parte vacío.
+  const [email, setEmail] = useState(import.meta.env.DEV ? "familia@demo.cl" : "");
+  const [password, setPassword] = useState(import.meta.env.DEV ? "Familia123!" : "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -47,9 +51,11 @@ export default function Login() {
               {busy ? "Ingresando…" : "Ingresar"}
             </button>
           </form>
+          {SHOW_DEMO_ACCESS && (
           <div className="field-hint" style={{ marginTop: 16 }}>
             <b>Demo:</b> familia@demo.cl / Familia123! — o maria@cuidado.cl / Cuidado123!
           </div>
+          )}
           <div className="auth-switch">¿No tienes cuenta? <Link to="/registro" className="btn link">Regístrate</Link></div>
         </div>
       </div>

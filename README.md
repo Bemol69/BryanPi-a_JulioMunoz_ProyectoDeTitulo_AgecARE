@@ -100,12 +100,11 @@ Abre `http://localhost:5173`.
 
 | Correo | Contraseña | Rol |
 |---|---|---|
-| admin@wellq.co.uk | Admin123! | Administrador (acceso completo) |
-| soporte@wellq.co.uk | Soporte123! | Soporte |
-| analista@wellq.co.uk | Analista123! | Analista |
-| editora@wellq.co.uk | Editora123! | Editor de contenido |
+| admin@wellq.co.uk | Admin123! | Administrador (marketplace de cuidadoras y fidelización) |
+| editora@wellq.co.uk | Editora123! | Gestiona las cuidadoras (revisa documentos y aprueba perfiles) |
+| analista@wellq.co.uk | Analista123! | Solo ve fidelización y ranking |
 
-El menú lateral cambia según el rol: cada cuenta solo ve los módulos para los
+El menú superior cambia según el rol: cada cuenta solo ve las secciones para las
 que tiene permiso.
 
 Para restablecer los datos de prueba:
@@ -144,6 +143,18 @@ Para restablecer los datos de prueba:
 ```bash
 docker compose exec api python -m scripts.seed
 ```
+
+## Calidad y pruebas
+
+- **Pruebas automáticas de las APIs** (`pytest`, sin necesidad de Docker): `cd backend && pytest` y
+  `cd backend-general && pytest`. Cubren autenticación y permisos, el marketplace, la revisión de documentos,
+  las solicitudes de contratación, el chat, las reseñas y la verificación de los archivos subidos.
+- **Integración continua:** cada push y cada pull request ejecuta esas pruebas con la misma versión de Python que
+  usa Vercel (3.12), comprueba que cada API arranca como lo hace Vercel y compila las dos webs
+  (`.github/workflows/ci.yml`).
+- **Prueba de punta a punta con la interfaz:** la carpeta [`e2e/`](e2e/) tiene un recorrido que registra cuentas
+  nuevas, completa un perfil, sube fotos y documentos, aprueba desde la Consola, contrata, conversa por el chat y
+  deja una reseña. El último informe está en [`Fase 2/QA/Informe de pruebas.md`](Fase%202/QA/Informe%20de%20pruebas.md).
 
 ## Integrantes del equipo con sus roles
 

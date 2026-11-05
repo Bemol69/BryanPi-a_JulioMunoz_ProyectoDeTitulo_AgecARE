@@ -8,6 +8,8 @@ from app import models
 from app.security import now_utc
 from tests.conftest import INTERNAL
 
+PNG_BYTES = bytes.fromhex("89504e470d0a1a0a") + b"imagen-de-prueba"
+
 API = "/api/v1"
 
 
@@ -29,7 +31,7 @@ async def set_status(client, email, status):
 
 # ---------- Visibilidad según la revisión del staff ----------
 async def test_only_approved_caregivers_are_listed(client, family):
-    assert len(await names_in_search(client, family)) == 4
+    assert len(await names_in_search(client, family)) == 6
     await set_status(client, "rocio@cuidado.cl", "suspended")
     await set_status(client, "fernanda@cuidado.cl", "pending")
     found = await names_in_search(client, family)
@@ -66,7 +68,7 @@ async def test_working_caregivers_are_flagged_and_listed_last(client, family):
 # ---------- Documentos con aprobación del staff ----------
 async def upload(client, headers, doc_type="id_card", name="cedula.png"):
     return await client.post(f"{API}/caregiver/documents", headers=headers, data={"doc_type": doc_type},
-                             files={"file": (name, b"\x89PNG-demo", "image/png")})
+                             files={"file": (name, PNG_BYTES, "image/png")})
 
 
 async def review(client, doc_type, action, note=None, email="maria@cuidado.cl"):
@@ -371,3 +373,35 @@ async def test_accepting_one_request_leaves_the_others_unavailable(client, famil
     other_req = next(r for r in after if r["status"] == "unavailable")
     r = await client.post(f"{API}/caregiver/hire-requests/{other_req['request_id']}/accept", headers=javiera)
     assert r.status_code == 409
+
+
+# ---------- Archivos subidos: verificación de la firma y foto hacia la Consola ----------
+async def test_a_file_that_is_not_what_it_claims_to_be_is_rejected(client, maria):
+    r = await client.post(f"{API}/caregiver/documents", headers=maria, data={"doc_type": "id_card"},
+                          files={"file": ("cedula.png", b"esto es texto, no una imagen", "image/png")})
+    assert r.status_code == 422 and r.json()["error"]["code"] == "INVALID_FILE_TYPE"
+    r = await client.post(f"{API}/users/me/avatar", headers=maria,
+                          files={"file": ("foto.jpg", b"%PDF-1.4 no soy una foto", "image/jpeg")})
+    assert r.status_code == 422
+
+
+async def test_document_urls_cannot_be_guessed(client, maria):
+    first = (await upload(client, maria)).json()["file_url"]
+    second = (await upload(client, maria, doc_type="background_check")).json()["file_url"]
+    assert first != second and "id_card-" in first
+    suffix = first.rsplit("id_card-", 1)[1].split(".")[0]
+    assert len(suffix) >= 12 and not suffix.isdigit()
+
+
+async def test_caregiver_photo_is_sent_to_the_console(client, maria, monkeypatch):
+    import app.sync as sync_module
+    sent = []
+
+    async def capture(path, payload):
+        sent.append((path, payload))
+        return True
+    monkeypatch.setattr(sync_module, "_post_to_admin", capture)
+    r = await client.post(f"{API}/users/me/avatar", headers=maria, files={"file": ("foto.png", PNG_BYTES, "image/png")})
+    assert r.status_code == 200, r.text
+    profile_syncs = [p for path, p in sent if path.endswith("/caregivers/sync")]
+    assert profile_syncs and "/avatars/" in (profile_syncs[-1]["photo_url"] or "")

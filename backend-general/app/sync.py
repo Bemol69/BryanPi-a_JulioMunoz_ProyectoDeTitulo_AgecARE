@@ -60,6 +60,7 @@ async def sync_caregiver_to_admin(profile: "models.CaregiverProfile", user: "mod
         "languages": profile.languages or [],
         "certifications_count": len(profile.certifications or []),
         "is_engaged": is_engaged,
+        "photo_url": user.avatar_url,
     })
 
 

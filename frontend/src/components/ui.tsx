@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 export function Card({ children, style }: { children: ReactNode; style?: React.CSSProperties }) {
   return <div className="card" style={style}>{children}</div>;
@@ -57,6 +57,29 @@ export function StatusChip({ status }: { status: string }) {
   };
   const m = map[status] ?? { kind: "neutral" as const, label: status, icon: "" };
   return <Chip kind={m.kind}>{m.icon} {m.label}</Chip>;
+}
+
+function initialsOf(name: string): string {
+  return name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
+}
+
+/** Foto redonda de una persona; si no tiene foto (o no carga) muestra sus iniciales. */
+export function PersonAvatar({ name, photoUrl, size = 38 }: { name: string; photoUrl?: string | null; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className="person-avatar" style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}>
+      {photoUrl && !failed ? <img src={photoUrl} alt={name} onError={() => setFailed(true)} /> : initialsOf(name)}
+    </span>
+  );
+}
+
+export function Person({ name, photoUrl, sub }: { name: string; photoUrl?: string | null; sub?: string }) {
+  return (
+    <span className="person">
+      <PersonAvatar name={name} photoUrl={photoUrl} />
+      <span className="person-text"><b>{name}</b>{sub && <i>{sub}</i>}</span>
+    </span>
+  );
 }
 
 export function Spinner({ label = "Cargando…" }: { label?: string }) {

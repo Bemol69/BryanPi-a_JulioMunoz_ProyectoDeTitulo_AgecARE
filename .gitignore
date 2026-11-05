@@ -26,3 +26,6 @@ backend-general/uploads/
 
 # imágenes intermedias que se regeneran al armar los documentos de la Fase 2
 Fase 2/capturas/_jpg/
+
+# resultados de la prueba de punta a punta
+e2e/resultados/

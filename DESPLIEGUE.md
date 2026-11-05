@@ -152,6 +152,24 @@ Las cuentas de demostración están en el README.
     del deploy, corre el equivalente `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` en el SQL Editor; hay un
     ejemplo en `deploy/migracion_2026-10-12.sql`).
 
+## Lista de verificación antes de lanzar
+
+Revísala antes de abrir el sistema a personas reales (para la demostración académica no hace falta).
+
+- [ ] **Claves únicas y largas** en las dos APIs: `ADMIN_JWT_SECRET`, `GENERAL_JWT_SECRET` y la clave de sincronización
+  (`ADMIN_INTERNAL_SYNC_KEY` = `GENERAL_ADMIN_SYNC_KEY`). Ninguna debe ser la que trae el código por defecto.
+- [ ] **Cuentas de demostración:** borrar o cambiar la contraseña de las cuentas del seed (`admin@wellq.co.uk`,
+  `familia@demo.cl`, etc.) y poner `VITE_SHOW_DEMO_ACCESS=false` en los proyectos de la Consola y del sitio para ocultar las cuentas de ejemplo
+  de la pantalla de ingreso (en la web publicada el formulario ya no viene con una cuenta precargada).
+- [ ] **Documentos privados:** pasar el bucket `agecare-uploads` a privado y servir los documentos con URLs firmadas
+  (hoy es público; las direcciones no se pueden adivinar, pero quien las tenga ve el archivo).
+- [ ] **CORS:** `CORS_ORIGINS` de cada API solo con los dominios reales de las webs.
+- [ ] **Respaldos:** activar los respaldos automáticos de Supabase (plan de pago) y probar una restauración.
+- [ ] **Textos legales:** publicar los términos de uso y la política de privacidad (hay datos de salud y documentos
+  de identidad) y pedir el consentimiento al registrarse.
+- [ ] **Monitoreo:** revisar los *Logs* de Vercel después de cada despliegue y activar alertas de errores.
+- [ ] **Plan de Vercel:** el plan Hobby es solo para uso personal; un lanzamiento comercial requiere el plan Pro.
+
 ## Límites y puntos a tener en cuenta
 
 - **Archivos:** Vercel acepta peticiones de hasta 4,5 MB, por eso fotos y documentos se limitaron a 4 MB.

@@ -8,6 +8,7 @@ Credenciales demo:
     analista@wellq.co.uk / Analista123!
 """
 import asyncio
+import os
 import random
 from datetime import date, datetime, time, timedelta, timezone
 
@@ -58,6 +59,14 @@ ADOPTION = {
 }
 ACTIVE_30D = {"family": 5310, "caregiver": 1470, "elder": 2640, "doctor": 420}
 ROLE_ORDER = ["family", "caregiver", "elder", "doctor"]
+
+
+AVATAR_BASE = os.getenv("DEMO_AVATAR_BASE", "http://localhost:5174").rstrip("/")
+
+
+def _avatar(slug: str) -> str:
+    """Foto de demostración (ilustración alojada en el sitio público)."""
+    return f"{AVATAR_BASE}/demo/avatars/{slug}.svg"
 
 
 async def seed() -> None:
@@ -287,17 +296,30 @@ async def seed() -> None:
         # ---- Marketplace ----
         caregivers = [
             models.CaregiverProfile(name="María Torres", email="maria@cuidado.cl", zone="Providencia",
+                                    photo_url=_avatar("maria"),
                                     specialties=["Alzheimer", "Movilidad reducida"], languages=["es"],
                                     certifications_count=3, certifications_verified=True,
                                     rating_avg=None, reviews_count=0, status="approved", is_engaged=True),
             models.CaregiverProfile(name="Javiera Soto", email="javiera@cuidado.cl", zone="Las Condes",
+                                    photo_url=_avatar("javiera"),
                                     specialties=["Cuidados paliativos", "Enfermería básica"],
                                     languages=["es", "en"], certifications_count=4,
                                     certifications_verified=True, rating_avg=None, reviews_count=0,
                                     status="approved", is_engaged=False),
             models.CaregiverProfile(name="Rocío Álvarez", email="rocio@cuidado.cl", zone="Maipú",
+                                    photo_url=_avatar("rocio"),
                                     specialties=["Movilidad reducida"], languages=["es"],
                                     certifications_count=2, certifications_verified=True,
+                                    rating_avg=None, reviews_count=0, status="approved", is_engaged=False),
+            models.CaregiverProfile(name="Sebastián Rivas", email="sebastian@cuidado.cl", zone="Santiago Centro",
+                                    photo_url=_avatar("sebastian"),
+                                    specialties=["Movilidad reducida", "Posoperatorio"], languages=["es"],
+                                    certifications_count=2, certifications_verified=True,
+                                    rating_avg=None, reviews_count=0, status="approved", is_engaged=False),
+            models.CaregiverProfile(name="Andrés Pizarro", email="andres@cuidado.cl", zone="La Florida",
+                                    photo_url=_avatar("andres"),
+                                    specialties=["Demencia", "Acompañamiento"], languages=["es"],
+                                    certifications_count=1, certifications_verified=True,
                                     rating_avg=None, reviews_count=0, status="approved", is_engaged=False),
             models.CaregiverProfile(name="Paula Fuentes", email="paula@cuidado.cl", zone="Ñuñoa",
                                     specialties=["Posoperatorio"], languages=["es", "en"],

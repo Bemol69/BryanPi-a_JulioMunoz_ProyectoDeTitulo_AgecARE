@@ -1,6 +1,39 @@
 [
   {
     "fecha": "2026-11-05",
+    "titulo": "Revisión previa al lanzamiento: pruebas completas, fotos de cuidadoras y seguridad",
+    "resumen": "Se probó todo el recorrido con cuentas nuevas y se corrigió lo encontrado. La Consola muestra las fotos y se quitaron secciones que no se usan.",
+    "areas": [
+      {
+        "nombre": "Consola de administración",
+        "items": [
+          "Se quitaron Contenido y Moderación y la etiqueta «NUEVO»; la Consola abre en Marketplace.",
+          "Se muestran las fotos de cuidadoras y cuidadores en el listado, el ranking y la ficha.",
+          "En la web publicada el ingreso ya no trae una cuenta precargada; las cuentas de ejemplo se pueden ocultar con una variable."
+        ]
+      },
+      {
+        "nombre": "Sitio de cuidadoras y familias",
+        "items": [
+          "La cuidadora puede cambiar su foto desde la vista de su perfil. Si una foto no carga, se muestran las iniciales.",
+          "Las listas piden hasta 100 resultados en vez de quedarse en 20. Cuidadores de ejemplo con foto, mujeres y hombres."
+        ]
+      },
+      {
+        "nombre": "Backend y base de datos",
+        "items": [
+          "Nueva columna photo_url en la Consola y migración 0005; la foto viaja desde el sitio. SQL opcional: deploy/fotos_cuidadoras_2026-11-05.sql.",
+          "Los archivos subidos se verifican por su contenido real y los documentos llevan un nombre imposible de adivinar.",
+          "Integración continua en GitHub (pruebas con Python 3.12 y compilación de las webs) y recorrido de punta a punta en la carpeta e2e."
+        ]
+      }
+    ],
+    "pasos_manuales": [
+      "Opcional: ejecutar deploy/fotos_cuidadoras_2026-11-05.sql en Supabase (SQL Editor) para completar las fotos ya existentes."
+    ]
+  },
+  {
+    "fecha": "2026-11-05",
     "titulo": "Rediseño visual profesional del sitio y de la Consola",
     "resumen": "Todo el front se rehízo con un estilo de «vidrio» sobre un lienzo pastel, inspirado en una plataforma CRM: barra superior en píldora, paneles translúcidos, tarjetas de color e indicadores en píldora.",
     "areas": [

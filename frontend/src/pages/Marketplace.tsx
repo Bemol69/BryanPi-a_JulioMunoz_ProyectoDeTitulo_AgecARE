@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MarketplaceApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
 import {
-  Card, CardHead, Chip, Drawer, EmptyState, ErrorBanner, Spinner, StatusChip, Stars, fmtDate, fmtCLP,
+  Card, CardHead, Chip, Drawer, EmptyState, ErrorBanner, Person, PersonAvatar, Spinner, StatusChip, Stars, fmtDate, fmtCLP,
 } from "../components/ui";
 import type { CaregiverDocType, CaregiverDocumentOut, CaregiverOut, ProductOut } from "../api/types";
 
@@ -74,7 +74,7 @@ function CaregiversTab() {
           <tbody>
             {list.data.items.map((c) => (
               <tr key={c.caregiver_id} className="clickable" onClick={() => setSelectedId(c.caregiver_id)}>
-                <td style={{ fontWeight: 600 }}>{c.name}</td>
+                <td><Person name={c.name} photoUrl={c.photo_url} /></td>
                 <td>{c.zone}</td>
                 <td>{c.specialties.join(", ") || "—"}</td>
                 <td className="num">{c.rating_avg != null ? <Stars rating={c.rating_avg} /> : "—"}</td>
@@ -156,7 +156,15 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
   return (
     <Drawer onClose={onClose}>
       <div className="drawer-head">
-        <div className="card-title">{c?.name ?? "Detalle de cuidadora"}</div>
+        {c ? (
+          <div className="drawer-person">
+            <PersonAvatar name={c.name} photoUrl={c.photo_url} size={64} />
+            <div>
+              <div className="card-title">{c.name}</div>
+              {!c.photo_url && <div className="card-sub">Todavía no sube su foto de perfil</div>}
+            </div>
+          </div>
+        ) : <div className="card-title">Detalle de cuidadora</div>}
         <button className="drawer-close" onClick={onClose}>✕</button>
       </div>
       {detail.loading && <Spinner />}

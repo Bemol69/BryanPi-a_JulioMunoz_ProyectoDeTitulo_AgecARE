@@ -10,6 +10,7 @@ from app.config import get_settings
 from app.errors import ApiError, conflict, unauthorized
 from app.schemas.auth import (AuthOut, LoginIn, MembershipOut, RefreshIn, RefreshOut,
                               RegisterIn, UserOut, UserPatchIn)
+from app.sync import sync_caregiver_to_admin
 from app.security import (as_utc, create_access_token, hash_password, hash_refresh,
                           new_refresh_token, now_utc, verify_password)
 
@@ -170,9 +171,19 @@ async def upload_avatar(request: Request, db: Db, user: CurrentUser, file: Uploa
     data = await file.read()
     if len(data) > storage.MAX_UPLOAD_BYTES:
         raise ApiError(422, "FILE_TOO_LARGE", f"La foto no puede superar los {storage.MAX_UPLOAD_LABEL}.")
+    storage.check_signature(data, file.content_type)
 
     url = await storage.save(f"avatars/{user.id}{ext}", data, file.content_type, str(request.base_url),
                              stale=[f"avatars/{user.id}{e}" for e in AVATAR_CONTENT_TYPES.values() if e != ext])
     user.avatar_url = f"{url}?v={int(now_utc().timestamp())}"
+    if user.account_type == "caregiver":
+        # La Consola muestra la foto de cada cuidadora: se le avisa del cambio.
+        profile = (await db.execute(select(models.CaregiverProfile)
+                                    .where(models.CaregiverProfile.user_id == user.id))).scalars().first()
+        if profile is not None:
+            engaged = (await db.execute(select(models.CaregiverEngagement.id).where(
+                models.CaregiverEngagement.caregiver_profile_id == profile.id,
+                models.CaregiverEngagement.status == "active").limit(1))).first() is not None
+            await sync_caregiver_to_admin(profile, user, engaged)
     memberships = await _memberships_for(db, user.id)
     return _user_out(user, memberships)

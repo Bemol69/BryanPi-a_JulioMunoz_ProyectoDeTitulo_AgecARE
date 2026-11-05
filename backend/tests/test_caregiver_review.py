@@ -156,3 +156,21 @@ async def test_site_can_query_the_review_state_of_the_documents(client, admin_he
     assert (await client.get(f"{BASE}/caregivers/documents", params={"email": EMAIL})).status_code in (401, 403)
     unknown = await client.get(f"{BASE}/caregivers/documents", headers=INTERNAL, params={"email": "nadie@x.cl"})
     assert unknown.json() == {"items": []}
+
+
+async def test_caregiver_photo_travels_from_the_site_to_the_console(client, admin_headers, pushed):
+    r = await client.post(f"{BASE}/caregivers/sync", headers=INTERNAL, json={
+        "external_user_id": "u-foto", "name": "Cuidador Con Foto", "email": "foto@test.cl", "zone": "Providencia",
+        "photo_url": "https://archivos.test/avatars/u-foto.png"})
+    assert r.status_code == 201, r.text
+    cid = r.json()["caregiver_id"]
+    assert r.json()["photo_url"].endswith("u-foto.png")
+    # una nueva sincronización actualiza la foto sin tocar el estado de revisión
+    r = await client.post(f"{BASE}/caregivers/sync", headers=INTERNAL, json={
+        "external_user_id": "u-foto", "name": "Cuidador Con Foto", "email": "foto@test.cl", "zone": "Providencia",
+        "photo_url": "https://archivos.test/avatars/nueva.png"})
+    assert r.json()["photo_url"].endswith("nueva.png") and r.json()["status"] == "pending"
+    detail = await client.get(f"{BASE}/caregivers/{cid}", headers=admin_headers)
+    assert detail.json()["photo_url"].endswith("nueva.png")
+    ranking = await client.get(f"{BASE}/caregivers/ranking", headers=admin_headers)
+    assert all("photo_url" in item for item in ranking.json()["items"])
