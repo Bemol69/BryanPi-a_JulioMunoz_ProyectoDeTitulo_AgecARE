@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export function Spinner({ label = "Cargando…" }: { label?: string }) {
   return <div className="spinner-row">{label}</div>;
@@ -52,8 +53,9 @@ export function Avatar({ name, photoUrl }: { name: string; photoUrl?: string | n
   return <Initials name={name} />;
 }
 
+/** Se monta en <body>: dentro de la página, los contenedores con desenfoque encierran a los elementos «fijos». */
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  return (
+  return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
@@ -62,7 +64,8 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

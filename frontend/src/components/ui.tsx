@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export function Card({ children, style }: { children: ReactNode; style?: React.CSSProperties }) {
   return <div className="card" style={style}>{children}</div>;
@@ -111,17 +112,19 @@ export function Stars({ rating }: { rating: number }) {
   return <span className="stars">{"★".repeat(full)}{"☆".repeat(5 - full)}</span>;
 }
 
+/** El cajón y el modal se montan en <body>: dentro de la página, los contenedores con desenfoque encierran a los elementos «fijos». */
 export function Drawer({ onClose, children }: { onClose: () => void; children: ReactNode }) {
-  return (
+  return createPortal(
     <>
       <div className="drawer-backdrop" onClick={onClose} />
       <div className="drawer">{children}</div>
-    </>
+    </>,
+    document.body,
   );
 }
 
 export function Modal({ title, onClose, children, width = 420 }: { title: string; onClose: () => void; children: ReactNode; width?: number }) {
-  return (
+  return createPortal(
     <>
       <div className="drawer-backdrop" onClick={onClose} />
       <div style={{
@@ -135,7 +138,8 @@ export function Modal({ title, onClose, children, width = 420 }: { title: string
         </div>
         {children}
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
 

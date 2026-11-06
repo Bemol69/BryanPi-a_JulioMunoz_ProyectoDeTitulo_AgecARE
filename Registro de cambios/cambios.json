@@ -1,6 +1,28 @@
 [
   {
     "fecha": "2026-11-05",
+    "titulo": "Corrección de las ventanas emergentes cortadas (crear perfil de familiar)",
+    "resumen": "El formulario «Crear perfil de un adulto mayor» se veía cortado porque la ventana emergente quedaba encerrada dentro de la página. Ahora se muestra centrada sobre toda la pantalla.",
+    "areas": [
+      {
+        "nombre": "Sitio de cuidadoras y familias",
+        "items": [
+          "Las ventanas emergentes (crear familiar, confirmar eliminación, reseñas, contratación) se muestran centradas y con el fondo cubriendo toda la pantalla; si el contenido es más alto que la ventana, se desplaza por dentro."
+        ]
+      },
+      {
+        "nombre": "Consola de administración",
+        "items": [
+          "El mismo arreglo para el cajón lateral de la cuidadora y sus ventanas de confirmación."
+        ]
+      }
+    ],
+    "pasos_manuales": [
+      "Ninguno."
+    ]
+  },
+  {
+    "fecha": "2026-11-05",
     "titulo": "Terminar el trabajo y ver a la cuidadora desde la ficha del familiar",
     "resumen": "Desde la ficha de cada familiar ahora se puede ir al perfil de su cuidadora y terminar el trabajo, sin tener que buscarla en otra pantalla.",
     "areas": [
