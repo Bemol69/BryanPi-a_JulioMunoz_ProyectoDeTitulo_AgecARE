@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Ilustración de una andadera plegable">
+  <rect width="400" height="300" fill="#DCE4FF"/>
+  <circle cx="360" cy="40" r="90" fill="#fff" opacity=".28"/>
+  <circle cx="30" cy="290" r="100" fill="#fff" opacity=".22"/>
+  <ellipse cx="200" cy="268" rx="130" ry="12" fill="#0B0E1C" opacity=".12"/>
+  <g stroke="#2342D6" stroke-width="10" stroke-linecap="round" fill="none">
+    <path d="M110 250 L135 110 Q140 90 160 90 L240 90 Q260 90 265 110 L290 250"/>
+    <path d="M135 150 L265 150"/>
+  </g>
+  <rect x="140" y="160" width="120" height="16" rx="8" fill="#FFC933"/>
+  <g fill="#0B0E1C"><circle cx="110" cy="256" r="18"/><circle cx="290" cy="256" r="18"/>
+    <rect x="98" y="238" width="24" height="10" rx="5" opacity="0"/></g>
+  <g fill="#fff"><circle cx="110" cy="256" r="6"/><circle cx="290" cy="256" r="6"/></g>
+  <g stroke="#0B0E1C" stroke-width="16" stroke-linecap="round"><path d="M148 90 L170 90"/><path d="M230 90 L252 90"/></g>
+</svg>

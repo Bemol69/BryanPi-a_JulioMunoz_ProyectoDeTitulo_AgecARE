@@ -382,7 +382,8 @@ async def seed() -> None:
                 id=product_id(x["slug"]), name=x["name"], category=x["category"], vendor=x["vendor"],
                 price_clp=x["price_clp"], external_url=x["external_url"], status="published",
                 description=x["description"], is_sponsored=x["sponsored"], conditions=x["conditions"],
-                commission_pct=x["commission_pct"])
+                commission_pct=x["commission_pct"],
+                image_url=f"{AVATAR_BASE}/demo/products/{x['slug']}.svg")
             for x in PRODUCTS
         ])
         await db.flush()

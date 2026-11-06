@@ -108,7 +108,8 @@ async def seed() -> None:
                 id=product_id(p["slug"]), name=p["name"], category=p["category"], vendor=p["vendor"],
                 description=p["description"], price_clp=p["price_clp"],
                 price_range="$" + f"{p['price_clp']:,}".replace(",", "."), is_sponsored=p["sponsored"],
-                conditions=p["conditions"], external_url=p["external_url"]))
+                conditions=p["conditions"], external_url=p["external_url"],
+                thumbnail_url=f"{AVATAR_BASE}/demo/products/{p['slug']}.svg"))
 
         # ---- Cuidadoras ----
         for c in CAREGIVERS:
