@@ -10,6 +10,7 @@ Credenciales demo:
 import asyncio
 import os
 import random
+import uuid
 from datetime import date, datetime, time, timedelta, timezone
 
 from sqlalchemy import delete, func, select
@@ -67,6 +68,44 @@ AVATAR_BASE = os.getenv("DEMO_AVATAR_BASE", "http://localhost:5174").rstrip("/")
 def _avatar(slug: str) -> str:
     """Foto de demostración (ilustración alojada en el sitio público)."""
     return f"{AVATAR_BASE}/demo/avatars/{slug}.svg"
+
+
+
+# Catálogo demo. El id sale del slug, igual que en el sitio público (backend-general/scripts/seed.py):
+# el mismo producto es el mismo en los dos sistemas, y así los clics se asocian al producto correcto.
+def product_id(slug: str) -> uuid.UUID:
+    return uuid.uuid5(uuid.NAMESPACE_URL, f"agecare:product:{slug}")
+
+
+PRODUCTS = [
+    dict(slug="andadera-plegable", name="Andadera plegable con ruedas", category="mobility", vendor="OrtoChile",
+         price_clp=54990, sponsored=True, commission_pct=8.0, conditions=["Movilidad reducida", "Posoperatorio"],
+         description="Andadera de aluminio ligera, plegable, con ruedas delanteras y asiento de descanso. "
+                     "Soporta hasta 130 kg.", external_url="https://ortochile.cl/andadera-plegable"),
+    dict(slug="baston-4-puntas", name="Bastón ortopédico de 4 puntas", category="mobility", vendor="OrtoChile",
+         price_clp=14990, sponsored=False, commission_pct=8.0, conditions=["Movilidad reducida"],
+         description="Bastón regulable en altura con base de cuatro apoyos: se sostiene solo y da más estabilidad.",
+         external_url="https://ortochile.cl/baston-cuatro-puntas"),
+    dict(slug="pastillero-semanal", name="Dispensador de pastillas semanal", category="daily_care", vendor="SaludHogar",
+         price_clp=19990, sponsored=False, commission_pct=6.0,
+         conditions=["Control de medicación", "Diabetes", "Hipertensión"],
+         description="Organizador de medicamentos de 7 días con 4 tomas diarias y alarma sonora programable.",
+         external_url="https://saludhogar.cl/pastillero"),
+    dict(slug="barra-bano", name="Barra de baño de seguridad", category="home_safety", vendor="SaludHogar",
+         price_clp=27990, sponsored=False, commission_pct=6.0, conditions=["Movilidad reducida", "Parkinson"],
+         description="Barra de sujeción antideslizante para regadera o tina. Instalación con ventosas de fijación rápida.",
+         external_url="https://saludhogar.cl/barra-bano"),
+    dict(slug="monitor-signos-vitales", name="Monitor de signos vitales portátil", category="monitoring",
+         vendor="OrtoChile", price_clp=69990, sponsored=False, commission_pct=8.0,
+         conditions=["Hipertensión", "Diabetes"],
+         description="Oxímetro y monitor de frecuencia cardíaca portátil, pantalla grande, fácil de leer.",
+         external_url="https://ortochile.cl/monitor-vitales"),
+    dict(slug="reloj-gps-sos", name="Reloj con GPS y botón SOS", category="monitoring", vendor="SaludHogar",
+         price_clp=49990, sponsored=False, commission_pct=6.0, conditions=["Alzheimer", "Demencia"],
+         description="Reloj de pulsera que comparte la ubicación con la familia y llama a un contacto "
+                     "con un solo botón. Útil si tu familiar suele desorientarse.",
+         external_url="https://saludhogar.cl/reloj-gps"),
+]
 
 
 async def seed() -> None:
@@ -326,14 +365,25 @@ async def seed() -> None:
                                     certifications_count=1, certifications_verified=False,
                                     rating_avg=None, reviews_count=0, status="pending"),
         ]
+        # Las aprobadas ya pasaron por el cobro de verificación (una está eximida); Paula sigue sin pagar.
+        now_ = datetime.now(timezone.utc)
+        for n, cg in enumerate(caregivers):
+            cg.verification_reference = f"AC-{(n + 1) * 7919 % 0xFFFFFF:06X}"
+            if cg.status == "approved":
+                if cg.email == "andres@cuidado.cl":
+                    cg.verification_fee_status, cg.verification_marked_by = "waived", "Administrador AgeCare"
+                else:
+                    cg.verification_fee_status = "paid"
+                    cg.verification_paid_at = now_ - timedelta(days=3 + n * 4)
+                    cg.verification_marked_by = "Administrador AgeCare"
         db.add_all(caregivers)
         db.add_all([
-            models.Product(name="Andador plegable con asiento", category="Movilidad",
-                           vendor="OrtoChile", price_clp=64990,
-                           external_url="https://ortochile.cl/andador-plegable", status="published"),
-            models.Product(name="Pastillero semanal electrónico", category="Medicación",
-                           vendor="SaludHogar", price_clp=29990,
-                           external_url="https://saludhogar.cl/pastillero", status="published"),
+            models.Product(
+                id=product_id(x["slug"]), name=x["name"], category=x["category"], vendor=x["vendor"],
+                price_clp=x["price_clp"], external_url=x["external_url"], status="published",
+                description=x["description"], is_sponsored=x["sponsored"], conditions=x["conditions"],
+                commission_pct=x["commission_pct"])
+            for x in PRODUCTS
         ])
         await db.flush()
 

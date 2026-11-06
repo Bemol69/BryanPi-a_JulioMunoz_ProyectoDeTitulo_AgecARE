@@ -37,6 +37,16 @@ class CaregiverDocumentOut(BaseModel):
     reviewed_at: datetime | None = None
 
 
+class VerificationOut(BaseModel):
+    """Cobro único por verificar identidad y antecedentes (insignia "Verificada por AgeCare")."""
+    available: bool  # false si la Consola no respondió: la pantalla no muestra el estado
+    fee_clp: int = 0
+    status: str = "unpaid"  # unpaid | paid | waived
+    reference: str | None = None  # código que la cuidadora indica al pagar
+    paid_at: datetime | None = None
+    payment_info: str = ""
+
+
 class CaregiverProfileOut(BaseModel):
     profile_id: UUID
     headline: str | None
@@ -166,6 +176,13 @@ class ProductCardOut(BaseModel):
     category: ProductCategory
     thumbnail_url: str | None
     price_range: str
+    vendor: str = ""
+    price_clp: int | None = None
+    description: str = ""
+    external_url: str | None = None
+    is_sponsored: bool = False
+    # "Elena Muñoz · Movilidad reducida": para quién del grupo familiar sirve el producto.
+    recommended_for: str | None = None
 
 
 class ProductOut(BaseModel):
@@ -177,3 +194,6 @@ class ProductOut(BaseModel):
     price_range: str
     external_url: str | None
     contact_info: str | None
+    vendor: str = ""
+    price_clp: int | None = None
+    is_sponsored: bool = False

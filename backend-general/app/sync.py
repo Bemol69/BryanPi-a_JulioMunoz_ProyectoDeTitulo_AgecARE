@@ -48,6 +48,20 @@ async def fetch_admin_documents(email: str) -> list[dict]:
     return []
 
 
+async def fetch_admin_verification(email: str) -> dict | None:
+    """Estado del pago de verificación según la Consola (None si no responde o no la conoce)."""
+    settings = get_settings()
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            res = await client.get(f"{settings.admin_sync_url}/marketplace/caregivers/verification",
+                                   params={"email": email}, headers={"X-Internal-Key": settings.admin_sync_key})
+        if res.status_code == 200:
+            return res.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning("No se pudo consultar la verificación en la Consola: %r", exc)
+    return None
+
+
 async def sync_caregiver_to_admin(profile: "models.CaregiverProfile", user: "models.User",
                                   is_engaged: bool = False) -> None:
     zones = profile.zones or []

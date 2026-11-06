@@ -90,6 +90,24 @@ class CaregiverOut(BaseModel):
     certifications_verified: bool = False  # cédula y antecedentes aprobados: permite aprobar el perfil
     pending_documents: int = 0  # documentos (o cambios) esperando revisión
     documents: list[CaregiverDocumentOut] = []
+    verification_fee_status: Literal["unpaid", "paid", "waived"] = "waived"
+    verification_fee_clp: int = 0
+    verification_reference: str | None = None
+    verification_paid_at: datetime | None = None
+    verification_marked_by: str | None = None
+
+
+class VerificationIn(BaseModel):
+    """Decisión del equipo sobre el cobro de verificación de una cuidadora."""
+    action: Literal["paid", "waived", "unpaid"]
+
+
+class VerificationSiteOut(BaseModel):
+    """Lo que el sitio público muestra a la cuidadora sobre su pago."""
+    fee_clp: int
+    status: Literal["unpaid", "paid", "waived"]
+    reference: str | None = None
+    paid_at: datetime | None = None
 
 
 class CaregiverPatchIn(BaseModel):
@@ -164,6 +182,9 @@ class CaregiverRankingItem(BaseModel):
     status: CaregiverStatus
 
 
+ProductCategoryKey = Literal["mobility", "monitoring", "home_safety", "daily_care"]
+
+
 class ProductOut(BaseModel):
     id: UUID
     name: str
@@ -174,34 +195,83 @@ class ProductOut(BaseModel):
     image_url: str | None
     status: ContentStatus
     updated_at: datetime
+    description: str | None = None
+    is_sponsored: bool = False
+    conditions: list[str] = []
+    commission_pct: float | None = None
+    # Clics en "Ver en tienda" según el sitio público (None si no respondió).
+    clicks_total: int | None = None
+    clicks_30d: int | None = None
 
     model_config = {"from_attributes": True}
+
+    @field_validator("conditions", mode="before")
+    @classmethod
+    def _conditions_not_null(cls, v):
+        return v or []
+
+
+def _https(v: HttpUrl | None) -> HttpUrl | None:
+    if v is not None and v.scheme != "https":
+        raise ValueError("El enlace debe usar https.")
+    return v
 
 
 class ProductCreateIn(BaseModel):
     name: str = Field(min_length=3, max_length=160)
-    category: str = Field(min_length=2, max_length=60)
+    category: ProductCategoryKey
     vendor: str = Field(min_length=2, max_length=120)
     price_clp: int | None = Field(default=None, ge=0)
     external_url: HttpUrl
     image_url: HttpUrl | None = None
+    description: str | None = Field(default=None, max_length=1000)
+    is_sponsored: bool = False
+    conditions: list[str] = Field(default_factory=list, max_length=12)
+    commission_pct: float | None = Field(default=None, ge=0, le=100)
+    status: ContentStatus = ContentStatus.published
 
-    @field_validator("external_url")
+
+    @field_validator("external_url", "image_url")
     @classmethod
-    def https_only(cls, v: HttpUrl) -> HttpUrl:
-        if v.scheme != "https":
-            raise ValueError("El enlace externo debe usar https.")
-        return v
+    def https_only(cls, v: HttpUrl | None) -> HttpUrl | None:
+        return _https(v)
 
 
 class ProductPatchIn(BaseModel):
     name: str | None = Field(default=None, min_length=3, max_length=160)
-    category: str | None = Field(default=None, min_length=2, max_length=60)
+    category: ProductCategoryKey | None = None
     vendor: str | None = Field(default=None, min_length=2, max_length=120)
     price_clp: int | None = Field(default=None, ge=0)
     external_url: HttpUrl | None = None
     image_url: HttpUrl | None = None
+    description: str | None = Field(default=None, max_length=1000)
+    is_sponsored: bool | None = None
+    conditions: list[str] | None = Field(default=None, max_length=12)
+    commission_pct: float | None = Field(default=None, ge=0, le=100)
     status: ContentStatus | None = None
+
+
+    @field_validator("external_url", "image_url")
+    @classmethod
+    def https_only(cls, v: HttpUrl | None) -> HttpUrl | None:
+        return _https(v)
+
+
+class MonetizationOut(BaseModel):
+    """Resumen de ingresos del marketplace para la Consola."""
+    verification_fee_clp: int  # tarifa vigente
+    verification_paid_count: int
+    verification_paid_total_clp: int
+    verification_pending_count: int
+    verification_pending_total_clp: int
+    verification_waived_count: int
+    products_published: int
+    products_sponsored: int
+    clicks_30d: int | None  # None si el sitio público no respondió
+    clicks_total: int | None
+    # Estimación = clics 30 días × conversión supuesta × precio × comisión pactada de cada producto.
+    estimated_commission_30d_clp: int | None
+    assumed_conversion_pct: float
 
 
 # ---- Moderación ----

@@ -177,6 +177,23 @@ class MarketProduct(Base):
     price_range: Mapped[str] = mapped_column(String(60))
     external_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     contact_info: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # Rentabilidad: el id es el mismo que en la Consola (que administra el catálogo y lo envía
+    # a /internal/products). Un producto "patrocinado" paga por salir primero en la lista.
+    vendor: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    price_clp: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_sponsored: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # Condiciones del adulto mayor para las que sirve (se cruzan con las de sus perfiles).
+    conditions: Mapped[list] = mapped_column(PortableJSON, default=list)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+
+
+class ProductClick(Base):
+    """Un clic en "Ver en tienda": respalda la comisión por referido con cada proveedor."""
+    __tablename__ = "market_product_clicks"
+    id: Mapped[uuid.UUID] = pk()
+    product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("market_products.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, index=True)
+    created_at: Mapped[datetime] = ts_now()
 
 
 # ============ Chat dentro de la aplicación ============

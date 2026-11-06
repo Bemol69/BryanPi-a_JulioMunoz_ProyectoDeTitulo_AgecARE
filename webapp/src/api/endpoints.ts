@@ -2,7 +2,7 @@ import { api, qs } from "./client";
 import type {
   AuthOut, CaregiverCard, CaregiverDocType, CaregiverDocumentOut, CaregiverProfileOut,
   CaregiverPublic, ChatDetail, ChatMessage, ChatSummary, ContactMessage, ContactOut, Engagement, HireRequestOut, Page,
-  PatientCard, PatientCreateOut, PatientDetail, ProductCard, ProductDetail, ReceivedHireRequest, Review, UserOut,
+  PatientCard, PatientCreateOut, PatientDetail, ProductCard, ProductDetail, VerificationOut, ReceivedHireRequest, Review, UserOut,
 } from "./types";
 
 export const AuthApi = {
@@ -33,6 +33,7 @@ export const CaregiverApi = {
     languages: string[]; zones: string[]; certifications: { name: string; issuer?: string; year?: number }[];
     is_listed: boolean;
   }>) => api.put<CaregiverProfileOut>("/caregiver/profile", body),
+  verification: () => api.get<VerificationOut>("/caregiver/verification"),
   contacts: () => api.get<Page<ContactMessage>>("/caregiver/contacts"),
   engagement: () => api.get<Engagement | null>("/caregiver/engagement"),
   hireRequests: () => api.get<Page<ReceivedHireRequest>>("/caregiver/hire-requests"),
@@ -59,6 +60,8 @@ export const MarketplaceApi = {
   products: (params: { category?: string; q?: string }) =>
     api.get<Page<ProductCard>>(`/marketplace/products${qs(params)}`),
   product: (id: string) => api.get<ProductDetail>(`/marketplace/products/${id}`),
+  // Se llama al hacer clic en "Ver en tienda": cuenta la visita (no bloquea la navegación).
+  trackProductClick: (id: string) => api.post<void>(`/marketplace/products/${id}/click`),
 };
 
 export const ChatApi = {

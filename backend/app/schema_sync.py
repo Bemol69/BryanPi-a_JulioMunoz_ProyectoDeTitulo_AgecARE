@@ -15,6 +15,17 @@ COLUMN_PATCHES: list[tuple[str, str, str]] = [
     ("marketplace_caregiver_documents", "review_note", "TEXT"),
     ("marketplace_caregiver_documents", "reviewed_at", "TIMESTAMP WITH TIME ZONE"),
     ("marketplace_caregiver_documents", "reviewed_by_name", "VARCHAR(120)"),
+    # Cobro de verificación: las cuidadoras que ya existían quedan eximidas ("waived").
+    ("marketplace_caregivers", "verification_fee_status", "VARCHAR(10) NOT NULL DEFAULT 'waived'"),
+    ("marketplace_caregivers", "verification_fee_clp", "INTEGER NOT NULL DEFAULT 9990"),
+    ("marketplace_caregivers", "verification_reference", "VARCHAR(20)"),
+    ("marketplace_caregivers", "verification_paid_at", "TIMESTAMP WITH TIME ZONE"),
+    ("marketplace_caregivers", "verification_marked_by", "VARCHAR(120)"),
+    # Artículos de apoyo: patrocinio, comisión y condiciones.
+    ("marketplace_products", "description", "TEXT"),
+    ("marketplace_products", "is_sponsored", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("marketplace_products", "conditions", "JSONB"),
+    ("marketplace_products", "commission_pct", "DOUBLE PRECISION"),
 ]
 ADVISORY_LOCK_KEY = 727_502
 

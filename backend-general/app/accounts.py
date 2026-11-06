@@ -114,6 +114,8 @@ async def purge_user(db, user: models.User, *, force: bool = False) -> list[str]
             await db.execute(delete(models.PatientMember).where(models.PatientMember.id == m.id))
 
     await db.execute(delete(models.RefreshSession).where(models.RefreshSession.user_id == uid))
+    # Los clics a tiendas se conservan como cifra anónima (respaldan la comisión por referido).
+    await db.execute(update(models.ProductClick).where(models.ProductClick.user_id == uid).values(user_id=None))
     await db.execute(delete(models.User).where(models.User.id == uid))
     return [p for p in paths if p]
 

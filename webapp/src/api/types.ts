@@ -211,6 +211,12 @@ export interface ProductCard {
   category: ProductCategory;
   thumbnail_url: string | null;
   price_range: string;
+  vendor: string;
+  price_clp: number | null;
+  description: string;
+  external_url: string | null;
+  is_sponsored: boolean;
+  recommended_for: string | null; // "Elena Muñoz · Movilidad reducida": a quién de la familia le sirve
 }
 
 export interface ProductDetail {
@@ -222,4 +228,18 @@ export interface ProductDetail {
   price_range: string;
   external_url: string | null;
   contact_info: string | null;
+  vendor: string;
+  price_clp: number | null;
+  is_sponsored: boolean;
+}
+
+export type VerificationFeeStatus = "unpaid" | "paid" | "waived";
+
+export interface VerificationOut {
+  available: boolean; // false si no se pudo consultar: la pantalla no muestra el estado
+  fee_clp: number;
+  status: VerificationFeeStatus;
+  reference: string | null; // código que se indica al pagar
+  paid_at: string | null;
+  payment_info: string;
 }

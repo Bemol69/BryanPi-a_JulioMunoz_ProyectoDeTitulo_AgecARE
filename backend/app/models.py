@@ -293,6 +293,14 @@ class CaregiverProfile(Base):
     submitted_at: Mapped[datetime] = ts_now()
     reviewed_by: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     reviewed_by_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # Cobro único por verificar identidad y antecedentes. unpaid = falta el pago (no se puede aprobar
+    # el perfil); paid = el equipo confirmó el pago; waived = eximida por el equipo. Las filas que ya
+    # existían quedan "waived" (server_default); las cuidadoras nuevas nacen "unpaid" (default de Python).
+    verification_fee_status: Mapped[str] = mapped_column(String(10), default="unpaid", server_default="waived")
+    verification_fee_clp: Mapped[int] = mapped_column(Integer, default=9990, server_default="9990")
+    verification_reference: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    verification_paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    verification_marked_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
 
 class CaregiverDocument(Base):
@@ -361,6 +369,12 @@ class Product(Base):
     status: Mapped[str] = mapped_column(String(12), index=True, default="draft")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
                                                  onupdate=func.now())
+    # Rentabilidad: patrocinio pagado por el proveedor, comisión pactada por referido y las condiciones
+    # del adulto mayor para las que sirve el producto (alimentan "Recomendado para tu familiar").
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_sponsored: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    conditions: Mapped[list] = mapped_column(PortableJSON, default=list)
+    commission_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
 class ModerationItem(Base):

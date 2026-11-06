@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     admin_sync_url: str = "http://host.docker.internal:8000/api/v1/admin"
     admin_sync_key: str = "clave-interna-solo-para-desarrollo"
 
+    # Cómo paga la cuidadora su verificación (texto libre, p. ej. datos de transferencia). Se configura
+    # en Vercel con GENERAL_VERIFICATION_PAYMENT_INFO; nunca va en el repositorio.
+    verification_payment_info: str = ""
+
     # Supabase Storage para fotos y documentos (en Vercel el disco es de solo lectura).
     # Si no se configuran, los archivos se guardan en la carpeta local uploads/.
     supabase_url: str = ""
