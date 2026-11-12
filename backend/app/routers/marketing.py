@@ -4,7 +4,7 @@ from datetime import timedelta
 from fastapi import APIRouter
 from sqlalchemy import func, select
 
-from app import models
+from app import loyalty, models
 from app.deps import Db, require
 from app.enums import CaregiverStatus
 from app.schemas.marketing import MarketingDashboardOut, TopCaregiverOut
@@ -29,9 +29,7 @@ async def dashboard_summary(db: Db, days: int = 30):
         select(func.avg(models.CaregiverProfile.rating_avg))
         .where(models.CaregiverProfile.status == CaregiverStatus.approved))).scalar_one()
 
-    points_sub = (select(models.CaregiverPointsLog.caregiver_id,
-                         func.sum(models.CaregiverPointsLog.points).label("points"))
-                 .group_by(models.CaregiverPointsLog.caregiver_id).subquery())
+    points_sub = loyalty.points_by_caregiver()
 
     avg_points = (await db.execute(
         select(func.coalesce(func.avg(points_sub.c.points), 0))
@@ -41,10 +39,11 @@ async def dashboard_summary(db: Db, days: int = 30):
 
     reviews_last = (await db.execute(
         select(func.count()).select_from(models.CaregiverReview)
-        .where(models.CaregiverReview.created_at >= since))).scalar_one()
+        .where(models.CaregiverReview.created_at >= since,
+               models.CaregiverReview.archived_at.is_(None)))).scalar_one()
     points_last = (await db.execute(
         select(func.coalesce(func.sum(models.CaregiverPointsLog.points), 0))
-        .where(models.CaregiverPointsLog.created_at >= since))).scalar_one()
+        .where(models.CaregiverPointsLog.created_at >= since, loyalty.active_points()))).scalar_one()
 
     top_rows = (await db.execute(
         select(models.CaregiverProfile, func.coalesce(points_sub.c.points, 0))

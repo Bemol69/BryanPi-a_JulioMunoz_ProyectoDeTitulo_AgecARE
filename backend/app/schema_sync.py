@@ -15,6 +15,9 @@ COLUMN_PATCHES: list[tuple[str, str, str]] = [
     ("marketplace_caregiver_documents", "review_note", "TEXT"),
     ("marketplace_caregiver_documents", "reviewed_at", "TIMESTAMP WITH TIME ZONE"),
     ("marketplace_caregiver_documents", "reviewed_by_name", "VARCHAR(120)"),
+    ("marketplace_caregiver_reviews", "external_id", "UUID"),
+    ("marketplace_caregiver_reviews", "archived_at", "TIMESTAMP WITH TIME ZONE"),
+    ("marketplace_caregiver_reviews", "archived_by_name", "VARCHAR(120)"),
 ]
 ADVISORY_LOCK_KEY = 727_502
 

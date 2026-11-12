@@ -16,7 +16,7 @@ from app.security import decode_access_token
 
 
 async def get_current_admin(request: Request,
-                            db: Annotated[AsyncSession, Depends(get_db)]) -> models.AdminUser:
+                            db: Annotated[AsyncSession, Depends(get_db, scope="function")]) -> models.AdminUser:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise unauthorized()
@@ -32,7 +32,7 @@ async def get_current_admin(request: Request,
 
 
 CurrentAdmin = Annotated[models.AdminUser, Depends(get_current_admin)]
-Db = Annotated[AsyncSession, Depends(get_db)]
+Db = Annotated[AsyncSession, Depends(get_db, scope="function")]
 
 
 def require(module: str, write: bool = False):

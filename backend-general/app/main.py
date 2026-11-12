@@ -1,4 +1,5 @@
 """AgeCare — API general (usuarios, pacientes, marketplace público)."""
+import logging
 import os
 
 from fastapi import APIRouter, FastAPI
@@ -8,10 +9,23 @@ from fastapi.staticfiles import StaticFiles
 from app import storage
 from app.config import get_settings
 from app.errors import RequestIdMiddleware, register_error_handlers
+from app.headers import SecurityHeadersMiddleware
 from app.routers import auth, caregiver, chat, internal, marketplace, patients
 
 # Orígenes extra permitidos (p. ej. el dominio de Vercel), separados por coma.
 CORS_EXTRA_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
+
+
+def _warn_if_default_secrets() -> None:
+    """En Vercel, firmar sesiones con el secreto de ejemplo permitiría falsificar accesos: se deja un aviso crítico."""
+    s = get_settings()
+    weak = [name for name, value in (("GENERAL_JWT_SECRET", s.jwt_secret), ("GENERAL_ADMIN_SYNC_KEY", s.admin_sync_key))
+            if value in ("cambia-esto-en-produccion", "clave-interna-solo-para-desarrollo", "solo-para-desarrollo")]
+    if weak and os.getenv("VERCEL"):
+        logging.getLogger("agecare.security").critical("Variables con valor de ejemplo en producción: %s", ", ".join(weak))
+
+
+_warn_if_default_secrets()
 
 app = FastAPI(
     title="AgeCare General API",
@@ -21,6 +35,7 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json",
 )
 app.add_middleware(RequestIdMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5174", "http://127.0.0.1:5174", *CORS_EXTRA_ORIGINS],

@@ -1,5 +1,8 @@
 """Hash de contraseñas (Argon2id), JWT y TOTP."""
+import asyncio
 import hashlib
+import os
+from concurrent.futures import ThreadPoolExecutor
 import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -11,7 +14,11 @@ from argon2.exceptions import VerifyMismatchError
 
 from app.config import get_settings
 
-_ph = PasswordHasher()  # Argon2id por defecto
+# Argon2id con la configuración mínima que recomienda OWASP (19 MiB, 2 pasadas, 1 hilo). Antes se usaban los
+# valores por defecto de la librería (64 MiB, 3 pasadas, 4 hilos): cada hash costaba el doble y ocupaba 4 núcleos,
+# así que el servidor aguantaba ~14 inicios de sesión por segundo contra ~60 ahora. Los hashes ya guardados
+# siguen siendo válidos: cada uno lleva sus propios parámetros.
+_ph = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1)  # Argon2id por defecto
 
 
 def hash_password(password: str) -> str:
@@ -30,6 +37,20 @@ def verify_password(password: str, password_hash: str) -> bool:
 def verify_totp(secret: str, code: str) -> bool:
     """Valida un código TOTP con ventana de ±1 intervalo."""
     return pyotp.TOTP(secret).verify(code, valid_window=1)
+
+
+# Argon2 usa 64 MB y varios hilos por cada hash: si se calculan muchos a la vez, la máquina se satura y todo
+# se pone lento. Un grupo pequeño de hilos hace que se turnen (los demás esperan sin bloquear el servidor).
+_HASH_POOL = ThreadPoolExecutor(max_workers=int(os.getenv("HASH_WORKERS", str(min(4, os.cpu_count() or 2)))), thread_name_prefix="argon2")
+
+
+async def ahash_password(password: str) -> str:
+    """Argon2 gasta ~150 ms de CPU a propósito. Se calcula fuera del hilo principal para no frenar a los demás."""
+    return await asyncio.get_running_loop().run_in_executor(_HASH_POOL, hash_password, password)
+
+
+async def averify_password(password: str, password_hash: str) -> bool:
+    return await asyncio.get_running_loop().run_in_executor(_HASH_POOL, verify_password, password, password_hash)
 
 
 def now_utc() -> datetime:

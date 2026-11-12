@@ -14,7 +14,7 @@ from app.security import decode_access_token
 
 
 async def get_current_user(request: Request,
-                           db: Annotated[AsyncSession, Depends(get_db)]) -> models.User:
+                           db: Annotated[AsyncSession, Depends(get_db, scope="function")]) -> models.User:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise unauthorized()
@@ -30,7 +30,7 @@ async def get_current_user(request: Request,
 
 
 CurrentUser = Annotated[models.User, Depends(get_current_user)]
-Db = Annotated[AsyncSession, Depends(get_db)]
+Db = Annotated[AsyncSession, Depends(get_db, scope="function")]
 
 
 def require_account_type(account_type: str):

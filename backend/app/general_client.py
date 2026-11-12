@@ -71,6 +71,18 @@ async def push_document_review(email: str, doc_type: str, action: str, note: str
         raise _sync_failed()
 
 
+async def push_review_moderation(email: str, action: str, *, review_id: str | None, family_name: str,
+                                 rating: int, comment: str | None) -> None:
+    """El staff archivó, restauró o eliminó una reseña: el sitio la oculta/muestra/borra y recalcula la nota."""
+    if not enabled():
+        return
+    res = await _call("POST", "/internal/reviews/moderate", json={
+        "email": email, "action": action, "review_id": review_id,
+        "family_name": family_name, "rating": rating, "comment": comment})
+    if res is None or (res.status_code >= 400 and res.status_code != 404):
+        raise _sync_failed()
+
+
 async def fetch_documents(email: str) -> list[dict] | None:
     """Documentos de la cuidadora tal como están en el sitio público (None si no se pudo consultar)."""
     if not enabled():

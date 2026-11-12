@@ -78,6 +78,7 @@ async def update_profile(body: CaregiverProfilePatchIn, db: Db, user: CurrentUse
     if body.is_listed is not None:
         profile.is_listed = body.is_listed
     await db.flush()
+    await db.commit()  # se guarda y la conexión vuelve al grupo mientras se espera a la otra API
     await sync_caregiver_to_admin(profile, user, await _is_engaged(db, profile.id))
     return _out(profile)
 
@@ -116,6 +117,7 @@ async def list_documents(db: Db, user: CurrentUser):
     rows = (await db.execute(select(models.CaregiverDocument)
                              .where(models.CaregiverDocument.caregiver_profile_id == profile.id)
                              )).scalars().all()
+    await db.commit()  # termina la lectura y devuelve la conexión mientras se consulta a la Consola
     await _reconcile_with_admin(user, rows)
     return [_doc_out(d) for d in rows]
 
@@ -163,6 +165,7 @@ async def upload_document(request: Request, db: Db, user: CurrentUser,
     await db.flush()
     await db.refresh(existing)
 
+    await db.commit()  # se guarda y la conexión vuelve al grupo mientras se espera a la otra API
     await sync_document_to_admin(user.email, doc_type.value, file_url, original_name, is_change)
     return _doc_out(existing)
 
@@ -187,7 +190,8 @@ async def my_reviews(db: Db, user: CurrentUser):
     """Las reseñas que las familias le han dejado a la cuidadora (de la más nueva a la más antigua)."""
     profile = await _get_own_profile(db, user)
     rows = (await db.execute(select(models.CaregiverReview)
-                             .where(models.CaregiverReview.caregiver_profile_id == profile.id)
+                             .where(models.CaregiverReview.caregiver_profile_id == profile.id,
+                                    models.CaregiverReview.hidden.is_(False))
                              .order_by(models.CaregiverReview.created_at.desc()))).scalars().all()
     return [ReviewOut(review_id=r.id, rating=r.rating, comment=r.comment, author_name=r.author_name,
                       created_at=r.created_at) for r in rows]
@@ -282,6 +286,7 @@ async def accept_hire_request(request_id: UUID, db: Db, user: CurrentUser):
     family_name = await _family_label(db, r)
     conv, _ = await get_or_create_conversation(db, profile, r.family)
     await add_message(db, conv, user, "¡Acepté tu solicitud de contratación! Coordinemos los detalles por aquí.")
+    await db.commit()  # se guarda y la conexión vuelve al grupo mientras se espera a la otra API
     await sync_caregiver_to_admin(profile, user, True)
     return EngagementOut(engagement_id=engagement.id, family_name=family_name,
                          patient_name=r.patient.full_name if r.patient else None,

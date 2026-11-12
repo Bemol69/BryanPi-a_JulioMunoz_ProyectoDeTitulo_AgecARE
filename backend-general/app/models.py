@@ -9,6 +9,7 @@ from datetime import date, datetime
 from sqlalchemy import (JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String,
                         Text, UniqueConstraint, Uuid, func)
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.sql import expression
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -136,6 +137,8 @@ class CaregiverReview(Base):
     rating: Mapped[int] = mapped_column(Integer)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = ts_now()
+    # El staff la archivó desde la Consola: no se muestra ni cuenta para la nota.
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False, server_default=expression.false())
 
 
 class ContactRequest(Base):

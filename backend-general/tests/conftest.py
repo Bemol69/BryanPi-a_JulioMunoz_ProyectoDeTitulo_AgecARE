@@ -41,6 +41,13 @@ async def engine():
 
 
 @pytest.fixture(autouse=True)
+def purge_every_time(monkeypatch):
+    """En las pruebas la limpieza de chats corre siempre (en producción, una vez cada pocos minutos)."""
+    import app.chat_retention as retention
+    monkeypatch.setattr(retention, "PURGE_EVERY_SECONDS", 0)
+
+
+@pytest.fixture(autouse=True)
 def no_network(monkeypatch, tmp_path):
     """Sin llamadas reales a la Consola y con archivos subidos en una carpeta temporal."""
     async def fake_post(path, payload):

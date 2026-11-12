@@ -329,6 +329,11 @@ class CaregiverReview(Base):
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     job_reference: Mapped[str | None] = mapped_column(String(120), nullable=True)
     created_at: Mapped[datetime] = ts_now()
+    # Id de la misma reseña en el sitio público (para avisarle cuando el staff la archiva o elimina).
+    external_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, index=True)
+    # Archivada = el staff la oculta: no cuenta en el promedio ni en los puntos y se puede restaurar.
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    archived_by_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
 
 class CaregiverPointsLog(Base):
@@ -341,7 +346,7 @@ class CaregiverPointsLog(Base):
     id: Mapped[uuid.UUID] = pk()
     caregiver_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("marketplace_caregivers.id"), index=True)
     points: Mapped[int] = mapped_column(Integer)
-    reason: Mapped[str] = mapped_column(String(20))  # job_completed | good_review | manual
+    reason: Mapped[str] = mapped_column(String(20))  # job_completed | good_review | bad_review | manual
     note: Mapped[str | None] = mapped_column(String(300), nullable=True)
     review_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     awarded_by: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)

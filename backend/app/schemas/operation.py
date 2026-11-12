@@ -125,6 +125,7 @@ class CaregiverReviewSyncIn(BaseModel):
     family_name: str = Field(min_length=2, max_length=120)
     rating: int = Field(ge=1, le=5)
     comment: str | None = Field(default=None, max_length=1000)
+    review_id: UUID | None = None  # id de la reseña en el sitio público
 
 
 class CaregiverReviewOut(BaseModel):
@@ -136,6 +137,12 @@ class CaregiverReviewOut(BaseModel):
     job_reference: str | None
     points_awarded: int
     created_at: datetime
+    archived_at: datetime | None = None
+    archived_by_name: str | None = None
+
+
+class ReviewArchiveIn(BaseModel):
+    archived: bool
 
 
 class CaregiverPointsIn(BaseModel):

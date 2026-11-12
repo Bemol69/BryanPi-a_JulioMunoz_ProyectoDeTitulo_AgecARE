@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MarketplaceApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
+import ReviewsManager from "../components/ReviewsManager";
 import {
   Card, CardHead, Chip, Drawer, EmptyState, ErrorBanner, Modal, Person, PersonAvatar, Spinner, StatusChip, Stars, fmtDate, fmtCLP,
 } from "../components/ui";
@@ -103,6 +104,8 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
   const [rejecting, setRejecting] = useState<CaregiverDocType | null>(null);
   const [rejectNote, setRejectNote] = useState("");
   const [deleting, setDeleting] = useState(false);
+  // Los botones esperan también a que termine de recargarse el detalle: un segundo clic rápido actuaría sobre datos viejos.
+  const locked = busy || detail.loading;
 
   async function deleteProfile() {
     setBusy(true);
@@ -230,16 +233,16 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
                         <input className="input" style={{ width: "100%" }} value={rejectNote} onChange={(e) => setRejectNote(e.target.value)}
                               placeholder="Motivo del rechazo (se le muestra a la cuidadora)" />
                         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                          <button className="btn small danger" disabled={busy} onClick={() => reviewDoc(docType, "reject")}>Confirmar rechazo</button>
-                          <button className="btn small" disabled={busy} onClick={() => { setRejecting(null); setRejectNote(""); }}>Cancelar</button>
+                          <button className="btn small danger" disabled={locked} onClick={() => reviewDoc(docType, "reject")}>Confirmar rechazo</button>
+                          <button className="btn small" disabled={locked} onClick={() => { setRejecting(null); setRejectNote(""); }}>Cancelar</button>
                         </div>
                       </div>
                     ) : (
                       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                        <button className="btn small primary" disabled={busy} onClick={() => reviewDoc(docType, "approve")}>
+                        <button className="btn small primary" disabled={locked} onClick={() => reviewDoc(docType, "approve")}>
                           {doc?.pending_file_url ? "Aprobar cambio" : "Aprobar"}
                         </button>
-                        <button className="btn small" disabled={busy} onClick={() => { setRejecting(docType); setError(null); }}>
+                        <button className="btn small" disabled={locked} onClick={() => { setRejecting(docType); setError(null); }}>
                           {doc?.pending_file_url ? "Rechazar cambio" : "Rechazar"}
                         </button>
                       </div>
@@ -252,6 +255,8 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
 
           <div className="field-label">Rating</div>
           <div className="field-value">{c.rating_avg != null ? <>{c.rating_avg.toFixed(2)} · {c.reviews_count} reseñas</> : "Sin reseñas todavía"}</div>
+          <div className="field-label">Calificaciones de las familias</div>
+          <ReviewsManager caregiverId={id} onChanged={() => { detail.reload(); onChanged(); }} />
           <div className="field-label">Enviado el</div>
           <div className="field-value">{fmtDate(c.submitted_at)}</div>
           {c.reviewed_by_name && (
@@ -265,7 +270,7 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
           <textarea className="input" style={{ width: "100%", minHeight: 60 }}
                    defaultValue={c.internal_note ?? ""} onChange={(e) => setNote(e.target.value)} />
           <div style={{ marginTop: 8 }}>
-            <button className="btn small" disabled={busy} onClick={() => saveNote(c)}>Guardar nota</button>
+            <button className="btn small" disabled={locked} onClick={() => saveNote(c)}>Guardar nota</button>
           </div>
 
           {error && <div style={{ marginTop: 12 }}><ErrorBanner message={error} /></div>}
@@ -277,13 +282,13 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
           )}
           <div style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
             {c.status === "suspended" && (
-              <button className="btn primary" disabled={busy || !c.certifications_verified} onClick={() => act("approved")}>Reactivar perfil</button>
+              <button className="btn primary" disabled={locked || !c.certifications_verified} onClick={() => act("approved")}>Reactivar perfil</button>
             )}
             {c.status === "pending" && (
-              <button className="btn primary" disabled={busy || !c.certifications_verified} onClick={() => act("approved")}>Aprobar perfil</button>
+              <button className="btn primary" disabled={locked || !c.certifications_verified} onClick={() => act("approved")}>Aprobar perfil</button>
             )}
             {c.status !== "suspended" && (
-              <button className="btn danger" disabled={busy} onClick={() => act("suspended")}>Suspender</button>
+              <button className="btn danger" disabled={locked} onClick={() => act("suspended")}>Suspender</button>
             )}
           </div>
           {c.status !== "suspended" && (
@@ -298,7 +303,7 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
               <b>Eliminar perfil</b>
               <span>Borra a la cuidadora de la Consola y su cuenta del sitio, con documentos, reseñas y puntos.</span>
             </div>
-            <button className="btn danger" disabled={busy} onClick={() => setDeleting(true)}>Eliminar</button>
+            <button className="btn danger" disabled={locked} onClick={() => setDeleting(true)}>Eliminar</button>
           </div>
           {deleting && (
             <Modal title={`¿Eliminar a ${c.name}?`} onClose={() => setDeleting(false)}>

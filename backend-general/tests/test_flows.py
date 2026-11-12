@@ -189,6 +189,41 @@ async def test_caregiver_sees_the_reviews_she_received(client, family, maria, ja
     assert (await client.get(f"{API}/caregiver/reviews", headers=family)).status_code in (403, 404)
 
 
+async def test_staff_can_archive_restore_and_delete_a_review_from_the_console(client, family, maria):
+    pid = await profile_id_of(client, family, "María Torres")
+    detail = (await client.get(f"{API}/marketplace/caregivers/{pid}", headers=family)).json()
+    await client.post(f"{API}/marketplace/engagements/{detail['my_engagement_id']}/end", headers=family)
+    r = await client.post(f"{API}/marketplace/caregivers/{pid}/reviews",
+                          json={"rating": 1, "comment": "Reseña injusta"}, headers=family)
+    review_id = r.json()["review_id"]
+
+    def shown(d):
+        return [x["comment"] for x in d["reviews"]]
+
+    before = (await client.get(f"{API}/marketplace/caregivers/{pid}", headers=family)).json()
+    assert "Reseña injusta" in shown(before)
+    url = f"{API}/internal/reviews/moderate"
+    base = {"email": "maria@cuidado.cl", "review_id": review_id}
+
+    assert (await client.post(url, json={**base, "action": "archive"})).status_code in (401, 403)
+    assert (await client.post(url, json={**base, "action": "archive"}, headers=INTERNAL)).status_code == 204
+    hidden = (await client.get(f"{API}/marketplace/caregivers/{pid}", headers=family)).json()
+    assert "Reseña injusta" not in shown(hidden)
+    assert hidden["reviews_count"] == before["reviews_count"] - 1  # ya no cuenta para la nota
+    assert all(x["comment"] != "Reseña injusta" for x in (await client.get(f"{API}/caregiver/reviews", headers=maria)).json())
+
+    assert (await client.post(url, json={**base, "action": "restore"}, headers=INTERNAL)).status_code == 204
+    back = (await client.get(f"{API}/marketplace/caregivers/{pid}", headers=family)).json()
+    assert "Reseña injusta" in shown(back) and back["reviews_count"] == before["reviews_count"]
+
+    assert (await client.post(url, json={**base, "action": "delete"}, headers=INTERNAL)).status_code == 204
+    gone = (await client.get(f"{API}/marketplace/caregivers/{pid}", headers=family)).json()
+    assert "Reseña injusta" not in shown(gone) and gone["reviews_count"] == before["reviews_count"] - 1
+    # Una reseña antigua sin id se encuentra por autor, nota y comentario; si ya no existe, no falla.
+    legacy = {"email": "maria@cuidado.cl", "action": "delete", "family_name": "Nadie", "rating": 3, "comment": "x"}
+    assert (await client.post(url, json=legacy, headers=INTERNAL)).status_code == 204
+
+
 async def test_never_hired_caregiver_cannot_be_reviewed(client, family):
     pid = await profile_id_of(client, family, "Javiera Soto")
     r = await client.post(f"{API}/marketplace/caregivers/{pid}/reviews", json={"rating": 4}, headers=family)

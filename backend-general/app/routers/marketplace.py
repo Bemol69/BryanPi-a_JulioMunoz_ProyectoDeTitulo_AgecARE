@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Query
 from sqlalchemy import func, select
 
-from app import models
+from app import accounts, models
 from app.deps import CurrentUser, Db
 from app.chat_retention import purge_expired
 from app.errors import conflict, forbidden, not_found
@@ -99,7 +99,8 @@ async def get_caregiver_public(profile_id: UUID, db: Db, user: CurrentUser):
         raise forbidden("El marketplace de cuidadoras es para cuentas de familia.")
     p = await _get_listed(db, profile_id)
     reviews = (await db.execute(select(models.CaregiverReview)
-                                .where(models.CaregiverReview.caregiver_profile_id == profile_id)
+                                .where(models.CaregiverReview.caregiver_profile_id == profile_id,
+                                       models.CaregiverReview.hidden.is_(False))
                                 .order_by(models.CaregiverReview.created_at.desc()))).scalars().all()
     my_engagement = (await db.execute(select(models.CaregiverEngagement).where(
         models.CaregiverEngagement.caregiver_profile_id == profile_id,
@@ -203,6 +204,7 @@ async def end_engagement(engagement_id: UUID, db: Db, user: CurrentUser):
         e.status = "ended"
         e.ended_at = now_utc()
         p = await db.get(models.CaregiverProfile, e.caregiver_profile_id)
+        await db.commit()  # se guarda y la conexión vuelve al grupo mientras se espera a la otra API
         await sync_caregiver_to_admin(p, p.user, await _is_engaged(db, p.id))
 
 
@@ -249,12 +251,9 @@ async def review_caregiver(profile_id: UUID, body: ReviewCreateIn, db: Db, user:
     await db.flush()
     engagement.review_id = review.id
 
-    agg = (await db.execute(select(func.avg(models.CaregiverReview.rating),
-                                   func.count(models.CaregiverReview.id))
-                            .where(models.CaregiverReview.caregiver_profile_id == profile_id))).one()
-    p.rating_avg = round(float(agg[0]), 2)
-    p.reviews_count = int(agg[1])
-    await sync_review_to_admin(p.user.email, display_name, body.rating, body.comment)
+    await accounts.recalc_ratings(db, {profile_id})
+    await db.commit()  # se guarda y la conexión vuelve al grupo mientras se espera a la otra API
+    await sync_review_to_admin(p.user.email, display_name, body.rating, body.comment, str(review.id))
     return ReviewCreateOut(review_id=review.id)
 
 

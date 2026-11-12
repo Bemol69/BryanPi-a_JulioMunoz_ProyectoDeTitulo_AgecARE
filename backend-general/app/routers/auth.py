@@ -11,8 +11,8 @@ from app.errors import ApiError, conflict, unauthorized
 from app.schemas.auth import (AuthOut, DeleteAccountIn, LoginIn, MembershipOut, RefreshIn, RefreshOut,
                               RegisterIn, UserOut, UserPatchIn)
 from app.sync import remove_caregiver_from_admin, sync_caregiver_to_admin
-from app.security import (as_utc, create_access_token, hash_password, hash_refresh,
-                          new_refresh_token, now_utc, verify_password)
+from app.security import (as_utc, create_access_token, ahash_password, averify_password, hash_refresh,
+                          new_refresh_token, now_utc)
 
 router = APIRouter(tags=["Autenticación"])
 
@@ -36,6 +36,8 @@ def _user_out(user: models.User, memberships: list[MembershipOut]) -> UserOut:
 @router.post("/auth/register", response_model=AuthOut, status_code=201)
 async def register(body: RegisterIn, db: Db):
     email = body.email.lower()
+    # El hash va primero: así no se retiene una conexión a la base mientras se espera el turno de la CPU.
+    password_hash = await ahash_password(body.password)
     exists = (await db.execute(select(models.User).where(models.User.email == email))).scalar_one_or_none()
     if exists:
         raise conflict("EMAIL_ALREADY_EXISTS", "Ya existe una cuenta con este correo electrónico.")
@@ -47,7 +49,7 @@ async def register(body: RegisterIn, db: Db):
         if phone_exists:
             raise conflict("PHONE_ALREADY_EXISTS", "Ya existe una cuenta con este número de teléfono.")
 
-    user = models.User(full_name=body.full_name, email=email, password_hash=hash_password(body.password),
+    user = models.User(full_name=body.full_name, email=email, password_hash=password_hash,
                        phone=phone, locale=body.locale, account_type=body.account_type)
     db.add(user)
     await db.flush()
@@ -64,22 +66,40 @@ async def register(body: RegisterIn, db: Db):
 
 
 # ---------- 3.2 Iniciar sesión ----------
+_DUMMY_HASH: str | None = None
+
+
+async def _burn_hash_time(password: str) -> None:
+    """Si el correo no existe se hace igual el cálculo del hash: así no se nota por el tiempo de respuesta."""
+    global _DUMMY_HASH
+    if _DUMMY_HASH is None:
+        _DUMMY_HASH = await ahash_password("relleno-para-igualar-tiempos")
+    await averify_password(password, _DUMMY_HASH)
+
+
 @router.post("/auth/login", response_model=AuthOut)
 async def login(body: LoginIn, db: Db):
     s = get_settings()
     email = body.email.lower()
     user = (await db.execute(select(models.User).where(models.User.email == email))).scalar_one_or_none()
+    await db.commit()  # termina la lectura y devuelve la conexión: lo que sigue (el hash) es solo CPU
 
-    if user is None or not verify_password(body.password, user.password_hash):
+    # Cuenta bloqueada: ni se mira la contraseña (así tampoco se puede seguir probando).
+    if user is not None and user.locked_until and as_utc(user.locked_until) > now_utc():
+        raise ApiError(423, "ACCOUNT_LOCKED",
+                       f"Cuenta bloqueada temporalmente por intentos fallidos. Intenta en {s.lockout_minutes} minutos.")
+
+    if user is None:
+        await _burn_hash_time(body.password)
+    if user is None or not await averify_password(body.password, user.password_hash):
         if user is not None:
             user.failed_attempts += 1
             if user.failed_attempts >= s.max_login_attempts:
                 user.locked_until = now_utc() + timedelta(minutes=s.lockout_minutes)
                 user.failed_attempts = 0
+            # Se guarda ahora: al lanzar el error la sesión se revierte y el intento fallido se perdería.
+            await db.commit()
         raise ApiError(401, "INVALID_CREDENTIALS", "Correo o contraseña incorrectos.")
-    if user.locked_until and as_utc(user.locked_until) > now_utc():
-        raise ApiError(423, "ACCOUNT_LOCKED",
-                       "Cuenta bloqueada temporalmente por intentos fallidos. Intenta en 15 minutos.")
 
     user.failed_attempts = 0
     user.locked_until = None
@@ -166,13 +186,14 @@ async def patch_me(body: UserPatchIn, db: Db, user: CurrentUser):
 @router.delete("/users/me", status_code=204)
 async def delete_me(body: DeleteAccountIn, db: Db, user: CurrentUser):
     """Elimina la cuenta con todo lo que cuelga de ella. Pide la contraseña para evitar errores."""
-    if not verify_password(body.password, user.password_hash):
+    if not await averify_password(body.password, user.password_hash):
         raise ApiError(403, "WRONG_PASSWORD", "La contraseña no es correcta.")
     email, was_caregiver = user.email, user.account_type == "caregiver"
     paths = await accounts.purge_user(db, user)
     await db.flush()
     await storage.delete(paths)
     if was_caregiver:  # también desaparece de la Consola
+        await db.commit()  # se guarda y la conexión vuelve al grupo mientras se espera a la otra API
         await remove_caregiver_from_admin(email)
 
 
@@ -198,6 +219,7 @@ async def upload_avatar(request: Request, db: Db, user: CurrentUser, file: Uploa
             engaged = (await db.execute(select(models.CaregiverEngagement.id).where(
                 models.CaregiverEngagement.caregiver_profile_id == profile.id,
                 models.CaregiverEngagement.status == "active").limit(1))).first() is not None
+            await db.commit()  # se guarda y la conexión vuelve al grupo mientras se espera a la otra API
             await sync_caregiver_to_admin(profile, user, engaged)
     memberships = await _memberships_for(db, user.id)
     return _user_out(user, memberships)

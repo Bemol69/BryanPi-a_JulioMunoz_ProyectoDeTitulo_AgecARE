@@ -1,0 +1,6 @@
+# Los PDF y las imágenes son binarios: Git no debe tocarles los saltos de línea.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.docx binary
+*.pptx binary

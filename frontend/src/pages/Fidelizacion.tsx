@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { MarketingApi, MarketplaceApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
+import ReviewsManager from "../components/ReviewsManager";
 import {
-  Card, CardHead, Chip, EmptyState, ErrorBanner, Kpi, Modal, Spinner, Stars, fmtDateTime, fmtNumber, Person } from "../components/ui";
+  Card, CardHead, EmptyState, ErrorBanner, Kpi, Modal, Spinner, Stars, fmtNumber, Person } from "../components/ui";
 import type { CaregiverRankingItem } from "../api/types";
 
 export default function Fidelizacion() {
@@ -13,10 +14,6 @@ export default function Fidelizacion() {
 
   const dash = useApi(() => MarketingApi.dashboardSummary(30), []);
   const ranking = useApi(() => MarketplaceApi.ranking({ zone: zone || undefined, page_size: 20 }), [zone]);
-  const reviews = useApi(
-    () => (selected ? MarketplaceApi.listReviews(selected.caregiver_id) : Promise.resolve(null)),
-    [selected?.caregiver_id]
-  );
 
   const zones = useMemo(() => {
     const set = new Set((ranking.data?.items ?? []).map((c) => c.zone));
@@ -26,7 +23,6 @@ export default function Fidelizacion() {
   function refreshAll() {
     dash.reload();
     ranking.reload();
-    reviews.reload();
   }
 
   return (
@@ -103,31 +99,10 @@ export default function Fidelizacion() {
       <Card>
         <CardHead
           title={selected ? `Historial de reseñas · ${selected.name}` : "Historial de reseñas"}
-          sub={selected ? `${selected.zone} · haz clic en otra fila del ranking para cambiar` : "Selecciona una cuidadora del ranking para ver sus reseñas"}
+          sub={selected ? `${selected.zone} · haz clic en otra fila del ranking para cambiar · archiva o elimina las reseñas que no correspondan` : "Selecciona una cuidadora del ranking para ver sus reseñas"}
         />
         {!selected && <EmptyState label="Sin cuidadora seleccionada." />}
-        {selected && reviews.loading && <Spinner />}
-        {selected && reviews.error && <ErrorBanner message={reviews.error} />}
-        {selected && reviews.data && reviews.data.items.length === 0 && <EmptyState label="Todavía no tiene reseñas registradas." />}
-        {selected && reviews.data && reviews.data.items.length > 0 && (
-          <table className="data">
-            <thead>
-              <tr><th>Familia</th><th>Calificación</th><th>Comentario</th><th className="num">Puntos</th><th>Trabajo</th><th>Fecha</th></tr>
-            </thead>
-            <tbody>
-              {reviews.data.items.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.family_name}</td>
-                  <td><Stars rating={r.rating} /></td>
-                  <td style={{ maxWidth: 260 }}>{r.comment ?? "—"}</td>
-                  <td className="num"><Chip kind="gold">+{r.points_awarded}</Chip></td>
-                  <td>{r.job_reference ?? "—"}</td>
-                  <td>{fmtDateTime(r.created_at)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        {selected && <ReviewsManager key={selected.caregiver_id} caregiverId={selected.caregiver_id} onChanged={() => { dash.reload(); ranking.reload(); }} />}
       </Card>
 
       {pointsTarget && (
@@ -195,7 +170,7 @@ function RegisterReviewCard({ candidates, onDone }: { candidates: CaregiverRanki
               </button>
             ))}
             <span style={{ alignSelf: "center", fontSize: 12, color: "var(--ac-text-secondary)", marginLeft: 4 }}>
-              {rating >= 4 ? "Buena reseña → bono +5 pts" : "Sin bono por buena reseña"}
+              {rating >= 4 ? "Buena reseña → bono +5 pts" : rating === 3 ? "Neutra → solo los +10 del trabajo" : rating === 2 ? "Mala reseña → descuento −5 pts" : "Muy mala reseña → descuento −15 pts"}
             </span>
           </div>
         </div>

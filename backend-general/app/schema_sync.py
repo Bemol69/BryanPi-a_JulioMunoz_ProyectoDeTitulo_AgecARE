@@ -25,6 +25,7 @@ COLUMN_PATCHES: list[tuple[str, str, str]] = [
     ("caregiver_documents", "review_note", "TEXT"),
     ("caregiver_documents", "reviewed_at", "TIMESTAMP WITH TIME ZONE"),
     ("caregiver_engagements", "review_id", "UUID"),
+    ("caregiver_reviews", "hidden", "BOOLEAN NOT NULL DEFAULT FALSE"),
 ]
 # Tablas que Supabase expondría por su API pública: se les activa RLS sin políticas.
 RLS_TABLES = ["chat_conversations", "chat_messages", "hire_requests"]

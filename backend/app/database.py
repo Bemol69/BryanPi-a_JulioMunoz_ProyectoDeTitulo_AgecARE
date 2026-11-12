@@ -29,6 +29,10 @@ def _engine_options(url: str) -> dict:
     transaction_pooler = ":6543/" in url
     if transaction_pooler or os.getenv("VERCEL"):
         opts["poolclass"] = NullPool
+    elif not url.startswith("sqlite"):
+        # Servidor permanente (Docker, VM): grupo de conexiones más amplio que el de fábrica (5 + 10).
+        opts.update(pool_size=int(os.getenv("DB_POOL_SIZE", "20")), max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
+                    pool_timeout=int(os.getenv("DB_POOL_TIMEOUT", "15")), pool_recycle=1800)
     if transaction_pooler:
         opts["connect_args"] = {
             "statement_cache_size": 0,

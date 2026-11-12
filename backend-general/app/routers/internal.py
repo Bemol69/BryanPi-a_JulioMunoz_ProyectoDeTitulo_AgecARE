@@ -2,6 +2,7 @@
 compartida X-Internal-Key) cuando el staff aprueba, suspende o revisa documentos."""
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
@@ -26,6 +27,15 @@ class DocumentReviewIn(BaseModel):
     doc_type: str
     action: Literal["approve", "reject"]
     note: str | None = Field(default=None, max_length=1000)
+
+
+class ReviewModerationIn(BaseModel):
+    email: str
+    action: Literal["archive", "restore", "delete"]
+    review_id: UUID | None = None  # si falta (reseñas antiguas), se busca por autor, nota y comentario
+    family_name: str | None = None
+    rating: int | None = None
+    comment: str | None = None
 
 
 class InternalDocumentOut(BaseModel):
@@ -82,6 +92,29 @@ async def delete_caregiver_account(db: Db, email: str = Query(max_length=254)):
     paths = await accounts.purge_user(db, user, force=True)
     await db.flush()
     await storage.delete(paths)
+
+
+@router.post("/reviews/moderate", status_code=204)
+async def moderate_review(body: ReviewModerationIn, db: Db):
+    """El staff archivó, restauró o eliminó una reseña en la Consola: aquí se oculta/muestra/borra
+    y se recalcula la nota de la cuidadora."""
+    p = await _profile_by_email(db, body.email)
+    stmt = select(models.CaregiverReview).where(models.CaregiverReview.caregiver_profile_id == p.id)
+    if body.review_id is not None:
+        stmt = stmt.where(models.CaregiverReview.id == body.review_id)
+    else:
+        stmt = stmt.where(models.CaregiverReview.author_name == body.family_name,
+                          models.CaregiverReview.rating == body.rating,
+                          models.CaregiverReview.comment == body.comment)
+    review = (await db.execute(stmt.order_by(models.CaregiverReview.created_at.desc()))).scalars().first()
+    if review is None:
+        return  # ya no existe en el sitio: nada que hacer
+    if body.action == "delete":
+        await db.delete(review)
+    else:
+        review.hidden = body.action == "archive"
+    await db.flush()
+    await accounts.recalc_ratings(db, {p.id})
 
 
 @router.post("/documents/review", status_code=204)

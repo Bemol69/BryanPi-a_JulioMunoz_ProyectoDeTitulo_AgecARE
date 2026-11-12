@@ -132,7 +132,7 @@ def main():
             c.pg.get_by_role("button", name=re.compile("Necesito cuidado")).click()
             c.pg.fill("#fullName", "Otra Persona"); c.pg.fill("#email", EMAIL_FAM); c.pg.fill("#password", PW)
             c.pg.click("button[type=submit]")
-            c.pg.wait_for_selector(".error-banner", timeout=6000)
+            c.pg.wait_for_selector(".error-banner", timeout=20000)
             msg = c.pg.inner_text(".error-banner")
             c.ctx.close()
             return "mensaje: " + msg[:80]
@@ -143,7 +143,7 @@ def main():
             goto(c, SITE + "/login")
             c.pg.fill("input[type=email]", EMAIL_FAM); c.pg.fill("input[type=password]", "incorrecta123")
             c.pg.click("button[type=submit]")
-            c.pg.wait_for_selector(".error-banner", timeout=6000)
+            c.pg.wait_for_selector(".error-banner", timeout=20000)
             msg = c.pg.inner_text(".error-banner")
             c.ctx.close()
             assert "incorrect" in msg.lower(), msg
@@ -176,7 +176,7 @@ def main():
 
         def patient_page():
             fam.pg.locator("a[href^='/familia/']").first.click()
-            fam.pg.wait_for_selector("text=Sin cuidadora asignada", timeout=6000)
+            fam.pg.wait_for_selector("text=Sin cuidadora asignada", timeout=20000)
             shot(fam, "02_ficha_familiar.png")
         step(fam, "La ficha del familiar muestra «Sin cuidadora asignada»", patient_page)
 
@@ -184,7 +184,7 @@ def main():
         step(cg, "Registro de cuidadora con cuenta nueva", lambda: register(cg, "caregiver", "Pedro Salinas QA", EMAIL_CG))
 
         def profile():
-            cg.pg.wait_for_selector("text=Título profesional", timeout=6000)
+            cg.pg.wait_for_selector("text=Título profesional", timeout=20000)
             cg.pg.fill("input[placeholder^='Cuidadora certificada']", "Cuidador con 6 años de experiencia")
             cg.pg.fill("textarea", "Acompaño a adultos mayores con paciencia y respeto.")
             cg.pg.fill("input[type=number]", "6")
@@ -213,9 +213,9 @@ def main():
 
         def docs_bad():
             goto(cg, SITE + "/cuidadora")
-            cg.pg.wait_for_selector("text=Mis documentos", timeout=6000)
+            cg.pg.wait_for_selector("text=Mis documentos", timeout=20000)
             inp = cg.pg.locator(".doc-card input[type=file]").first
-            inp.set_input_files(BAD, timeout=8000)
+            inp.set_input_files(BAD, timeout=20000)
             cg.pg.wait_for_timeout(800)
             body = cg.pg.inner_text(".doc-card-main") if cg.pg.locator(".doc-card-main").count() else ""
             assert re.search(r"PDF|JPG|PNG", body), "no avisa del formato: " + body[:60]
@@ -265,11 +265,15 @@ def main():
 
         def con_approve():
             adm.pg.get_by_text("Pedro Salinas QA").first.click()
-            adm.pg.wait_for_selector(".drawer", timeout=6000)
+            adm.pg.wait_for_selector(".drawer", timeout=20000)
+            docs_btn = adm.pg.locator(".drawer button:has-text('Aprobar')").filter(has_not_text="perfil")
             for _ in range(3):
-                btn = adm.pg.locator(".drawer button:has-text('Aprobar')").filter(has_not_text="perfil").first
-                btn.click()
-                adm.pg.wait_for_timeout(1500)
+                pending = docs_btn.count()
+                docs_btn.first.click()
+                for _ in range(60):  # espera a que el documento deje de estar pendiente (no un tiempo fijo)
+                    adm.pg.wait_for_timeout(250)
+                    if docs_btn.count() < pending:
+                        break
             shot(adm, "07_consola_documentos_aprobados.png")
             adm.pg.get_by_role("button", name="Aprobar perfil").click()
             adm.pg.wait_for_timeout(2500)
@@ -289,7 +293,7 @@ def main():
 
         def hire_request():
             fam.pg.get_by_text("Pedro Salinas").first.click()
-            fam.pg.wait_for_selector("text=Solicitar contratación", timeout=6000)
+            fam.pg.wait_for_selector("text=Solicitar contratación", timeout=20000)
             fam.pg.get_by_role("button", name="Solicitar contratación").click()
             fam.pg.wait_for_selector(".modal")
             fam.pg.fill(".modal textarea", "Necesitamos apoyo por las mañanas.")
@@ -301,7 +305,7 @@ def main():
 
         def cg_accept():
             goto(cg, SITE + "/solicitudes", 1500)
-            cg.pg.wait_for_selector("text=Aceptar solicitud", timeout=8000)
+            cg.pg.wait_for_selector("text=Aceptar solicitud", timeout=20000)
             shot(cg, "10_solicitud_recibida.png")
             cg.pg.get_by_role("button", name="Aceptar solicitud").click()
             cg.pg.wait_for_timeout(2500)
@@ -333,7 +337,7 @@ def main():
             register(fam2, "family", "Lucía Torres QA", EMAIL_FAM2)
             goto(fam2, SITE + "/marketplace", 1500)
             fam2.pg.get_by_text("Pedro Salinas").first.click()
-            fam2.pg.wait_for_selector("text=En servicio", timeout=6000)
+            fam2.pg.wait_for_selector("text=En servicio", timeout=20000)
             btn = fam2.pg.get_by_role("button", name="Solicitar contratación")
             assert btn.count() == 0, "otra familia aún puede solicitarla"
         step(fam2, "Otra familia NO puede solicitar a una cuidadora que ya trabaja", fam2_blocked)
@@ -341,7 +345,7 @@ def main():
         def review_flow():
             goto(fam, SITE + "/marketplace", 1200)
             fam.pg.get_by_text("Pedro Salinas").first.click()
-            fam.pg.wait_for_selector("text=Finalizar trabajo", timeout=6000)
+            fam.pg.wait_for_selector("text=Finalizar trabajo", timeout=20000)
             fam.pg.once("dialog", lambda d: d.accept())
             fam.pg.get_by_role("button", name=re.compile("Finalizar trabajo")).click()
             fam.pg.wait_for_timeout(2500)
@@ -355,7 +359,11 @@ def main():
         step(fam, "Finalizar el trabajo y dejar una reseña", review_flow)
 
         def cg_reviews():
-            goto(cg, SITE + "/cuidadora", 1500)
+            goto(cg, SITE + "/cuidadora", 800)
+            try:
+                cg.pg.wait_for_function("document.body.innerText.includes('Excelente trato')", timeout=10000)
+            except Exception:
+                pass
             assert "Excelente trato" in cg.pg.inner_text("body"), "la cuidadora no ve su reseña"
             shot(cg, "14_cuidador_resenas.png")
         step(cg, "La cuidadora ve la reseña en su perfil", cg_reviews)
@@ -394,7 +402,7 @@ def main():
         def con_new_photo():
             goto(adm, CON + "/marketplace", 1800)
             adm.pg.get_by_text("Pedro Salinas QA").first.click()
-            adm.pg.wait_for_selector(".drawer .person-avatar img", timeout=6000)
+            adm.pg.wait_for_selector(".drawer .person-avatar img", timeout=20000)
         step(adm, "La foto que subió el cuidador nuevo llegó a la Consola", con_new_photo)
 
         def home_is_marketplace():

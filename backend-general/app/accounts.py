@@ -24,15 +24,16 @@ async def _has_active_engagement(db, *, family_user_id: UUID | None = None,
     return (await db.execute(select(models.CaregiverEngagement.id).where(*cond).limit(1))).first() is not None
 
 
-async def _recalc_ratings(db, profile_ids: set[UUID]) -> None:
-    """Recalcula la valoración de las cuidadoras que perdieron reseñas."""
+async def recalc_ratings(db, profile_ids: set[UUID]) -> None:
+    """Recalcula la valoración de las cuidadoras (las reseñas archivadas no cuentan)."""
     for pid in profile_ids:
         profile = await db.get(models.CaregiverProfile, pid)
         if profile is None:
             continue
         n, avg = (await db.execute(select(func.count(models.CaregiverReview.id),
                                           func.avg(models.CaregiverReview.rating))
-                                   .where(models.CaregiverReview.caregiver_profile_id == pid))).one()
+                                   .where(models.CaregiverReview.caregiver_profile_id == pid,
+                                          models.CaregiverReview.hidden.is_(False)))).one()
         profile.reviews_count = int(n or 0)
         profile.rating_avg = round(float(avg), 2) if n else None
 
@@ -92,7 +93,7 @@ async def purge_user(db, user: models.User, *, force: bool = False) -> list[str]
     if pid:
         await db.execute(delete(models.CaregiverReview).where(models.CaregiverReview.caregiver_profile_id == pid))
         affected.discard(pid)
-    await _recalc_ratings(db, affected)
+    await recalc_ratings(db, affected)
     # Perfil profesional y sus documentos
     if pid:
         docs = (await db.execute(select(models.CaregiverDocument)

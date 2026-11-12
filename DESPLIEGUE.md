@@ -163,12 +163,27 @@ Revísala antes de abrir el sistema a personas reales (para la demostración aca
   de la pantalla de ingreso (en la web publicada el formulario ya no viene con una cuenta precargada).
 - [ ] **Documentos privados:** pasar el bucket `agecare-uploads` a privado y servir los documentos con URLs firmadas
   (hoy es público; las direcciones no se pueden adivinar, pero quien las tenga ve el archivo).
+- [ ] **Región de las APIs:** en Vercel (proyecto → Settings → Functions) debe figurar **São Paulo (gru1)**, igual que la base de datos
+  (ya viene fijada en `backend*/vercel.json`). Si las funciones corren en otra región, cada petición paga el viaje de ida y vuelta a la base
+  (se midió ~1 s extra por petición desde Washington).
 - [ ] **CORS:** `CORS_ORIGINS` de cada API solo con los dominios reales de las webs.
 - [ ] **Respaldos:** activar los respaldos automáticos de Supabase (plan de pago) y probar una restauración.
 - [ ] **Textos legales:** publicar los términos de uso y la política de privacidad (hay datos de salud y documentos
   de identidad) y pedir el consentimiento al registrarse.
 - [ ] **Monitoreo:** revisar los *Logs* de Vercel después de cada despliegue y activar alertas de errores.
 - [ ] **Plan de Vercel:** el plan Hobby es solo para uso personal; un lanzamiento comercial requiere el plan Pro.
+
+## Variables opcionales de rendimiento (solo para servidores permanentes: Docker, una VM)
+
+En Vercel no se usan (cada petición abre su conexión). Si pones las APIs en Docker o en una máquina propia:
+
+| Variable | Por defecto | Para qué |
+|---|---|---|
+| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | 20 / 20 | Conexiones a la base por proceso. Debe cumplirse `procesos × (POOL + OVERFLOW) < max_connections` de PostgreSQL (100 por defecto) |
+| `DB_POOL_TIMEOUT` | 15 s | Cuánto espera una petición por una conexión libre antes de fallar |
+| `HASH_WORKERS` | núcleos (máx. 4) | Contraseñas que se calculan a la vez; las demás esperan su turno sin frenar al servidor |
+
+Detalle y resultados de las pruebas de carga en `pruebas/README.md`.
 
 ## Límites y puntos a tener en cuenta
 

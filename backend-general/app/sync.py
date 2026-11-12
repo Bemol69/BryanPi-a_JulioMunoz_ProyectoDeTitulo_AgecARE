@@ -70,11 +70,11 @@ async def remove_caregiver_from_admin(email: str) -> None:
 
 
 async def sync_review_to_admin(caregiver_email: str, family_name: str, rating: int,
-                               comment: str | None) -> None:
+                               comment: str | None, review_id: str | None = None) -> None:
     """Reenvía una reseña a la Consola para que otorgue puntos de fidelización."""
     await _post_to_admin("/marketplace/reviews/sync", {
         "caregiver_email": caregiver_email, "family_name": family_name,
-        "rating": rating, "comment": comment,
+        "rating": rating, "comment": comment, "review_id": review_id,
     })
 
 

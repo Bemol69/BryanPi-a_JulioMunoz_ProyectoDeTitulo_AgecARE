@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 
-from app import general_client, models
+from app import general_client, loyalty, models
 from app.audit import audit
 from app.deps import Db, require, require_internal_key
 from app.enums import CaregiverStatus, ContentStatus
@@ -17,33 +17,32 @@ from app.schemas.operation import (CaregiverDocumentOut, CaregiverDocumentReview
                                    CaregiverPatchIn, CaregiverPointsIn, CaregiverPointsOut,
                                    CaregiverRankingItem, CaregiverReviewIn, CaregiverReviewOut,
                                    CaregiverReviewSyncIn, CaregiverSyncIn, ProductCreateIn,
-                                   ProductOut, ProductPatchIn)
+                                   ProductOut, ProductPatchIn, ReviewArchiveIn)
 from app.security import now_utc
 
 router = APIRouter(prefix="/marketplace", tags=["Catálogos marketplace"])
 
-# Puntos de fidelización otorgados automáticamente al registrar una reseña.
-POINTS_JOB_COMPLETED = 10
-POINTS_GOOD_REVIEW_BONUS = 5
-GOOD_REVIEW_THRESHOLD = 4
+# Reglas de puntos en app/loyalty.py (las reseñas buenas suman, las malas restan).
+POINTS_JOB_COMPLETED = loyalty.POINTS_JOB_COMPLETED
 
 
 async def _total_points(db: Db, caregiver_id: UUID) -> int:
     total = (await db.execute(
         select(func.coalesce(func.sum(models.CaregiverPointsLog.points), 0))
-        .where(models.CaregiverPointsLog.caregiver_id == caregiver_id))).scalar_one()
+        .where(models.CaregiverPointsLog.caregiver_id == caregiver_id, loyalty.active_points()))).scalar_one()
     return int(total)
 
 
 async def _register_review(db: Db, c: models.CaregiverProfile, family_name: str, rating: int,
                            comment: str | None, job_reference: str | None,
-                           admin: models.AdminUser | None) -> tuple[models.CaregiverReview, int]:
+                           admin: models.AdminUser | None,
+                           external_id: UUID | None = None) -> tuple[models.CaregiverReview, int]:
     """Crea la reseña, otorga los puntos de fidelización que correspondan y
     recalcula el promedio/conteo de la cuidadora. Compartido entre el registro
     manual del staff y la sincronización de reseñas del sitio público (donde
     no hay un admin autenticado, por eso `admin` puede ser None)."""
     review = models.CaregiverReview(caregiver_id=c.id, family_name=family_name, rating=rating,
-                                    comment=comment, job_reference=job_reference)
+                                    comment=comment, job_reference=job_reference, external_id=external_id)
     db.add(review)
     await db.flush()
 
@@ -53,20 +52,24 @@ async def _register_review(db: Db, c: models.CaregiverProfile, family_name: str,
                                      note=f"Trabajo cerrado con reseña de {family_name}.",
                                      awarded_by=admin.id if admin else None,
                                      awarded_by_name=admin.full_name if admin else None))
-    if rating >= GOOD_REVIEW_THRESHOLD:
-        points_awarded += POINTS_GOOD_REVIEW_BONUS
-        db.add(models.CaregiverPointsLog(caregiver_id=c.id, points=POINTS_GOOD_REVIEW_BONUS,
-                                         reason="good_review", review_id=review.id,
-                                         note=f"Bono por buena reseña (rating {rating}).",
-                                         awarded_by=admin.id if admin else None,
+    extra = loyalty.review_bonus(rating)
+    if extra is not None:
+        pts, reason, note = extra
+        points_awarded += pts
+        db.add(models.CaregiverPointsLog(caregiver_id=c.id, points=pts, reason=reason, review_id=review.id,
+                                         note=note, awarded_by=admin.id if admin else None,
                                          awarded_by_name=admin.full_name if admin else None))
 
-    agg = (await db.execute(
-        select(func.avg(models.CaregiverReview.rating), func.count(models.CaregiverReview.id))
-        .where(models.CaregiverReview.caregiver_id == c.id))).one()
-    c.rating_avg = round(float(agg[0]), 2) if agg[0] is not None else None
-    c.reviews_count = int(agg[1])
+    await db.flush()
+    await loyalty.recalc_rating(db, c)
     return review, points_awarded
+
+
+def _review_out(r: models.CaregiverReview, points: int) -> CaregiverReviewOut:
+    return CaregiverReviewOut(id=r.id, caregiver_id=r.caregiver_id, family_name=r.family_name,
+                              rating=r.rating, comment=r.comment, job_reference=r.job_reference,
+                              points_awarded=points, created_at=r.created_at,
+                              archived_at=r.archived_at, archived_by_name=r.archived_by_name)
 
 
 def _cg_out(c: models.CaregiverProfile, include_note: bool = False) -> CaregiverOut:
@@ -337,9 +340,7 @@ async def caregiver_ranking(db: Db,
                             zone: str | None = None,
                             page: int = Query(default=1, ge=1),
                             page_size: int = Query(default=25, ge=1, le=100)):
-    points_sub = (select(models.CaregiverPointsLog.caregiver_id,
-                         func.sum(models.CaregiverPointsLog.points).label("points"))
-                 .group_by(models.CaregiverPointsLog.caregiver_id).subquery())
+    points_sub = loyalty.points_by_caregiver()
     stmt = (select(models.CaregiverProfile, func.coalesce(points_sub.c.points, 0))
            .outerjoin(points_sub, points_sub.c.caregiver_id == models.CaregiverProfile.id)
            .where(models.CaregiverProfile.status == CaregiverStatus.approved))
@@ -484,7 +485,8 @@ async def sync_review(body: CaregiverReviewSyncIn, request: Request, db: Db):
 
     job_reference = "Reseña del sitio público"
     review, points_awarded = await _register_review(db, c, body.family_name, body.rating,
-                                                     body.comment, job_reference, admin=None)
+                                                     body.comment, job_reference, admin=None,
+                                                     external_id=body.review_id)
     await audit(db, request, "marketplace.review_synced", "caregiver_profile", c.id,
                after={"rating": body.rating, "points_awarded": points_awarded})
     return CaregiverReviewOut(id=review.id, caregiver_id=c.id, family_name=body.family_name,
@@ -506,16 +508,54 @@ async def list_reviews(caregiver_id: UUID, db: Db,
            .order_by(models.CaregiverReview.created_at.desc()))
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
     rows = (await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))).scalars().all()
-    items = []
-    for r in rows:
-        pts = (await db.execute(
-            select(func.coalesce(func.sum(models.CaregiverPointsLog.points), 0))
-            .where(models.CaregiverPointsLog.review_id == r.id))).scalar_one()
-        items.append(CaregiverReviewOut(id=r.id, caregiver_id=r.caregiver_id,
-                                        family_name=r.family_name, rating=r.rating,
-                                        comment=r.comment, job_reference=r.job_reference,
-                                        points_awarded=int(pts), created_at=r.created_at))
+    # Puntos de cada reseña en una sola consulta (antes era una por fila).
+    pts = dict((await db.execute(
+        select(models.CaregiverPointsLog.review_id, func.sum(models.CaregiverPointsLog.points))
+        .where(models.CaregiverPointsLog.review_id.in_([r.id for r in rows]))
+        .group_by(models.CaregiverPointsLog.review_id))).all()) if rows else {}
+    items = [_review_out(r, int(pts.get(r.id, 0))) for r in rows]
     return Page(items=items, page=page, page_size=page_size, total=total)
+
+
+async def _moderate(db: Db, request: Request, admin: models.AdminUser, review_id: UUID, action: str):
+    r = await db.get(models.CaregiverReview, review_id)
+    if r is None:
+        raise not_found()
+    c = await db.get(models.CaregiverProfile, r.caregiver_id)
+    # Primero se avisa al sitio público: si no se puede, no se cambia nada aquí.
+    await general_client.push_review_moderation(
+        c.email, action, review_id=str(r.external_id) if r.external_id else None,
+        family_name=r.family_name, rating=r.rating, comment=r.comment)
+    before = {"rating": r.rating, "archived": r.archived_at is not None, "family": r.family_name}
+    if action == "archive":
+        r.archived_at, r.archived_by_name = now_utc(), admin.full_name
+    elif action == "restore":
+        r.archived_at, r.archived_by_name = None, None
+    else:  # delete
+        await db.execute(delete(models.CaregiverPointsLog).where(models.CaregiverPointsLog.review_id == r.id))
+        await db.delete(r)
+    await db.flush()
+    await loyalty.recalc_rating(db, c)
+    await audit(db, request, f"marketplace.review_{action}", "caregiver_profile", c.id, before=before,
+                after={"total_points": await _total_points(db, c.id)})
+    return r
+
+
+@router.patch("/reviews/{review_id}", response_model=CaregiverReviewOut)
+async def archive_review(review_id: UUID, body: ReviewArchiveIn, request: Request, db: Db,
+                         admin: models.AdminUser = require("marketplace", write=True)):
+    """Archiva (oculta, no cuenta para nota ni puntos) o restaura una reseña."""
+    r = await _moderate(db, request, admin, review_id, "archive" if body.archived else "restore")
+    pts = (await db.execute(select(func.coalesce(func.sum(models.CaregiverPointsLog.points), 0))
+                            .where(models.CaregiverPointsLog.review_id == r.id))).scalar_one()
+    return _review_out(r, int(pts))
+
+
+@router.delete("/reviews/{review_id}", status_code=204)
+async def delete_review(review_id: UUID, request: Request, db: Db,
+                        admin: models.AdminUser = require("marketplace", write=True)):
+    """Elimina la reseña definitivamente, junto con los puntos que dio o quitó."""
+    await _moderate(db, request, admin, review_id, "delete")
 
 
 # ---------- 10.3 Listar artículos ----------

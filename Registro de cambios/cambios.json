@@ -1,5 +1,67 @@
 [
   {
+    "fecha": "2026-11-12",
+    "titulo": "Reseñas malas restan puntos y el equipo modera las calificaciones de cada cuidadora",
+    "resumen": "Las calificaciones bajas ahora afectan el puntaje de fidelización, y desde la Consola se ven las reseñas de cada cuidadora una por una para archivarlas, restaurarlas o eliminarlas. Los cambios se reflejan también en el sitio público.",
+    "areas": [
+      {
+        "nombre": "Fidelización (puntos)",
+        "items": [
+          "Una reseña de 4 o 5 estrellas sigue sumando (+5 de bono sobre los +10 del trabajo); la de 3 queda neutra; la de 2 resta 5 puntos y la de 1 resta 15.",
+          "El total de puntos puede quedar bajo cero y el ranking pone más abajo a quien acumula malas reseñas. Las reglas están en un solo lugar (backend/app/loyalty.py).",
+          "El formulario de la Consola avisa cuántos puntos suma o resta cada calificación."
+        ]
+      },
+      {
+        "nombre": "Consola de administración",
+        "items": [
+          "Fidelización y la ficha de cada cuidadora (Marketplace) muestran sus calificaciones una por una, con familia, estrellas, comentario, puntos y fecha; las malas se marcan en rojo.",
+          "Cada reseña se puede archivar (se oculta y deja de contar para la nota y los puntos; se puede restaurar) o eliminar definitivamente, con confirmación y registro en la auditoría.",
+          "Si el sitio público no responde, la acción no se aplica (así los dos sistemas no quedan distintos).",
+          "Los botones de revisión de documentos esperan a que el detalle termine de recargarse; antes un segundo clic rápido daba un error 409 confuso."
+        ]
+      },
+      {
+        "nombre": "Sitio de cuidadoras y familias",
+        "items": [
+          "Una reseña archivada o eliminada por el equipo deja de verse en el perfil público y en «Mis reseñas» de la cuidadora, y la nota se recalcula."
+        ]
+      },
+      {
+        "nombre": "Seguridad",
+        "items": [
+          "Se agregaron 78 pruebas automáticas de seguridad (inyección SQL, scripts en textos, tokens falsos o vencidos, acceso a datos de otras personas, claves internas, fuerza bruta, cabeceras y CORS).",
+          "Corregido: en el sitio público el bloqueo de cuenta tras 5 contraseñas incorrectas NO funcionaba (el contador de intentos se perdía al responder el error), por lo que se podían probar contraseñas sin límite. Ahora la cuenta se bloquea 15 minutos.",
+          "Cabeceras de seguridad en las dos APIs y en las dos webs (no se pueden incrustar en otro sitio, el navegador no adivina tipos de archivo, HTTPS obligatorio).",
+          "Si el correo no existe, el login tarda lo mismo que si la contraseña fuera incorrecta (no se puede averiguar qué correos tienen cuenta midiendo el tiempo).",
+          "Aviso crítico en el registro del servidor si en Vercel quedó un secreto de ejemplo (GENERAL_JWT_SECRET, ADMIN_JWT_SECRET o las claves internas)."
+        ]
+      },
+      {
+        "nombre": "Velocidad y estabilidad con muchos usuarios",
+        "items": [
+          "Las dos APIs ahora corren en la región de São Paulo (gru1), junto a la base de datos. Antes corrían en Washington y cada petición pagaba el viaje de ida y vuelta varias veces (un login de correo inexistente tardaba ~1,3 s).",
+          "El cálculo de contraseñas (Argon2) ya no frena a los demás usuarios: se hace en hilos aparte y con la configuración mínima que recomienda OWASP. Las contraseñas existentes siguen funcionando.",
+          "Corregido: la API respondía «creado» antes de guardar en la base; con carga o con la base lejos, la petición siguiente podía dar 403 o 404 al azar.",
+          "Corregido: con cientos de usuarios simultáneos se agotaban las conexiones a la base de datos (error 500). Se liberan antes de esperar a la otra API o al cálculo de contraseña, y el grupo de conexiones es configurable.",
+          "La limpieza de chats vencidos corre como máximo una vez cada 5 minutos (antes eran 3 consultas en cada visita al chat) y el listado de reseñas hace 1 consulta en vez de una por reseña.",
+          "Las webs guardan en caché por un año los archivos con hash."
+        ]
+      },
+      {
+        "nombre": "Pruebas de carga",
+        "items": [
+          "Nuevo script pruebas/carga.mjs: simula cientos de usuarios (familias, cuidadoras y staff) con un recorrido real. Resultados en pruebas/README.md."
+        ]
+      }
+    ],
+    "pasos_manuales": [
+      "En Vercel, en las dos APIs, confirma que NO tengan valores de ejemplo en GENERAL_JWT_SECRET, GENERAL_ADMIN_SYNC_KEY, ADMIN_JWT_SECRET y ADMIN_INTERNAL_SYNC_KEY (las claves internas deben ser iguales en ambas APIs).",
+      "Tras el despliegue automático, revisa en Vercel (Settings → Functions) que la región de las dos APIs sea São Paulo (gru1).",
+      "Las columnas nuevas se crean solas al primer uso, no hay que correr SQL."
+    ]
+  },
+  {
     "fecha": "2026-11-05",
     "titulo": "Corrección de las ventanas emergentes cortadas (crear perfil de familiar)",
     "resumen": "El formulario «Crear perfil de un adulto mayor» se veía cortado porque la ventana emergente quedaba encerrada dentro de la página. Ahora se muestra centrada sobre toda la pantalla.",

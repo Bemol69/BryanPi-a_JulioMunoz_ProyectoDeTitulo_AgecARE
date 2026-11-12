@@ -31,6 +31,9 @@ export const MarketplaceApi = {
     api.post<CaregiverReviewOut>("/marketplace/reviews", body),
   listReviews: (caregiverId: string, page = 1) =>
     api.get<Page<CaregiverReviewOut>>(`/marketplace/caregivers/${caregiverId}/reviews${qs({ page })}`),
+  archiveReview: (reviewId: string, archived: boolean) =>
+    api.patch<CaregiverReviewOut>(`/marketplace/reviews/${reviewId}`, { archived }),
+  deleteReview: (reviewId: string) => api.del<void>(`/marketplace/reviews/${reviewId}`),
   listProducts: (params: { category?: string; status?: string; q?: string; page?: number }) =>
     api.get<Page<ProductOut>>(`/marketplace/products${qs(params)}`),
 };

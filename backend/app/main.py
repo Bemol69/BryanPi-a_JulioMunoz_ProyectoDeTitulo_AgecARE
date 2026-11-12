@@ -1,16 +1,30 @@
 """AgeCare — API de la Consola de Administración (FastAPI + PostgreSQL)."""
+import logging
 import os
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.errors import RequestIdMiddleware, register_error_handlers
+from app.headers import SecurityHeadersMiddleware
 from app.routers import (auth, content, marketing, marketplace, metrics_commercial,
                          metrics_features, metrics_roles, moderation, ops, support)
 from app.routers import system as system_router
 
 # Orígenes extra permitidos (p. ej. el dominio de Vercel), separados por coma.
 CORS_EXTRA_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
+
+
+def _warn_if_default_secrets() -> None:
+    """En Vercel, firmar sesiones con el secreto de ejemplo permitiría falsificar accesos: se deja un aviso crítico."""
+    s = get_settings()
+    weak = [name for name, value in (("ADMIN_JWT_SECRET", s.jwt_secret), ("ADMIN_INTERNAL_SYNC_KEY", s.internal_sync_key))
+            if value in ("cambia-esto-en-produccion", "clave-interna-solo-para-desarrollo", "solo-para-desarrollo")]
+    if weak and os.getenv("VERCEL"):
+        logging.getLogger("agecare.security").critical("Variables con valor de ejemplo en producción: %s", ", ".join(weak))
+
+
+_warn_if_default_secrets()
 
 app = FastAPI(
     title="AgeCare Admin API",
@@ -20,6 +34,7 @@ app = FastAPI(
     openapi_url="/api/v1/admin/openapi.json",
 )
 app.add_middleware(RequestIdMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 # CORS para el frontend local (React + Vite) del equipo Marketing y Fidelización.
 # El backend base no lo traía porque no tenía frontend propio corriendo aún.
 app.add_middleware(

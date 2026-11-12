@@ -91,6 +91,8 @@ export interface CaregiverReviewOut {
   job_reference: string | null;
   points_awarded: number;
   created_at: string;
+  archived_at: string | null;
+  archived_by_name: string | null;
 }
 
 export interface TopCaregiverOut {

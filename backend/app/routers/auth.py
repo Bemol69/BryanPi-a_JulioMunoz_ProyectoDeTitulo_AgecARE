@@ -15,7 +15,7 @@ from app.schemas.auth import (AdminCreateIn, AdminCreateOut, AdminPatchIn, Admin
                               LoginIn, LoginOut, MeOut, RefreshIn, RefreshOut)
 from app.schemas.common import Page
 from app.security import (as_utc, create_access_token, hash_refresh, new_refresh_token,
-                          now_utc, verify_password, verify_totp)
+                          now_utc, averify_password, verify_totp)
 
 router = APIRouter(tags=["Autenticación de staff"])
 
@@ -26,6 +26,7 @@ async def login(body: LoginIn, request: Request, db: Db):
     s = get_settings()
     q = await db.execute(select(models.AdminUser).where(models.AdminUser.email == body.email.lower()))
     admin = q.scalar_one_or_none()
+    await db.commit()  # devuelve la conexión: lo que sigue (el hash) es solo CPU
 
     async def fail(code="INVALID_CREDENTIALS", msg="Correo o contraseña incorrectos.", status=401):
         await audit(db, request, "auth.login_failed", "admin_user",
@@ -37,7 +38,7 @@ async def login(body: LoginIn, request: Request, db: Db):
         await fail()  # mismo error que contraseña incorrecta: no revela existencia
     if admin.locked_until and as_utc(admin.locked_until) > now_utc():
         raise ApiError(423, "ACCOUNT_LOCKED", "Cuenta bloqueada 15 minutos por intentos fallidos repetidos.")
-    if admin.password_hash is None or not verify_password(body.password, admin.password_hash):
+    if admin.password_hash is None or not await averify_password(body.password, admin.password_hash):
         admin.failed_attempts += 1
         if admin.failed_attempts >= s.max_login_attempts:
             admin.locked_until = now_utc() + timedelta(minutes=s.lockout_minutes)
