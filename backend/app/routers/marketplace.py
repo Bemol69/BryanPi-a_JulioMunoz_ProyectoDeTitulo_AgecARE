@@ -1,5 +1,6 @@
 """Catálogos del marketplace: perfiles de cuidadoras, artículos de apoyo,
 reseñas, puntos de fidelización y ranking."""
+import secrets
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -17,7 +18,8 @@ from app.schemas.operation import (CaregiverDocumentOut, CaregiverDocumentReview
                                    CaregiverPatchIn, CaregiverPointsIn, CaregiverPointsOut,
                                    CaregiverRankingItem, CaregiverReviewIn, CaregiverReviewOut,
                                    CaregiverReviewSyncIn, CaregiverSyncIn, ProductCreateIn,
-                                   ProductOut, ProductPatchIn, ReviewArchiveIn)
+                                   MonetizationOut, ProductOut, ProductPatchIn, ReviewArchiveIn,
+                                   VerificationIn, VerificationSiteOut)
 from app.security import now_utc
 
 router = APIRouter(prefix="/marketplace", tags=["Catálogos marketplace"])
@@ -80,7 +82,17 @@ def _cg_out(c: models.CaregiverProfile, include_note: bool = False) -> Caregiver
                         status=CaregiverStatus(c.status),
                         submitted_at=c.submitted_at, reviewed_by_name=c.reviewed_by_name,
                         internal_note=c.internal_note if include_note else None,
-                        certifications_verified=c.certifications_verified)
+                        certifications_verified=c.certifications_verified,
+                        verification_fee_status=c.verification_fee_status,
+                        verification_fee_clp=c.verification_fee_clp,
+                        verification_reference=c.verification_reference,
+                        verification_paid_at=c.verification_paid_at,
+                        verification_marked_by=c.verification_marked_by)
+
+
+def _new_reference() -> str:
+    """Código corto que la cuidadora indica al pagar, para que el equipo identifique el pago."""
+    return "AC-" + secrets.token_hex(3).upper()
 
 
 def _doc_out(d: models.CaregiverDocument) -> CaregiverDocumentOut:
@@ -178,7 +190,8 @@ async def sync_caregiver(body: CaregiverSyncIn, db: Db):
                                       specialties=body.specialties, languages=body.languages,
                                       certifications_count=body.certifications_count,
                                       certifications_verified=False, status="pending",
-                                      is_engaged=body.is_engaged)
+                                      is_engaged=body.is_engaged,
+                                      verification_fee_status="unpaid", verification_reference=_new_reference())
     db.add(profile)
     await db.flush()
     return _cg_out(profile)
@@ -228,6 +241,20 @@ async def caregiver_documents_for_site(db: Db, email: str = Query(max_length=254
     return {"items": [{"doc_type": d.doc_type, "file_url": d.file_url, "status": d.status,
                        "pending_file_url": d.pending_file_url, "review_note": d.review_note}
                       for d in docs]}
+
+
+# El sitio público consulta aquí el estado del pago de verificación de la cuidadora.
+@router.get("/caregivers/verification", response_model=VerificationSiteOut,
+            dependencies=[Depends(require_internal_key)])
+async def caregiver_verification_for_site(db: Db, email: str = Query(max_length=254)):
+    c = (await db.execute(select(models.CaregiverProfile).where(
+        func.lower(models.CaregiverProfile.email) == email.lower()))).scalars().first()
+    if c is None:
+        raise not_found("No se encontró una cuidadora sincronizada con ese correo.")
+    if c.verification_reference is None:  # perfiles anteriores al cobro
+        c.verification_reference = _new_reference()
+    return VerificationSiteOut(fee_clp=c.verification_fee_clp, status=c.verification_fee_status,
+                               reference=c.verification_reference, paid_at=c.verification_paid_at)
 
 
 # ---------- 10.1 Listar cuidadoras ----------
@@ -282,6 +309,10 @@ async def patch_caregiver(caregiver_id: UUID, body: CaregiverPatchIn, request: R
             raise conflict("CERTIFICATION_REQUIRED",
                            "Para aprobar el perfil primero aprueba su cédula de identidad y su "
                            "certificado de antecedentes.")
+        if body.status == CaregiverStatus.approved and c.verification_fee_status == "unpaid":
+            raise conflict("VERIFICATION_FEE_PENDING",
+                           "Falta el pago de la verificación. Confirma el pago recibido o exime a la "
+                           "cuidadora antes de aprobar su perfil.")
         if body.status == CaregiverStatus.suspended and not body.reason:
             raise invalid("REASON_REQUIRED", "Para suspender un perfil debes indicar el motivo.")
         c.status = body.status
@@ -296,6 +327,26 @@ async def patch_caregiver(caregiver_id: UUID, body: CaregiverPatchIn, request: R
     if body.status is not None:
         # De esto depende quién aparece en el marketplace: si no se puede avisar, no se guarda.
         await general_client.push_status(c.email, c.status)
+    return _cg_out(c, include_note=True)
+
+
+# ---------- Cobro de verificación ----------
+@router.post("/caregivers/{caregiver_id}/verification", response_model=CaregiverOut)
+async def set_verification(caregiver_id: UUID, body: VerificationIn, request: Request, db: Db,
+                           admin: models.AdminUser = require("marketplace", write=True)):
+    """El equipo confirma que recibió el pago (paid), exime a la cuidadora (waived) o lo revierte (unpaid)."""
+    c = await db.get(models.CaregiverProfile, caregiver_id)
+    if c is None:
+        raise not_found()
+    before = {"verification_fee_status": c.verification_fee_status}
+    c.verification_fee_status = body.action
+    c.verification_paid_at = now_utc() if body.action == "paid" else None
+    c.verification_marked_by = admin.full_name if body.action != "unpaid" else None
+    if c.verification_reference is None:
+        c.verification_reference = _new_reference()
+    await audit(db, request, "marketplace.verification_fee", "caregiver_profile", c.id, before=before,
+                after={"verification_fee_status": c.verification_fee_status,
+                       "amount_clp": c.verification_fee_clp})
     return _cg_out(c, include_note=True)
 
 
@@ -559,6 +610,28 @@ async def delete_review(review_id: UUID, request: Request, db: Db,
 
 
 # ---------- 10.3 Listar artículos ----------
+# Conversión supuesta (clics que terminan en compra) para estimar la comisión. Es un supuesto de
+# trabajo, no una medición: la cifra real depende de lo que informe cada tienda.
+ASSUMED_CONVERSION_PCT = 3.0
+
+
+def _product_payload(p: models.Product) -> dict:
+    """Lo que el sitio público necesita para mostrar el artículo (mismo id que en la Consola)."""
+    return {"id": str(p.id), "name": p.name, "category": p.category, "vendor": p.vendor,
+            "description": p.description or "", "price_clp": p.price_clp, "external_url": p.external_url,
+            "image_url": p.image_url, "is_sponsored": p.is_sponsored, "conditions": p.conditions or [],
+            "is_active": p.status == "published"}
+
+
+def _product_out(p: models.Product, stats: dict[str, dict] | None) -> ProductOut:
+    out = ProductOut.model_validate(p)
+    if stats is not None:
+        st = stats.get(str(p.id), {})
+        out.clicks_total = int(st.get("clicks_total", 0))
+        out.clicks_30d = int(st.get("clicks_30d", 0))
+    return out
+
+
 @router.get("/products", response_model=Page[ProductOut], dependencies=[require("marketplace")])
 async def list_products(db: Db,
                         category: str | None = None,
@@ -568,17 +641,17 @@ async def list_products(db: Db,
                         page_size: int = Query(default=25, ge=1, le=100)):
     stmt = select(models.Product)
     if category:
-        stmt = stmt.where(models.Product.category.ilike(f"%{category}%"))
+        stmt = stmt.where(models.Product.category == category)
     if status_f:
         stmt = stmt.where(models.Product.status == status_f)
     if q:
         like = f"%{q}%"
         stmt = stmt.where(models.Product.name.ilike(like) | models.Product.vendor.ilike(like))
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
-    rows = (await db.execute(stmt.order_by(models.Product.updated_at.desc())
+    rows = (await db.execute(stmt.order_by(models.Product.is_sponsored.desc(), models.Product.updated_at.desc())
                              .offset((page - 1) * page_size).limit(page_size))).scalars().all()
-    return Page(items=[ProductOut.model_validate(p) for p in rows],
-                page=page, page_size=page_size, total=total)
+    stats = await general_client.fetch_product_stats()
+    return Page(items=[_product_out(p, stats) for p in rows], page=page, page_size=page_size, total=total)
 
 
 # ---------- 10.4 Crear artículo ----------
@@ -587,12 +660,16 @@ async def create_product(body: ProductCreateIn, request: Request, db: Db,
                          admin: models.AdminUser = require("marketplace", write=True)):
     p = models.Product(name=body.name, category=body.category, vendor=body.vendor,
                        price_clp=body.price_clp, external_url=str(body.external_url),
-                       image_url=str(body.image_url) if body.image_url else None)
+                       image_url=str(body.image_url) if body.image_url else None,
+                       description=body.description, is_sponsored=body.is_sponsored,
+                       conditions=body.conditions, commission_pct=body.commission_pct,
+                       status=body.status)
     db.add(p)
     await db.flush()
     await db.refresh(p)
+    await general_client.push_product(_product_payload(p))  # si falla, no se guarda
     await audit(db, request, "marketplace.product_create", "product", p.id, after={"name": p.name})
-    return ProductOut.model_validate(p)
+    return _product_out(p, None)
 
 
 # ---------- 10.5 Editar / archivar artículo ----------
@@ -602,12 +679,13 @@ async def patch_product(product_id: UUID, body: ProductPatchIn, request: Request
     p = await db.get(models.Product, product_id)
     if p is None:
         raise not_found()
-    before = {"status": p.status, "name": p.name}
+    before = {"status": p.status, "name": p.name, "is_sponsored": p.is_sponsored}
     if body.external_url is not None:
         if body.external_url.scheme != "https":
             raise invalid("INSECURE_URL", "El enlace externo debe usar https.")
         p.external_url = str(body.external_url)
-    for field in ("name", "category", "vendor", "price_clp"):
+    for field in ("name", "category", "vendor", "price_clp", "description", "is_sponsored",
+                  "conditions", "commission_pct"):
         v = getattr(body, field)
         if v is not None:
             setattr(p, field, v)
@@ -618,6 +696,40 @@ async def patch_product(product_id: UUID, body: ProductPatchIn, request: Request
     p.updated_at = now_utc()
     await db.flush()
     await db.refresh(p)
+    await general_client.push_product(_product_payload(p))
     await audit(db, request, "marketplace.product_update", "product", p.id, before=before,
-                after={"status": p.status, "name": p.name})
-    return ProductOut.model_validate(p)
+                after={"status": p.status, "name": p.name, "is_sponsored": p.is_sponsored})
+    return _product_out(p, None)
+
+
+# ---------- 10.6 Resumen de rentabilidad ----------
+@router.get("/monetization", response_model=MonetizationOut, dependencies=[require("marketplace")])
+async def monetization(db: Db):
+    """Cuánto aportan hoy las dos fuentes de ingreso del marketplace: verificación y artículos."""
+    cg = models.CaregiverProfile
+    rows = (await db.execute(
+        select(cg.verification_fee_status, func.count(cg.id), func.coalesce(func.sum(cg.verification_fee_clp), 0))
+        .group_by(cg.verification_fee_status))).all()
+    by_status = {st: (int(n), int(total)) for st, n, total in rows}
+    fee_row = (await db.execute(select(cg.verification_fee_clp).limit(1))).first()
+
+    products = (await db.execute(select(models.Product).where(models.Product.status == "published"))).scalars().all()
+    stats = await general_client.fetch_product_stats()
+    clicks_30d = clicks_total = estimate = None
+    if stats is not None:
+        clicks_30d = sum(int(i["clicks_30d"]) for i in stats.values())
+        clicks_total = sum(int(i["clicks_total"]) for i in stats.values())
+        estimate = round(sum(
+            int(stats.get(str(p.id), {}).get("clicks_30d", 0)) * (ASSUMED_CONVERSION_PCT / 100)
+            * (p.price_clp or 0) * ((p.commission_pct or 0) / 100) for p in products))
+    zero = (0, 0)
+    return MonetizationOut(
+        verification_fee_clp=fee_row[0] if fee_row else 9990,
+        verification_paid_count=by_status.get("paid", zero)[0],
+        verification_paid_total_clp=by_status.get("paid", zero)[1],
+        verification_pending_count=by_status.get("unpaid", zero)[0],
+        verification_pending_total_clp=by_status.get("unpaid", zero)[1],
+        verification_waived_count=by_status.get("waived", zero)[0],
+        products_published=len(products), products_sponsored=sum(1 for p in products if p.is_sponsored),
+        clicks_30d=clicks_30d, clicks_total=clicks_total, estimated_commission_30d_clp=estimate,
+        assumed_conversion_pct=ASSUMED_CONVERSION_PCT)

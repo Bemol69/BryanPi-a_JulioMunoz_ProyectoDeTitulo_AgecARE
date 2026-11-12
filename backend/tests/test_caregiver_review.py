@@ -45,6 +45,10 @@ async def review(client, headers, cid, doc_type, action, note=None):
                              json={"action": action, "note": note})
 
 
+async def pay(client, headers, cid, action):
+    return await client.post(f"{BASE}/caregivers/{cid}/verification", headers=headers, json={"action": action})
+
+
 async def detail(client, headers, cid):
     r = await client.get(f"{BASE}/caregivers/{cid}", headers=headers)
     assert r.status_code == 200, r.text
@@ -72,6 +76,10 @@ async def test_profile_cannot_be_approved_until_the_required_documents_are_appro
     assert d["certifications_verified"] is True and d["pending_documents"] == 0
 
     r = await client.patch(f"{BASE}/caregivers/{cid}", headers=admin_headers, json={"status": "approved"})
+    assert r.status_code == 409 and r.json()["error"]["code"] == "VERIFICATION_FEE_PENDING"  # falta el pago
+
+    assert (await pay(client, admin_headers, cid, "paid")).status_code == 200
+    r = await client.patch(f"{BASE}/caregivers/{cid}", headers=admin_headers, json={"status": "approved"})
     assert r.status_code == 200 and r.json()["status"] == "approved"
     assert pushed["status"][-1] == (EMAIL, "approved")
     assert [c[2] for c in pushed["review"]] == ["approve", "approve"]
@@ -82,6 +90,7 @@ async def test_suspend_and_reactivate_notify_the_public_site(client, admin_heade
     for t in ("id_card", "background_check"):
         await sync_doc(client, t)
         await review(client, admin_headers, cid, t, "approve")
+    await pay(client, admin_headers, cid, "paid")
     await client.patch(f"{BASE}/caregivers/{cid}", headers=admin_headers, json={"status": "approved"})
 
     r = await client.patch(f"{BASE}/caregivers/{cid}", headers=admin_headers,

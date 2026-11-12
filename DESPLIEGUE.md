@@ -100,6 +100,7 @@ Anota la URL → **URL-ADMIN**.
 | `GENERAL_ADMIN_SYNC_KEY` | el mismo valor de `ADMIN_INTERNAL_SYNC_KEY` |
 | `GENERAL_SUPABASE_URL` | Project URL del paso 1.4 |
 | `GENERAL_SUPABASE_SERVICE_KEY` | llave `service_role` del paso 1.4 |
+| `GENERAL_VERIFICATION_PAYMENT_INFO` | (opcional) cómo paga la cuidadora su verificación de $9.990, p. ej. los datos de transferencia del equipo. Se muestra en su perfil junto a su código de pago. Va aquí, nunca en el repositorio. |
 
 Prueba `https://<url-del-proyecto>/api/v1/docs`. Anota la URL → **URL-GENERAL**.
 El bucket de archivos (`agecare-uploads`) se crea solo con la primera foto que se suba.
@@ -205,3 +206,4 @@ Detalle y resultados de las pruebas de carga en `pruebas/README.md`.
 | La foto no se sube (502 `STORAGE_ERROR`) | `GENERAL_SUPABASE_URL` y `GENERAL_SUPABASE_SERVICE_KEY` en la API General. |
 | Las rutas del sitio dan 404 al recargar | Que el proyecto tenga el `vercel.json` de su carpeta y el Root Directory correcto. |
 | Las cuidadoras nuevas no aparecen en la consola | `GENERAL_ADMIN_SYNC_URL` / `GENERAL_ADMIN_SYNC_KEY` y que coincida con `ADMIN_INTERNAL_SYNC_KEY`. |
+| Un artículo creado en la Consola no aparece en el sitio (o da error 502 al guardar) | `ADMIN_GENERAL_SYNC_URL` en la Consola: es por donde el catálogo viaja al sitio. Los clics y el resumen de ingresos usan el mismo enlace. |

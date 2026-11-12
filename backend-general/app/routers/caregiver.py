@@ -8,15 +8,17 @@ from uuid import UUID
 from sqlalchemy import select
 
 from app import models, storage
+from app.config import get_settings
 from app.deps import CurrentUser, Db
 from app.enums import CaregiverDocType
 from app.errors import ApiError, conflict, forbidden, not_found
 from app.schemas.common import Page
 from app.schemas.marketplace import (CaregiverDocumentOut, CaregiverProfileOut,
                                      CaregiverProfilePatchIn, ContactMessageOut, EngagementOut,
-                                     ReceivedHireRequestOut, ReviewOut)
+                                     ReceivedHireRequestOut, ReviewOut, VerificationOut)
 from app.security import now_utc
-from app.sync import fetch_admin_documents, sync_caregiver_to_admin, sync_document_to_admin
+from app.sync import (fetch_admin_documents, fetch_admin_verification, sync_caregiver_to_admin,
+                      sync_document_to_admin)
 
 router = APIRouter(prefix="/caregiver", tags=["Perfil de cuidadora"])
 
@@ -109,6 +111,18 @@ async def _reconcile_with_admin(user: models.User, docs: list[models.CaregiverDo
                 apply_review(d, "approve", a.get("review_note"))
         elif a["file_url"] == d.file_url and a["status"] in ("approved", "rejected") and a["status"] != d.status:
             apply_review(d, "approve" if a["status"] == "approved" else "reject", a.get("review_note"))
+
+
+@router.get("/verification", response_model=VerificationOut)
+async def get_verification(db: Db, user: CurrentUser):
+    """Estado del pago de la verificación, tal como lo lleva la Consola (el equipo confirma el pago)."""
+    await _get_own_profile(db, user)
+    remote = await fetch_admin_verification(user.email)
+    if remote is None:
+        return VerificationOut(available=False)
+    return VerificationOut(available=True, fee_clp=remote["fee_clp"], status=remote["status"],
+                           reference=remote.get("reference"), paid_at=remote.get("paid_at"),
+                           payment_info=get_settings().verification_payment_info)
 
 
 @router.get("/documents", response_model=list[CaregiverDocumentOut])

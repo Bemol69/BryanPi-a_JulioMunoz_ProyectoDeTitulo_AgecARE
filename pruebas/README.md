@@ -53,7 +53,7 @@ Sirve para encontrar fallas y comparar antes/después, no para prometer tiempos 
 
 | Qué | Dónde | Cómo |
 |---|---|---|
-| Pruebas automáticas de la Consola (73) | `backend/tests` | `cd backend && python -m pytest -q` |
-| Pruebas automáticas del sitio (80) | `backend-general/tests` | `cd backend-general && python -m pytest -q` |
+| Pruebas automáticas de la Consola (83) | `backend/tests` | `cd backend && python -m pytest -q` |
+| Pruebas automáticas del sitio (94) | `backend-general/tests` | `cd backend-general && python -m pytest -q` |
 | Seguridad (78 de las anteriores) | `test_security.py` en cada carpeta | ídem |
 | Recorrido completo con navegador | `e2e/run_e2e.py` | ver `e2e/README.md` |

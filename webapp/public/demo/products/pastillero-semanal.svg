@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Ilustración de un pastillero semanal">
+  <rect width="400" height="300" fill="#FFEFC2"/>
+  <circle cx="360" cy="40" r="90" fill="#fff" opacity=".28"/>
+  <circle cx="30" cy="290" r="100" fill="#fff" opacity=".22"/>
+  <ellipse cx="200" cy="268" rx="130" ry="12" fill="#0B0E1C" opacity=".12"/>
+  <rect x="55" y="105" width="290" height="110" rx="22" fill="#2342D6"/>
+  <rect x="55" y="105" width="290" height="22" rx="11" fill="#3358F7"/>
+  <g fill="#fff">
+    <rect x="70" y="135" width="30" height="64" rx="9"/><rect x="104" y="135" width="30" height="64" rx="9"/>
+    <rect x="138" y="135" width="30" height="64" rx="9"/><rect x="172" y="135" width="30" height="64" rx="9"/>
+    <rect x="206" y="135" width="30" height="64" rx="9"/><rect x="240" y="135" width="30" height="64" rx="9"/>
+    <rect x="274" y="135" width="30" height="64" rx="9"/>
+  </g>
+  <g fill="#0B0E1C" font-family="Arial, sans-serif" font-size="13" font-weight="700" text-anchor="middle">
+    <text x="85" y="226">L</text><text x="119" y="226">M</text><text x="153" y="226">X</text>
+    <text x="187" y="226">J</text><text x="221" y="226">V</text><text x="255" y="226">S</text><text x="289" y="226">D</text>
+  </g>
+  <g><circle cx="85" cy="160" r="9" fill="#FF8FA0"/><ellipse cx="153" cy="165" rx="12" ry="7" fill="#FFC933"/><circle cx="221" cy="160" r="9" fill="#5CC38B"/><circle cx="289" cy="165" r="9" fill="#FF8FA0"/></g>
+</svg>

@@ -1,6 +1,7 @@
 """Endpoints servidor-a-servidor: los llama la Consola de Administración (con la clave
 compartida X-Internal-Key) cuando el staff aprueba, suspende o revisa documentos."""
-from datetime import datetime
+from datetime import datetime, timedelta
+from uuid import UUID
 from typing import Literal
 from uuid import UUID
 
@@ -139,3 +140,51 @@ async def caregiver_documents(db: Db, email: str = Query(max_length=254)):
                                 original_filename=d.original_filename, status=d.status,
                                 pending_file_url=d.pending_file_url, pending_filename=d.pending_filename,
                                 uploaded_at=d.uploaded_at or now_utc()) for d in rows]
+
+
+# ---------- Catálogo de artículos de apoyo (lo administra la Consola) ----------
+class ProductUpsertIn(BaseModel):
+    id: UUID  # el mismo id que tiene el producto en la Consola
+    name: str = Field(max_length=160)
+    category: Literal["mobility", "monitoring", "home_safety", "daily_care"]
+    vendor: str = Field(default="", max_length=120)
+    description: str = ""
+    price_clp: int | None = Field(default=None, ge=0)
+    external_url: str | None = Field(default=None, max_length=500)
+    image_url: str | None = Field(default=None, max_length=500)
+    is_sponsored: bool = False
+    conditions: list[str] = Field(default_factory=list)
+    is_active: bool = True
+
+
+@router.post("/products", status_code=204)
+async def upsert_product(body: ProductUpsertIn, db: Db):
+    """Crea o actualiza un producto con el mismo id de la Consola. `is_active=false` lo oculta del sitio."""
+    from app.routers.marketplace import format_clp  # evita importar el router completo al cargar este módulo
+    p = await db.get(models.MarketProduct, body.id)
+    if p is None:
+        p = models.MarketProduct(id=body.id, photos=[])
+        db.add(p)
+    p.name = body.name
+    p.category = body.category
+    p.vendor = body.vendor
+    p.description = body.description
+    p.price_clp = body.price_clp
+    p.price_range = format_clp(body.price_clp)
+    p.external_url = body.external_url
+    p.thumbnail_url = body.image_url
+    p.is_sponsored = body.is_sponsored
+    p.conditions = body.conditions
+    p.is_active = body.is_active
+
+
+@router.get("/products/stats")
+async def product_stats(db: Db):
+    """Clics en "Ver en tienda" por producto (total y últimos 30 días), para el panel de la Consola."""
+    since = now_utc() - timedelta(days=30)
+    rows = (await db.execute(
+        select(models.ProductClick.product_id, func.count(models.ProductClick.id),
+               func.count(models.ProductClick.id).filter(models.ProductClick.created_at >= since))
+        .group_by(models.ProductClick.product_id))).all()
+    return {"items": [{"product_id": str(pid), "clicks_total": int(total), "clicks_30d": int(recent)}
+                      for pid, total, recent in rows]}

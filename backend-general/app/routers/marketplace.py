@@ -258,21 +258,54 @@ async def review_caregiver(profile_id: UUID, body: ReviewCreateIn, db: Db, user:
 
 
 # ---------- 14.5 Catálogo de artículos de apoyo ----------
+def format_clp(amount: int | None) -> str:
+    return "Consultar precio" if amount is None else "$" + f"{amount:,}".replace(",", ".")
+
+
+async def _condition_owners(db: Db, user: models.User) -> dict[str, str]:
+    """Condición (en minúsculas) -> "Nombre del adulto mayor · Condición", para los familiares de la cuenta."""
+    rows = (await db.execute(select(models.Patient).join(
+        models.PatientMember, models.PatientMember.patient_id == models.Patient.id
+    ).where(models.PatientMember.user_id == user.id))).scalars().all()
+    owners: dict[str, str] = {}
+    for patient in rows:
+        for cond in patient.conditions or []:
+            owners.setdefault(cond.strip().lower(), f"{patient.full_name} · {cond.strip()}")
+    return owners
+
+
+def _recommended_for(product: models.MarketProduct, owners: dict[str, str]) -> str | None:
+    for cond in product.conditions or []:
+        hit = owners.get(str(cond).strip().lower())
+        if hit:
+            return hit
+    return None
+
+
 @router.get("/products", response_model=Page[ProductCardOut])
 async def list_products(db: Db, user: CurrentUser,
                         category: str | None = None,
                         q: str | None = Query(default=None, max_length=120),
                         page: int = Query(default=1, ge=1),
-                        page_size: int = Query(default=20, ge=1, le=100)):
-    stmt = select(models.MarketProduct)
+                        page_size: int = Query(default=50, ge=1, le=100)):
+    """Orden: recomendados para algún familiar, luego patrocinados, luego el resto por nombre."""
+    stmt = select(models.MarketProduct).where(models.MarketProduct.is_active.is_(True))
     if category:
         stmt = stmt.where(models.MarketProduct.category == category)
     if q:
-        stmt = stmt.where(models.MarketProduct.name.ilike(f"%{q}%"))
-    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
-    rows = (await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))).scalars().all()
-    items = [ProductCardOut(product_id=p.id, name=p.name, category=p.category,
-                            thumbnail_url=p.thumbnail_url, price_range=p.price_range) for p in rows]
+        like = f"%{q}%"
+        stmt = stmt.where(models.MarketProduct.name.ilike(like) | models.MarketProduct.vendor.ilike(like))
+    rows = list((await db.execute(stmt)).scalars().all())
+    owners = await _condition_owners(db, user)
+    cards = [(p, _recommended_for(p, owners)) for p in rows]
+    cards.sort(key=lambda pr: (pr[1] is None, not pr[0].is_sponsored, pr[0].name.lower()))
+    total = len(cards)
+    cards = cards[(page - 1) * page_size: page * page_size]
+    items = [ProductCardOut(product_id=p.id, name=p.name, category=p.category, thumbnail_url=p.thumbnail_url,
+                            price_range=p.price_range, vendor=p.vendor, price_clp=p.price_clp,
+                            description=p.description, external_url=p.external_url, is_sponsored=p.is_sponsored,
+                            recommended_for=rec)
+             for p, rec in cards]
     return Page(items=items, total=total)
 
 
@@ -280,8 +313,29 @@ async def list_products(db: Db, user: CurrentUser,
 @router.get("/products/{product_id}", response_model=ProductOut)
 async def get_product(product_id: UUID, db: Db, user: CurrentUser):
     p = await db.get(models.MarketProduct, product_id)
-    if p is None:
+    if p is None or not p.is_active:
         raise not_found()
     return ProductOut(product_id=p.id, name=p.name, category=p.category, description=p.description,
                       photos=p.photos or [], price_range=p.price_range, external_url=p.external_url,
-                      contact_info=p.contact_info)
+                      contact_info=p.contact_info, vendor=p.vendor, price_clp=p.price_clp,
+                      is_sponsored=p.is_sponsored)
+
+
+# ---------- 14.7 Clic en "Ver en tienda" ----------
+CLICK_DEDUP_MINUTES = 10
+
+
+@router.post("/products/{product_id}/click", status_code=204)
+async def track_product_click(product_id: UUID, db: Db, user: CurrentUser):
+    """Registra que una familia salió hacia la tienda del proveedor. Es la base para cobrar comisión
+    por referido y para mostrar cuánto tráfico aporta AgeCare. Varios clics seguidos de la misma
+    persona sobre el mismo producto cuentan uno solo."""
+    p = await db.get(models.MarketProduct, product_id)
+    if p is None or not p.is_active:
+        raise not_found()
+    since = now_utc() - timedelta(minutes=CLICK_DEDUP_MINUTES)
+    recent = (await db.execute(select(models.ProductClick.id).where(
+        models.ProductClick.product_id == product_id, models.ProductClick.user_id == user.id,
+        models.ProductClick.created_at >= since).limit(1))).first()
+    if recent is None:
+        db.add(models.ProductClick(product_id=product_id, user_id=user.id))

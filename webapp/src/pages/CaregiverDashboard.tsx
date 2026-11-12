@@ -3,7 +3,8 @@ import { CaregiverApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
 import { useAuth } from "../auth/AuthContext";
 import { Link } from "react-router-dom";
-import { Avatar, Chip, ErrorBanner, OkBanner, Spinner, Stars, Switch, fmtDate } from "../components/ui";
+import TagPicker from "../components/TagPicker";
+import { Avatar, Chip, ErrorBanner, OkBanner, Spinner, Stars, Switch, fmtCLP, fmtDate } from "../components/ui";
 import type { CaregiverDocType, CaregiverDocumentOut, CaregiverProfileOut, Engagement } from "../api/types";
 
 const AVATAR_MAX_BYTES = 4 * 1024 * 1024;
@@ -34,50 +35,6 @@ const ZONE_OPTIONS = [
   "Estación Central", "Independencia", "Recoleta", "Quilicura", "Huechuraba",
   "Lo Barnechea", "San Bernardo", "Puente Alto", "Cerrillos", "Pudahuel",
 ];
-
-function TagPicker({ label, values, onChange, options, placeholder }: {
-  label: string; values: string[]; onChange: (v: string[]) => void; options: string[]; placeholder: string;
-}) {
-  const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, []);
-
-  const available = options.filter((o) => !values.includes(o) && o.toLowerCase().includes(query.trim().toLowerCase()));
-
-  return (
-    <div className="field tag-picker" ref={wrapRef}>
-      <label>{label}</label>
-      <input value={query} autoComplete="off" placeholder={placeholder}
-            onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-            onFocus={() => setOpen(true)} onClick={() => setOpen(true)} />
-      {open && (
-        <div className="tag-picker-menu">
-          {available.length === 0 && <div className="tag-picker-empty">Sin coincidencias.</div>}
-          {available.map((opt) => (
-            <button type="button" key={opt} className="tag-picker-opt"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => { onChange([...values, opt]); setQuery(""); setOpen(false); }}>
-              {opt}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="tag-input-list">
-        {values.map((v) => (
-          <span key={v} className="tag-pill">{v} <button type="button" onClick={() => onChange(values.filter((x) => x !== v))}>✕</button></span>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function PendingRequestsBanner() {
   const reqs = useApi(() => CaregiverApi.hireRequests(), []);
@@ -248,6 +205,63 @@ function DocumentRow({ type, label, hint, doc, onUploaded }: {
 
 type DocsState = { data: CaregiverDocumentOut[] | null; loading: boolean; error: string | null; reload: () => void };
 
+/** Cobro único por verificar identidad y antecedentes. El equipo confirma el pago desde la Consola. */
+function VerificationCard() {
+  const v = useApi(() => CaregiverApi.verification(), []);
+  const [copied, setCopied] = useState(false);
+  if (v.loading || !v.data || !v.data.available) return null;
+  const { status, fee_clp, reference, paid_at, payment_info } = v.data;
+
+  if (status === "paid" || status === "waived") {
+    return (
+      <div className="verify-card done">
+        <span className="verify-ico">✓</span>
+        <div>
+          <b>{status === "paid" ? "Verificación pagada" : "Verificación sin costo para ti"}</b>
+          <span>
+            {status === "paid" && paid_at ? `Pago confirmado el ${fmtDate(paid_at)}. ` : ""}
+            El equipo revisa tus documentos y, al aprobarlos, tu perfil muestra la insignia «Verificada por AgeCare».
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  async function copy() {
+    if (!reference) return;
+    try {
+      await navigator.clipboard.writeText(reference);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* sin portapapeles: el código se ve igual en pantalla */
+    }
+  }
+
+  return (
+    <div className="verify-card pending">
+      <span className="verify-ico">🛡️</span>
+      <div style={{ flex: 1 }}>
+        <b>Verificación AgeCare · {fmtCLP(fee_clp)} (pago único)</b>
+        <span>
+          Cubre la revisión de tu cédula y tus antecedentes y te da la insignia «Verificada por AgeCare», que las familias
+          buscan al elegir. Tu perfil se publica cuando el equipo confirme el pago y apruebe tus documentos. Puedes subir
+          tus documentos ahora mismo.
+        </span>
+        {reference && (
+          <div className="verify-ref">
+            Tu código de pago: <code>{reference}</code>
+            <button type="button" className="btn ghost small" onClick={copy}>{copied ? "¡Copiado!" : "Copiar"}</button>
+          </div>
+        )}
+        <span className="verify-howto">
+          {payment_info || "Escribe al equipo de AgeCare indicando tu código para coordinar el pago."}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function IdentityPanel({ docs }: { docs: DocsState }) {
   const byType = new Map((docs.data ?? []).map((d) => [d.doc_type, d]));
 
@@ -264,6 +278,8 @@ function IdentityPanel({ docs }: { docs: DocsState }) {
       </div>
 
       <div className="identity-divider" />
+
+      <VerificationCard />
 
       <label style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "var(--ac-text-secondary)", marginBottom: 4 }}>
         Documentos de respaldo
@@ -430,6 +446,7 @@ function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed
         </div>
 
         <ReviewStatusBanner status={profile.admin_status} />
+        <VerificationCard />
         <ProfileCompleteness user={user} profile={profile} docs={docs} onEdit={onEdit} />
 
         <div className="stat-tiles">

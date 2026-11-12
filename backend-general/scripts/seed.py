@@ -8,6 +8,7 @@ Credenciales demo:
 import asyncio
 import os
 import random
+import uuid
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import delete, select
@@ -52,19 +53,38 @@ CAREGIVERS = [
         certifications=[], rating_seed=[5, 5, 4], featured=False),
 ]
 
+# Catálogo demo. El id sale del slug, igual que en la Consola (backend/scripts/seed.py): así
+# el mismo producto es el mismo en los dos sistemas y los clics se pueden asociar.
+def product_id(slug: str) -> uuid.UUID:
+    return uuid.uuid5(uuid.NAMESPACE_URL, f"agecare:product:{slug}")
+
+
 PRODUCTS = [
-    dict(name="Andadera plegable con ruedas", category="mobility", price_range="$40.000 - $60.000",
-        description="Andadera de aluminio ligera, plegable, con ruedas delanteras y asiento de descanso. "
-                    "Soporta hasta 130 kg.", external_url="https://ortochile.cl/andadera-plegable"),
-    dict(name="Dispensador de pastillas semanal", category="daily_care", price_range="$15.000 - $25.000",
-        description="Organizador de medicamentos de 7 días con 4 tomas diarias y alarma sonora programable.",
-        external_url="https://saludhogar.cl/pastillero"),
-    dict(name="Barra de baño de seguridad", category="home_safety", price_range="$20.000 - $35.000",
-        description="Barra de sujeción antideslizante para regadera o tina. Instalación con ventosas de fijación rápida.",
-        external_url="https://saludhogar.cl/barra-bano"),
-    dict(name="Monitor de signos vitales portátil", category="monitoring", price_range="$50.000 - $90.000",
-        description="Oxímetro y monitor de frecuencia cardíaca portátil, pantalla grande, fácil de leer.",
-        external_url="https://ortochile.cl/monitor-vitales"),
+    dict(slug="andadera-plegable", name="Andadera plegable con ruedas", category="mobility", vendor="OrtoChile",
+         price_clp=54990, sponsored=True, conditions=["Movilidad reducida", "Posoperatorio"],
+         description="Andadera de aluminio ligera, plegable, con ruedas delanteras y asiento de descanso. "
+                     "Soporta hasta 130 kg.", external_url="https://ortochile.cl/andadera-plegable"),
+    dict(slug="baston-4-puntas", name="Bastón ortopédico de 4 puntas", category="mobility", vendor="OrtoChile",
+         price_clp=14990, sponsored=False, conditions=["Movilidad reducida"],
+         description="Bastón regulable en altura con base de cuatro apoyos: se sostiene solo y da más estabilidad.",
+         external_url="https://ortochile.cl/baston-cuatro-puntas"),
+    dict(slug="pastillero-semanal", name="Dispensador de pastillas semanal", category="daily_care", vendor="SaludHogar",
+         price_clp=19990, sponsored=False, conditions=["Control de medicación", "Diabetes", "Hipertensión"],
+         description="Organizador de medicamentos de 7 días con 4 tomas diarias y alarma sonora programable.",
+         external_url="https://saludhogar.cl/pastillero"),
+    dict(slug="barra-bano", name="Barra de baño de seguridad", category="home_safety", vendor="SaludHogar",
+         price_clp=27990, sponsored=False, conditions=["Movilidad reducida", "Parkinson"],
+         description="Barra de sujeción antideslizante para regadera o tina. Instalación con ventosas de fijación rápida.",
+         external_url="https://saludhogar.cl/barra-bano"),
+    dict(slug="monitor-signos-vitales", name="Monitor de signos vitales portátil", category="monitoring",
+         vendor="OrtoChile", price_clp=69990, sponsored=False, conditions=["Hipertensión", "Diabetes"],
+         description="Oxímetro y monitor de frecuencia cardíaca portátil, pantalla grande, fácil de leer.",
+         external_url="https://ortochile.cl/monitor-vitales"),
+    dict(slug="reloj-gps-sos", name="Reloj con GPS y botón SOS", category="monitoring", vendor="SaludHogar",
+         price_clp=49990, sponsored=False, conditions=["Alzheimer", "Demencia"],
+         description="Reloj de pulsera que comparte la ubicación con la familia y llama a un contacto "
+                     "con un solo botón. Útil si tu familiar suele desorientarse.",
+         external_url="https://saludhogar.cl/reloj-gps"),
 ]
 
 FAMILY_REVIEW_NAMES = ["Familia Pérez", "Familia González", "Familia Rojas", "Familia Silva"]
@@ -79,14 +99,17 @@ async def seed() -> None:
         for table in (models.ChatMessage, models.ChatConversation,
                       models.CaregiverEngagement, models.ContactRequest, models.CaregiverReview,
                      models.CaregiverDocument, models.CaregiverProfile, models.PatientMember,
-                     models.Patient, models.MarketProduct, models.RefreshSession, models.User):
+                     models.Patient, models.ProductClick, models.MarketProduct, models.RefreshSession, models.User):
             await db.execute(delete(table))
 
         # ---- Productos ----
         for p in PRODUCTS:
-            db.add(models.MarketProduct(name=p["name"], category=p["category"],
-                                        description=p["description"], price_range=p["price_range"],
-                                        external_url=p["external_url"]))
+            db.add(models.MarketProduct(
+                id=product_id(p["slug"]), name=p["name"], category=p["category"], vendor=p["vendor"],
+                description=p["description"], price_clp=p["price_clp"],
+                price_range="$" + f"{p['price_clp']:,}".replace(",", "."), is_sponsored=p["sponsored"],
+                conditions=p["conditions"], external_url=p["external_url"],
+                thumbnail_url=f"{AVATAR_BASE}/demo/products/{p['slug']}.svg"))
 
         # ---- Cuidadoras ----
         for c in CAREGIVERS:

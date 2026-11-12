@@ -99,3 +99,7 @@ export function Switch({ checked, onChange }: { checked: boolean; onChange: (v: 
 export function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" });
 }
+
+export function fmtCLP(n: number): string {
+  return "$" + Math.round(n).toLocaleString("es-CL");
+}

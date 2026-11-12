@@ -2,10 +2,17 @@ import { useRef, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { PatientsApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
+import TagPicker from "../components/TagPicker";
 import { Avatar, ConfirmModal, EmptyState, ErrorBanner, Modal, Spinner, StatChip } from "../components/ui";
 
 const PHOTO_MAX_BYTES = 4 * 1024 * 1024;
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+// Condiciones habituales: también sirven para recomendar artículos de apoyo.
+const CONDITION_OPTIONS = [
+  "Alzheimer", "Demencia", "Parkinson", "Movilidad reducida", "Posoperatorio", "Diabetes",
+  "Hipertensión", "Enfermedad cardíaca", "Artrosis", "Osteoporosis", "Riesgo de caídas",
+  "Problemas de visión", "Problemas de audición", "Control de medicación",
+];
 
 export default function FamilyHome() {
   const patients = useApi(() => PatientsApi.list(), []);
@@ -130,6 +137,7 @@ function SimpleTagInput({ label, values, onChange, placeholder }: {
 function CreatePatientModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [fullName, setFullName] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  const [conditions, setConditions] = useState<string[]>([]);
   const [medicationAllergies, setMedicationAllergies] = useState<string[]>([]);
   const [foodAllergies, setFoodAllergies] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
@@ -165,7 +173,7 @@ function CreatePatientModal({ onClose, onCreated }: { onClose: () => void; onCre
     setError(null);
     try {
       const created = await PatientsApi.create({
-        full_name: fullName.trim(), birth_date: birthDate,
+        full_name: fullName.trim(), birth_date: birthDate, conditions,
         medication_allergies: medicationAllergies, food_allergies: foodAllergies,
         notes: notes || undefined,
       });
@@ -201,6 +209,8 @@ function CreatePatientModal({ onClose, onCreated }: { onClose: () => void; onCre
         <label>Fecha de nacimiento</label>
         <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
       </div>
+      <TagPicker label="Condiciones de salud (opcional)" values={conditions} onChange={setConditions}
+                options={CONDITION_OPTIONS} placeholder="Busca una condición…" />
       <SimpleTagInput label="Alergias a medicamentos" values={medicationAllergies} onChange={setMedicationAllergies}
                      placeholder="Ej: Penicilina" />
       <SimpleTagInput label="Alergias o intolerancias alimentarias" values={foodAllergies} onChange={setFoodAllergies}

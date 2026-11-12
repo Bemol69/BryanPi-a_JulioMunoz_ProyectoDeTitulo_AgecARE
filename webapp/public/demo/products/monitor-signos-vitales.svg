@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Ilustración de un monitor de signos vitales portátil">
+  <rect width="400" height="300" fill="#FFDDE2"/>
+  <circle cx="360" cy="40" r="90" fill="#fff" opacity=".28"/>
+  <circle cx="30" cy="290" r="100" fill="#fff" opacity=".22"/>
+  <ellipse cx="200" cy="268" rx="130" ry="12" fill="#0B0E1C" opacity=".12"/>
+  <rect x="110" y="45" width="180" height="215" rx="28" fill="#151B3A"/>
+  <rect x="126" y="62" width="148" height="104" rx="16" fill="#0B0E1C"/>
+  <path d="M136 120 H170 L182 92 L200 148 L214 108 L226 120 H264" fill="none" stroke="#5CF0A6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g font-family="Arial, sans-serif" font-weight="700"><text x="136" y="86" font-size="12" fill="#9AA3C7">SpO2</text><text x="220" y="154" font-size="26" fill="#fff">97</text></g>
+  <path d="M168 205 c-12 -9 -22 -17 -22 -28 a12 12 0 0 1 22 -6 a12 12 0 0 1 22 6 c0 11 -10 19 -22 28z" fill="#FF5D73"/>
+  <circle cx="232" cy="206" r="16" fill="#3358F7"/><circle cx="232" cy="206" r="6" fill="#fff"/>
+</svg>

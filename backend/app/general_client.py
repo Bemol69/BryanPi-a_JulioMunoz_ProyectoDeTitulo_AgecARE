@@ -92,3 +92,22 @@ async def fetch_documents(email: str) -> list[dict] | None:
     if res is None or res.status_code != 200:
         return None
     return res.json()
+
+
+async def push_product(payload: dict) -> None:
+    """Crea o actualiza un artículo de apoyo en el sitio (mismo id). Si falla no se guarda el cambio."""
+    if not enabled():
+        return
+    res = await _call("POST", "/internal/products", json=payload)
+    if res is None or res.status_code >= 400:
+        raise _sync_failed()
+
+
+async def fetch_product_stats() -> dict[str, dict] | None:
+    """Clics por producto según el sitio: {product_id: {clicks_total, clicks_30d}} (None si no responde)."""
+    if not enabled():
+        return None
+    res = await _call("GET", "/internal/products/stats", attempts=1, timeout=6.0)
+    if res is None or res.status_code != 200:
+        return None
+    return {i["product_id"]: i for i in res.json().get("items", [])}

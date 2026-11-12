@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Ilustración de una barra de seguridad para el baño">
+  <rect width="400" height="300" fill="#D6F2E4"/>
+  <circle cx="360" cy="40" r="90" fill="#fff" opacity=".28"/>
+  <circle cx="30" cy="290" r="100" fill="#fff" opacity=".22"/>
+  <ellipse cx="200" cy="268" rx="130" ry="12" fill="#0B0E1C" opacity=".12"/>
+  <g stroke="#fff" stroke-width="3" opacity=".7">
+    <path d="M0 100 H400 M0 200 H400"/><path d="M100 0 V300 M200 0 V300 M300 0 V300"/>
+  </g>
+  <rect x="75" y="140" width="250" height="24" rx="12" fill="#C9D1E6"/>
+  <rect x="75" y="140" width="250" height="9" rx="4" fill="#fff" opacity=".75"/>
+  <g fill="#6B7390"><rect x="88" y="120" width="26" height="64" rx="8"/><rect x="286" y="120" width="26" height="64" rx="8"/></g>
+  <g fill="#fff"><circle cx="101" cy="152" r="5"/><circle cx="299" cy="152" r="5"/></g>
+  <path d="M192 230 q8 -22 16 0 a8 8 0 0 1 -16 0z" fill="#3D8FA6" opacity=".65"/>
+</svg>

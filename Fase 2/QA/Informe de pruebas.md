@@ -58,9 +58,9 @@ Entorno: copia local con **PostgreSQL 16 real** (Docker), las dos APIs y las dos
 
 | Prueba | Resultado |
 |---|---|
-| Pruebas automáticas de la Consola (`backend`) | **73 aprobadas** (antes 34) |
-| Pruebas automáticas del sitio (`backend-general`) | **80 aprobadas** (antes 30) |
-| Migraciones de la Consola (Alembic 0001 → 0006) sobre PostgreSQL | Sin errores |
+| Pruebas automáticas de la Consola (`backend`) | **83 aprobadas** (antes 34) |
+| Pruebas automáticas del sitio (`backend-general`) | **94 aprobadas** (antes 30) |
+| Migraciones de la Consola (Alembic 0001 → 0007) sobre PostgreSQL | Sin errores |
 | Compilación de la Consola y del sitio | Sin errores |
 | Interfaz de moderación de reseñas (archivar, restaurar, eliminar, puntos) con navegador real | 9 de 9 comprobaciones correctas |
 | Recorrido de punta a punta (`e2e/run_e2e.py`) sobre base limpia | Mejor corrida 32 de 34. Con el equipo cargado el resultado varió entre 12 y 32 sin cambiar el código: los fallos eran esperas fijas de la propia prueba, que se cambiaron por esperas a la condición real. Conviene repetirla con el equipo libre antes de presentar |

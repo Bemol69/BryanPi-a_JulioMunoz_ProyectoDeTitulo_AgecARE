@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Ilustración de un bastón ortopédico de cuatro puntas">
+  <rect width="400" height="300" fill="#E2DBFF"/>
+  <circle cx="360" cy="40" r="90" fill="#fff" opacity=".28"/>
+  <circle cx="30" cy="290" r="100" fill="#fff" opacity=".22"/>
+  <ellipse cx="200" cy="268" rx="130" ry="12" fill="#0B0E1C" opacity=".12"/>
+  <path d="M170 70 Q170 40 205 40 Q240 40 240 70" fill="none" stroke="#0B0E1C" stroke-width="16" stroke-linecap="round"/>
+  <rect x="193" y="62" width="24" height="150" rx="10" fill="#6C4CF1"/>
+  <g fill="#fff" opacity=".85"><rect x="199" y="90" width="12" height="6" rx="3"/><rect x="199" y="110" width="12" height="6" rx="3"/><rect x="199" y="130" width="12" height="6" rx="3"/></g>
+  <path d="M205 212 L150 258 M205 212 L260 258 M205 212 L178 262 M205 212 L232 262" stroke="#0B0E1C" stroke-width="9" stroke-linecap="round" fill="none"/>
+  <g fill="#FFC933"><circle cx="150" cy="260" r="8"/><circle cx="260" cy="260" r="8"/><circle cx="178" cy="265" r="8"/><circle cx="232" cy="265" r="8"/></g>
+</svg>

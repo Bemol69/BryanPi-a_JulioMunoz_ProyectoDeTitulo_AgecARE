@@ -68,7 +68,14 @@ export interface CaregiverOut {
   certifications_verified: boolean; // cédula y antecedentes aprobados: permite aprobar el perfil
   pending_documents: number; // documentos (o cambios) esperando revisión
   documents: CaregiverDocumentOut[];
+  verification_fee_status: VerificationFeeStatus;
+  verification_fee_clp: number;
+  verification_reference: string | null;
+  verification_paid_at: string | null;
+  verification_marked_by: string | null;
 }
+
+export type VerificationFeeStatus = "unpaid" | "paid" | "waived";
 
 export interface CaregiverRankingItem {
   rank: number;
@@ -113,6 +120,8 @@ export interface MarketingDashboardOut {
   top5: TopCaregiverOut[];
 }
 
+export type ProductCategoryKey = "mobility" | "monitoring" | "home_safety" | "daily_care";
+
 export interface ProductOut {
   id: string;
   name: string;
@@ -123,6 +132,41 @@ export interface ProductOut {
   image_url: string | null;
   status: "draft" | "published" | "archived";
   updated_at: string;
+  description: string | null;
+  is_sponsored: boolean;
+  conditions: string[];
+  commission_pct: number | null;
+  clicks_total: number | null; // clics en "Ver en tienda" (null si el sitio público no respondió)
+  clicks_30d: number | null;
+}
+
+export interface ProductInput {
+  name: string;
+  category: ProductCategoryKey;
+  vendor: string;
+  price_clp: number | null;
+  external_url: string;
+  image_url: string | null;
+  description: string | null;
+  is_sponsored: boolean;
+  conditions: string[];
+  commission_pct: number | null;
+  status: "draft" | "published" | "archived";
+}
+
+export interface MonetizationOut {
+  verification_fee_clp: number;
+  verification_paid_count: number;
+  verification_paid_total_clp: number;
+  verification_pending_count: number;
+  verification_pending_total_clp: number;
+  verification_waived_count: number;
+  products_published: number;
+  products_sponsored: number;
+  clicks_30d: number | null;
+  clicks_total: number | null;
+  estimated_commission_30d_clp: number | null;
+  assumed_conversion_pct: number;
 }
 
 // ---- Comercial ----
