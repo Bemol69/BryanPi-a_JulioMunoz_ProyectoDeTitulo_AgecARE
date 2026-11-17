@@ -50,6 +50,15 @@ class VerificationOut(BaseModel):
     waiver_expired: bool = False
 
 
+class CaregiverStatsOut(BaseModel):
+    """Visibilidad de la cuidadora en los últimos 30 días, comparada con el promedio de la plataforma."""
+    views_30d: int
+    families_contacted_30d: int  # familias distintas que le escribieron, la contactaron o le pidieron contratación
+    is_qualified: bool
+    avg_views_qualified: float | None  # promedio de visitas de los perfiles calificados (None si no hay)
+    avg_views_unqualified: float | None
+
+
 class CaregiverProfileOut(BaseModel):
     profile_id: UUID
     headline: str | None

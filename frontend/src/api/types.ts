@@ -169,6 +169,19 @@ export interface ProductInput {
   status: "draft" | "published" | "archived";
 }
 
+export interface VerificationEvent {
+  at: string;
+  actor_name: string | null;
+  actor_role: string | null;
+  status: VerificationFeeStatus | null; // en que quedó el cobro
+  previous_status: VerificationFeeStatus | null;
+  reason: WaiverReasonKey | null;
+  until: string | null;
+  note: string | null;
+  method: PaymentMethodKey | null;
+  receipt: string | null;
+}
+
 export interface MonetizationOut {
   verification_fee_clp: number;
   verification_paid_count: number;
@@ -180,6 +193,7 @@ export interface MonetizationOut {
   verification_expiring_soon_count: number; // vencen en los próximos 14 días
   verification_waived_value_clp: number; // lo que se dejó de cobrar por las exenciones vigentes
   verification_waived_by_reason: Record<string, number>;
+  verification_waiver_quotas: Record<string, { used: number; limit: number }>; // solo los motivos con cupo
   products_published: number;
   products_sponsored: number;
   clicks_30d: number | null;

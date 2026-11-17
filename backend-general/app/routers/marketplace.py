@@ -51,6 +51,7 @@ async def search_caregivers(db: Db, user: CurrentUser,
                             specialty: str | None = None,
                             language: str | None = None,
                             min_rating: float | None = Query(default=None, ge=0, le=5),
+                            qualified_only: bool = False,
                             page: int = Query(default=1, ge=1),
                             page_size: int = Query(default=20, ge=1, le=100)):
     if user.account_type != "family":
@@ -63,6 +64,8 @@ async def search_caregivers(db: Db, user: CurrentUser,
         stmt = stmt.where(models.User.full_name.ilike(f"%{q}%"))
     if min_rating is not None:
         stmt = stmt.where(models.CaregiverProfile.rating_avg >= min_rating)
+    if qualified_only:  # solo perfiles calificados (los que pagaron su verificación)
+        stmt = stmt.where(models.CaregiverProfile.is_qualified.is_(True))
     rows = [c for c in (await db.execute(stmt)).scalars().all() if is_publicly_visible(c)]
 
     def matches_list_field(value_list, needle):
@@ -90,6 +93,19 @@ async def search_caregivers(db: Db, user: CurrentUser,
     return Page(items=items, total=total)
 
 
+VIEW_DEDUP_MINUTES = 30
+
+
+async def _record_view(db: Db, profile_id: UUID, viewer_id: UUID) -> None:
+    """Cuenta la visita de una familia a la ficha; las repetidas en 30 minutos cuentan una sola."""
+    since = now_utc() - timedelta(minutes=VIEW_DEDUP_MINUTES)
+    recent = (await db.execute(select(models.ProfileView.id).where(
+        models.ProfileView.caregiver_profile_id == profile_id, models.ProfileView.viewer_user_id == viewer_id,
+        models.ProfileView.created_at >= since).limit(1))).first()
+    if recent is None:
+        db.add(models.ProfileView(caregiver_profile_id=profile_id, viewer_user_id=viewer_id))
+
+
 async def _get_listed(db: Db, profile_id: UUID) -> models.CaregiverProfile:
     p = await db.get(models.CaregiverProfile, profile_id)
     if p is None or not is_publicly_visible(p):
@@ -103,6 +119,8 @@ async def get_caregiver_public(profile_id: UUID, db: Db, user: CurrentUser):
     if user.account_type != "family":
         raise forbidden("El marketplace de cuidadoras es para cuentas de familia.")
     p = await _get_listed(db, profile_id)
+    if user.account_type == "family":
+        await _record_view(db, profile_id, user.id)
     reviews = (await db.execute(select(models.CaregiverReview)
                                 .where(models.CaregiverReview.caregiver_profile_id == profile_id,
                                        models.CaregiverReview.hidden.is_(False))

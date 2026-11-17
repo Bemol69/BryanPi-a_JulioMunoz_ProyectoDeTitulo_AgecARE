@@ -210,6 +210,32 @@ const WAIVER_REASON_LABEL: Record<string, string> = {
   scholarship: "beca", special_case: "caso especial",
 };
 
+/** Cuánta visibilidad tiene su perfil y cómo se compara con los perfiles calificados y los que no lo son. */
+function VisibilityCard() {
+  const st = useApi(() => CaregiverApi.stats(), []);
+  if (!st.data) return null;
+  const { views_30d, families_contacted_30d, is_qualified, avg_views_qualified, avg_views_unqualified } = st.data;
+  const fmt = (n: number) => n.toLocaleString("es-CL", { maximumFractionDigits: 1 });
+  const ratio = avg_views_qualified != null && avg_views_unqualified ? avg_views_qualified / avg_views_unqualified : null;
+  return (
+    <div className="visibility-card">
+      <div className="visibility-head"><b>Tu visibilidad · últimos 30 días</b></div>
+      <div className="visibility-tiles">
+        <div><span>Visitas a tu perfil</span><b>{views_30d}</b></div>
+        <div><span>Familias que te contactaron</span><b>{families_contacted_30d}</b></div>
+      </div>
+      {avg_views_qualified != null && avg_views_unqualified != null && (
+        <p className="visibility-compare">
+          Promedio de visitas en AgeCare: perfiles calificados <b>{fmt(avg_views_qualified)}</b> · perfiles sin insignia{" "}
+          <b>{fmt(avg_views_unqualified)}</b>
+          {!is_qualified && ratio != null && ratio > 1 && <> — los calificados reciben unas <b>{fmt(ratio)} veces</b> más visitas, porque aparecen primero.</>}
+          {is_qualified && <> — tu perfil es calificado.</>}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Cobro único por verificar identidad y antecedentes. El equipo confirma el pago desde la Consola. */
 function VerificationCard() {
   const v = useApi(() => CaregiverApi.verification(), []);
@@ -476,6 +502,7 @@ function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed
 
         <ReviewStatusBanner status={profile.admin_status} />
         <VerificationCard />
+        <VisibilityCard />
         <ProfileCompleteness user={user} profile={profile} docs={docs} onEdit={onEdit} />
 
         <div className="stat-tiles">

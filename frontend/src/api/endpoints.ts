@@ -1,8 +1,8 @@
-import { api, qs } from "./client";
+import { api, download, qs } from "./client";
 import type {
   AdoptionOut, AlertsOut, CaregiverDocumentOut, CaregiverOut, CaregiverRankingItem, CaregiverReviewOut,
   CommercialSummaryOut, FunnelOut, IncidentOut, LoginOutT, MarketingDashboardOut,
-  MeOut, MonetizationOut, VerificationInput, OpsStatusOut, Page, PlansOut, ProductInput, ProductOut, RolesSummaryOut,
+  MeOut, MonetizationOut, VerificationEvent, VerificationInput, OpsStatusOut, Page, PlansOut, ProductInput, ProductOut, RolesSummaryOut,
   SupportSummaryOut, TicketOut,
 } from "./types";
 
@@ -41,6 +41,8 @@ export const MarketplaceApi = {
   setVerification: (id: string, body: VerificationInput) =>
     api.post<CaregiverOut>(`/marketplace/caregivers/${id}/verification`, body),
   monetization: () => api.get<MonetizationOut>("/marketplace/monetization"),
+  verificationHistory: (id: string) => api.get<VerificationEvent[]>(`/marketplace/caregivers/${id}/verification-history`),
+  exportVerification: () => download("/marketplace/verification/export", "verificaciones.csv"),
 };
 
 export const MarketingApi = {

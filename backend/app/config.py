@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # Clave compartida para el endpoint de sincronizacion con el sitio publico.
     internal_sync_key: str = "clave-interna-solo-para-desarrollo"
 
+    # Cupos de exenciones vigentes por motivo (0 = sin límite). Se cambian con ADMIN_WAIVER_QUOTA_LAUNCH_PROMO, etc.
+    waiver_quota_launch_promo: int = 20
+    waiver_quota_scholarship: int = 10
+
     # URL base de la API del sitio público (p. ej. https://agecare-api-general.vercel.app/api/v1).
     # La Consola la usa para avisarle cuando el staff aprueba, suspende o revisa documentos.
     # Vacía = no se avisa (desarrollo sin el sitio público).

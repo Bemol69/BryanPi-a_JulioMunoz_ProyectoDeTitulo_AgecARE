@@ -67,6 +67,26 @@ export const api = {
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
 
+/** Descarga un archivo de la API (necesita la sesión, así que no basta con un enlace). */
+export async function download(path: string, fallbackName: string): Promise<void> {
+  const send = () => fetch(`${BASE}${path}`, { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {} });
+  let res = await send();
+  if (res.status === 401 && refreshToken && (await doRefresh())) res = await send();
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(res.status, body?.error?.code ?? "UNKNOWN", body?.error?.message ?? "No se pudo descargar el archivo.");
+  }
+  const match = /filename="?([^";]+)"?/.exec(res.headers.get("Content-Disposition") ?? "");
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = match?.[1] ?? fallbackName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function qs(params: Record<string, string | number | boolean | undefined | null>): string {
   const parts = Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== null && v !== "")

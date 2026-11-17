@@ -101,6 +101,7 @@ async def purge_user(db, user: models.User, *, force: bool = False) -> list[str]
         for d in docs:
             paths += [storage.path_from_url(d.file_url), storage.path_from_url(d.pending_file_url)]
         await db.execute(delete(models.CaregiverDocument).where(models.CaregiverDocument.caregiver_profile_id == pid))
+        await db.execute(delete(models.ProfileView).where(models.ProfileView.caregiver_profile_id == pid))
         await db.execute(delete(models.CaregiverProfile).where(models.CaregiverProfile.id == pid))
     # Familiares: se eliminan los que solo ella tenía; en los compartidos solo se quita su acceso.
     memberships = (await db.execute(select(models.PatientMember)
@@ -117,6 +118,7 @@ async def purge_user(db, user: models.User, *, force: bool = False) -> list[str]
     await db.execute(delete(models.RefreshSession).where(models.RefreshSession.user_id == uid))
     # Los clics a tiendas se conservan como cifra anónima (respaldan la comisión por referido).
     await db.execute(update(models.ProductClick).where(models.ProductClick.user_id == uid).values(user_id=None))
+    await db.execute(delete(models.ProfileView).where(models.ProfileView.viewer_user_id == uid))
     await db.execute(delete(models.User).where(models.User.id == uid))
     return [p for p in paths if p]
 

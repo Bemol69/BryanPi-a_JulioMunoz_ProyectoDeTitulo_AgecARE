@@ -236,6 +236,14 @@ export interface ProductDetail {
   is_sponsored: boolean;
 }
 
+export interface CaregiverStats {
+  views_30d: number;
+  families_contacted_30d: number;
+  is_qualified: boolean;
+  avg_views_qualified: number | null; // promedio de visitas de los perfiles calificados
+  avg_views_unqualified: number | null;
+}
+
 export type VerificationFeeStatus = "unpaid" | "paid" | "waived";
 
 export interface VerificationOut {

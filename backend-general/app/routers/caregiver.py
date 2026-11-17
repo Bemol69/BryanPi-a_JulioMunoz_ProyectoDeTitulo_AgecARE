@@ -5,7 +5,7 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 from datetime import date, timedelta
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app import models, storage
 from app.config import get_settings
@@ -16,8 +16,9 @@ from app.hiring import engagement_blocking
 from app.schemas.common import Page
 from app.schemas.marketplace import (CaregiverDocumentOut, CaregiverProfileOut,
                                      CaregiverProfilePatchIn, ContactMessageOut, EngagementOut,
-                                     ReceivedHireRequestOut, ReviewOut, VerificationOut)
+                                     ReceivedHireRequestOut, ReviewOut, VerificationOut, CaregiverStatsOut)
 from app.security import now_utc
+from app.visibility import is_publicly_visible
 from app.sync import (fetch_admin_documents, fetch_admin_verification, sync_caregiver_to_admin,
                       sync_document_to_admin)
 
@@ -112,6 +113,38 @@ async def _reconcile_with_admin(user: models.User, docs: list[models.CaregiverDo
                 apply_review(d, "approve", a.get("review_note"))
         elif a["file_url"] == d.file_url and a["status"] in ("approved", "rejected") and a["status"] != d.status:
             apply_review(d, "approve" if a["status"] == "approved" else "reject", a.get("review_note"))
+
+
+@router.get("/stats", response_model=CaregiverStatsOut)
+async def my_stats(db: Db, user: CurrentUser):
+    """Visitas a su ficha y familias que la contactaron en los últimos 30 días, junto al promedio de los
+    perfiles calificados y de los que no lo son (para que vea qué le aporta la verificación)."""
+    profile = await _get_own_profile(db, user)
+    since = now_utc() - timedelta(days=30)
+
+    views = (await db.execute(select(models.ProfileView.caregiver_profile_id, func.count(models.ProfileView.id))
+                              .where(models.ProfileView.created_at >= since)
+                              .group_by(models.ProfileView.caregiver_profile_id))).all()
+    views_by_profile = {pid: int(n) for pid, n in views}
+
+    families: set = set()
+    for model, col in ((models.ContactRequest, models.ContactRequest.created_at),
+                       (models.HireRequest, models.HireRequest.created_at),
+                       (models.ChatConversation, models.ChatConversation.created_at)):
+        rows = (await db.execute(select(model.family_user_id).where(
+            model.caregiver_profile_id == profile.id, col >= since))).scalars().all()
+        families.update(rows)
+
+    visible = [p for p in (await db.execute(select(models.CaregiverProfile))).scalars().all() if is_publicly_visible(p)]
+
+    def average(group: list) -> float | None:
+        return round(sum(views_by_profile.get(p.id, 0) for p in group) / len(group), 1) if group else None
+
+    return CaregiverStatsOut(
+        views_30d=views_by_profile.get(profile.id, 0), families_contacted_30d=len(families),
+        is_qualified=profile.is_qualified,
+        avg_views_qualified=average([p for p in visible if p.is_qualified]),
+        avg_views_unqualified=average([p for p in visible if not p.is_qualified]))
 
 
 @router.get("/verification", response_model=VerificationOut)

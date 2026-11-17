@@ -195,6 +195,16 @@ class MarketProduct(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
 
+class ProfileView(Base):
+    """Una visita de una familia a la ficha de una cuidadora. Con esto la cuidadora ve cuánta visibilidad
+    tiene (y cuánta gana con el perfil calificado). Varias visitas seguidas de la misma persona cuentan una."""
+    __tablename__ = "caregiver_profile_views"
+    id: Mapped[uuid.UUID] = pk()
+    caregiver_profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("caregiver_profiles.id", ondelete="CASCADE"), index=True)
+    viewer_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, index=True)
+    created_at: Mapped[datetime] = ts_now()
+
+
 class ProductClick(Base):
     """Un clic en "Ver en tienda": respalda la comisión por referido con cada proveedor."""
     __tablename__ = "market_product_clicks"

@@ -137,6 +137,20 @@ class VerificationIn(BaseModel):
         return self
 
 
+class VerificationEventOut(BaseModel):
+    """Un movimiento del cobro de verificación de una cuidadora (tomado del registro de auditoría)."""
+    at: datetime
+    actor_name: str | None
+    actor_role: str | None
+    status: str | None  # estado en que quedó: paid | waived | unpaid
+    previous_status: str | None
+    reason: str | None = None
+    until: str | None = None
+    note: str | None = None
+    method: str | None = None
+    receipt: str | None = None
+
+
 class VerificationSiteOut(BaseModel):
     """Lo que el sitio público muestra a la cuidadora sobre su pago."""
     fee_clp: int
@@ -314,6 +328,8 @@ class MonetizationOut(BaseModel):
     verification_expiring_soon_count: int  # vencen en los próximos 14 días
     verification_waived_value_clp: int  # lo que se dejó de cobrar por las exenciones vigentes
     verification_waived_by_reason: dict[str, int] = {}
+    # Cupos de exenciones vigentes por motivo: {motivo: {used, limit}} (solo los motivos con límite).
+    verification_waiver_quotas: dict[str, dict[str, int]] = {}
     products_published: int
     products_sponsored: int
     clicks_30d: int | None  # None si el sitio público no respondió

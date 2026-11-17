@@ -41,8 +41,9 @@ export default function Marketplace() {
   const [q, setQ] = useState("");
   const [zone, setZone] = useState("");
   const [specialty, setSpecialty] = useState("");
+  const [qualifiedOnly, setQualifiedOnly] = useState(false);
 
-  const list = useApi(() => MarketplaceApi.search({ q: q || undefined, zone: zone || undefined, specialty: specialty || undefined }), [q, zone, specialty]);
+  const list = useApi(() => MarketplaceApi.search({ q: q || undefined, zone: zone || undefined, specialty: specialty || undefined, qualified_only: qualifiedOnly || undefined }), [q, zone, specialty, qualifiedOnly]);
 
   return (
     <div className="page">
@@ -64,6 +65,10 @@ export default function Marketplace() {
         <input placeholder="🔎  Buscar por nombre…" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 220 }} />
         <input placeholder="Zona (ej. Providencia)" value={zone} onChange={(e) => setZone(e.target.value)} />
         <input placeholder="Especialidad (ej. Alzheimer)" value={specialty} onChange={(e) => setSpecialty(e.target.value)} />
+        <label className="filter-check" title="Perfiles de cuidadoras que completaron la verificación AgeCare">
+          <input type="checkbox" checked={qualifiedOnly} onChange={(e) => setQualifiedOnly(e.target.checked)} />
+          <span>Solo perfiles calificados</span>
+        </label>
       </div>
 
       {list.error && <ErrorBanner message={list.error} />}

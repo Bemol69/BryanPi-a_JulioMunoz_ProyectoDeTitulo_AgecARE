@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { MarketplaceApi } from "../api/endpoints";
+import { useAuth } from "../auth/AuthContext";
 import { useApi } from "../hooks/useApi";
 import ReviewsManager from "../components/ReviewsManager";
 import {
-  Card, CardHead, Chip, Drawer, EmptyState, ErrorBanner, Kpi, Modal, Person, PersonAvatar, Spinner, StatusChip, Stars, fmtDate, fmtCLP, fmtNumber,
+  Card, CardHead, Chip, Drawer, EmptyState, ErrorBanner, Kpi, Modal, Person, PersonAvatar, Spinner, StatusChip, Stars, fmtDate, fmtDateTime, fmtCLP, fmtNumber,
 } from "../components/ui";
 import type {
   CaregiverDocType, CaregiverDocumentOut, CaregiverOut, PaymentMethodKey, ProductCategoryKey, ProductInput, ProductOut,
-  VerificationInput, WaiverReasonKey,
+  VerificationEvent, VerificationInput, WaiverReasonKey,
 } from "../api/types";
 
 const DOC_TYPE_LABELS: Record<CaregiverDocType, string> = {
@@ -53,8 +54,49 @@ const PAYMENT_METHODS: { key: PaymentMethodKey; label: string }[] = [
 ];
 const METHOD_LABEL = Object.fromEntries(PAYMENT_METHODS.map((m) => [m.key, m.label])) as Record<string, string>;
 
+function FeeHistory({ id, refreshKey }: { id: string; refreshKey: number }) {
+  const h = useApi(() => MarketplaceApi.verificationHistory(id), [id, refreshKey]);
+  const [all, setAll] = useState(false);
+  const events: VerificationEvent[] = h.data ?? [];
+  if (h.loading || events.length === 0) return null;
+  const describe = (e: VerificationEvent) => {
+    if (e.status === "paid") {
+      return `Pago confirmado${e.method ? ` · ${METHOD_LABEL[e.method]}` : ""}${e.receipt ? ` · comprobante ${e.receipt}` : ""}`;
+    }
+    if (e.status === "waived") {
+      return `Eximida${e.reason ? ` · ${WAIVER_LABEL[e.reason]}` : ""}${e.until ? ` · vence el ${fmtDate(e.until)}` : " · sin vencimiento"}`;
+    }
+    return `Cobro revertido${e.previous_status === "paid" ? " (estaba pagado)" : e.previous_status === "waived" ? " (estaba eximida)" : ""}`;
+  };
+  const shown = all ? events : events.slice(0, 4);
+  return (
+    <div style={{ marginTop: -4, marginBottom: 14 }}>
+      <div className="field-label">Historial del cobro</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {shown.map((e, i) => (
+          <div key={`${e.at}-${i}`} style={{ fontSize: 12, borderLeft: "2px solid var(--ac-border)", paddingLeft: 10 }}>
+            <div style={{ fontWeight: 700 }}>{describe(e)}</div>
+            <div style={{ color: "var(--ac-text-tertiary)", fontSize: 11 }}>
+              {fmtDateTime(e.at)}{e.actor_name ? ` · ${e.actor_name}` : ""}
+            </div>
+            {e.note && <div style={{ fontStyle: "italic", color: "var(--ac-text-secondary)" }}>«{e.note}»</div>}
+          </div>
+        ))}
+      </div>
+      {events.length > 4 && (
+        <button className="btn small ghost" style={{ marginTop: 6 }} onClick={() => setAll(!all)}>
+          {all ? "Ver menos" : `Ver todo (${events.length})`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** Cobro de verificación de una cuidadora: pago con comprobante o exención con motivo y vencimiento. */
 function FeePanel({ c, onChanged }: { c: CaregiverOut; onChanged: () => void }) {
+  const { me } = useAuth();
+  const isAdmin = me?.role === "admin"; // solo un administrador exime o revierte; el resto confirma pagos
+  const quotas = useApi(() => MarketplaceApi.monetization(), [c.verification_fee_status, c.verification_waiver_reason]).data?.verification_waiver_quotas ?? {};
   const [mode, setMode] = useState<null | "paid" | "waive">(null);
   const [method, setMethod] = useState<PaymentMethodKey>("transfer");
   const [receipt, setReceipt] = useState("");
@@ -132,11 +174,12 @@ function FeePanel({ c, onChanged }: { c: CaregiverOut; onChanged: () => void }) 
       )}
       {status === "unpaid" && <div style={small}>No se puede aprobar el perfil hasta confirmar el pago o eximirla.</div>}
 
+      {!isAdmin && <div style={small}>Solo un administrador puede eximir un pago o revertir un cobro. Tú puedes confirmar pagos recibidos.</div>}
       {mode === null && (
         <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
           {status !== "paid" && <button className="btn small primary" disabled={busy} onClick={() => { setError(null); setMode("paid"); }}>Confirmar pago recibido</button>}
-          {status !== "paid" && <button className="btn small" disabled={busy} onClick={() => { setError(null); setMode("waive"); }}>{status === "waived" ? "Renovar / cambiar exención" : "Eximir de pago"}</button>}
-          {status !== "unpaid" && (
+          {status !== "paid" && isAdmin && <button className="btn small" disabled={busy} onClick={() => { setError(null); setMode("waive"); }}>{status === "waived" ? "Renovar / cambiar exención" : "Eximir de pago"}</button>}
+          {status !== "unpaid" && isAdmin && (
             <button className="btn small" disabled={busy || published} onClick={() => send({ action: "unpaid" })}
                     title={published ? "El perfil está aprobado: suspéndelo antes de revertir el cobro" : undefined}>Revertir</button>
           )}
@@ -161,7 +204,16 @@ function FeePanel({ c, onChanged }: { c: CaregiverOut; onChanged: () => void }) 
           <label style={label}>Motivo de la exención</label>
           <select className="select" style={{ width: "100%" }} value={reason}
                   onChange={(e) => { const r = e.target.value as WaiverReasonKey; setReason(r); if (WAIVER_REASONS.find((x) => x.key === r)!.expires && days === "none") setDays("90"); }}>
-            {WAIVER_REASONS.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+            {WAIVER_REASONS.map((r) => {
+              const q = quotas[r.key];
+              const mine = status === "waived" && !expired && c.verification_waiver_reason === r.key; // renovar no gasta otro cupo
+              const left = q ? q.limit - q.used : null;
+              return (
+                <option key={r.key} value={r.key} disabled={left != null && left <= 0 && !mine}>
+                  {r.label}{q ? ` · quedan ${Math.max(left ?? 0, 0)} de ${q.limit} cupos` : ""}
+                </option>
+              );
+            })}
           </select>
           <label style={label}>Vigencia {reasonInfo.expires && "(obligatoria para este motivo)"}</label>
           <select className="select" style={{ width: "100%" }} value={days} onChange={(e) => setDays(e.target.value)}>
@@ -230,6 +282,8 @@ export default function Marketplace() {
 function CaregiversTab({ onChanged }: { onChanged: () => void }) {
   const [status, setStatus] = useState("");
   const [fee, setFee] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -241,7 +295,11 @@ function CaregiversTab({ onChanged }: { onChanged: () => void }) {
         title="Cuidadoras del marketplace"
         sub="Perfiles enviados por cuidadoras para publicarse en la app de familias"
         right={
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <button className="btn" disabled={exporting} title="Descarga los pagos y exenciones en un archivo que abre Excel"
+                    onClick={async () => { setExporting(true); setExportError(null); try { await MarketplaceApi.exportVerification(); } catch (e) { setExportError(e instanceof Error ? e.message : "No se pudo exportar."); } finally { setExporting(false); } }}>
+              {exporting ? "Exportando…" : "⬇ Exportar cobros (CSV)"}
+            </button>
             <input className="input" placeholder="Buscar por nombre o correo…" value={q} onChange={(e) => setQ(e.target.value)} />
             <select className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="">Todos los estados</option>
@@ -259,6 +317,7 @@ function CaregiversTab({ onChanged }: { onChanged: () => void }) {
           </div>
         }
       />
+      {exportError && <ErrorBanner message={exportError} />}
       {list.error && <ErrorBanner message={list.error} />}
       {list.loading && <Spinner />}
       {list.data && list.data.items.length === 0 && <EmptyState label="No se encontraron cuidadoras con esos filtros." />}
@@ -293,6 +352,7 @@ function CaregiversTab({ onChanged }: { onChanged: () => void }) {
 
 function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
   const detail = useApi(() => MarketplaceApi.getCaregiver(id), [id]);
+  const [feeKey, setFeeKey] = useState(0);
   const [note, setNote] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -397,7 +457,8 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
           <div className="field-value">{c.certifications_count}</div>
 
           <div className="field-label">Cobro de verificación</div>
-          <FeePanel c={c} onChanged={() => { onChanged(); detail.reload(); }} />
+          <FeePanel c={c} onChanged={() => { onChanged(); detail.reload(); setFeeKey((k) => k + 1); }} />
+          <FeeHistory id={id} refreshKey={feeKey} />
 
           <div className="field-label">Documentos</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 4 }}>

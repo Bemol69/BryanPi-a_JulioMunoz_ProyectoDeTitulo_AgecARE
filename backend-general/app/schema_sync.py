@@ -36,7 +36,8 @@ COLUMN_PATCHES: list[tuple[str, str, str]] = [
     ("market_products", "is_active", "BOOLEAN NOT NULL DEFAULT TRUE"),
 ]
 # Tablas que Supabase expondría por su API pública: se les activa RLS sin políticas.
-RLS_TABLES = ["chat_conversations", "chat_messages", "hire_requests", "market_product_clicks"]
+RLS_TABLES = ["chat_conversations", "chat_messages", "hire_requests", "market_product_clicks",
+              "caregiver_profile_views"]
 ADVISORY_LOCK_KEY = 727_501  # evita que dos instancias nuevas apliquen el esquema a la vez
 
 

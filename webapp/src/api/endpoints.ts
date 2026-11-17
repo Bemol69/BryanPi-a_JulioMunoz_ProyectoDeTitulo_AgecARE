@@ -2,7 +2,7 @@ import { api, qs } from "./client";
 import type {
   AuthOut, CaregiverCard, CaregiverDocType, CaregiverDocumentOut, CaregiverProfileOut,
   CaregiverPublic, ChatDetail, ChatMessage, ChatSummary, ContactMessage, ContactOut, Engagement, HireRequestOut, Page,
-  PatientCard, PatientCreateOut, PatientDetail, ProductCard, ProductDetail, VerificationOut, ReceivedHireRequest, Review, UserOut,
+  PatientCard, PatientCreateOut, PatientDetail, ProductCard, ProductDetail, VerificationOut, CaregiverStats, ReceivedHireRequest, Review, UserOut,
 } from "./types";
 
 export const AuthApi = {
@@ -34,6 +34,7 @@ export const CaregiverApi = {
     is_listed: boolean;
   }>) => api.put<CaregiverProfileOut>("/caregiver/profile", body),
   verification: () => api.get<VerificationOut>("/caregiver/verification"),
+  stats: () => api.get<CaregiverStats>("/caregiver/stats"),
   contacts: () => api.get<Page<ContactMessage>>("/caregiver/contacts"),
   engagement: () => api.get<Engagement | null>("/caregiver/engagement"),
   hireRequests: () => api.get<Page<ReceivedHireRequest>>("/caregiver/hire-requests"),
@@ -46,7 +47,7 @@ export const CaregiverApi = {
 };
 
 export const MarketplaceApi = {
-  search: (params: { q?: string; zone?: string; specialty?: string; language?: string; min_rating?: number }) =>
+  search: (params: { q?: string; zone?: string; specialty?: string; language?: string; min_rating?: number; qualified_only?: boolean }) =>
     api.get<Page<CaregiverCard>>(`/marketplace/caregivers${qs({ ...params, page_size: 100 })}`),
   detail: (profileId: string) => api.get<CaregiverPublic>(`/marketplace/caregivers/${profileId}`),
   contact: (profileId: string, message?: string) =>

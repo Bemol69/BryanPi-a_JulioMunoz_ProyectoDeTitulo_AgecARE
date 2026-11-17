@@ -102,7 +102,7 @@ async def seed() -> None:
     async with get_session_factory()() as db:
         for table in (models.ChatMessage, models.ChatConversation,
                       models.CaregiverEngagement, models.ContactRequest, models.CaregiverReview,
-                     models.CaregiverDocument, models.CaregiverProfile, models.PatientMember,
+                     models.CaregiverDocument, models.ProfileView, models.CaregiverProfile, models.PatientMember,
                      models.Patient, models.ProductClick, models.MarketProduct, models.RefreshSession, models.User):
             await db.execute(delete(table))
 
@@ -161,6 +161,13 @@ async def seed() -> None:
                                   .where(models.User.email == "maria@cuidado.cl"))).scalar_one()
         db.add(models.CaregiverEngagement(caregiver_profile_id=maria.id, family_user_id=family.id,
                                           patient_id=patient.id))
+
+        # Visitas de ejemplo a las fichas (solo demo): los perfiles calificados reciben más.
+        rng = random.Random(7)
+        for profile in (await db.execute(select(models.CaregiverProfile))).scalars().all():
+            for _ in range(rng.randint(28, 52) if profile.is_qualified else rng.randint(4, 14)):
+                db.add(models.ProfileView(caregiver_profile_id=profile.id, viewer_user_id=family.id,
+                                          created_at=NOW - timedelta(days=rng.randint(0, 28), hours=rng.randint(0, 23))))
 
         await db.commit()
         print(f"Seed completado: {len(CAREGIVERS)} cuidadoras publicadas, 1 familia demo, {len(PRODUCTS)} productos.")

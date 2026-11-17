@@ -1,11 +1,13 @@
 """Catálogos del marketplace: perfiles de cuidadoras, artículos de apoyo,
 reseñas, puntos de fidelización y ranking."""
+import csv
+import io
 import secrets
 from datetime import timedelta
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 
@@ -13,7 +15,8 @@ from app import general_client, loyalty, models
 from app.audit import audit
 from app.deps import Db, require, require_internal_key
 from app.enums import CaregiverStatus, ContentStatus
-from app.errors import conflict, invalid, not_found
+from app.config import get_settings
+from app.errors import conflict, forbidden, invalid, not_found
 from app.schemas.common import Page
 from app.schemas.operation import (CaregiverDocumentOut, CaregiverDocumentReviewIn,
                                    CaregiverDocumentSyncIn, CaregiverOut, CaregiverStatusItem,
@@ -21,7 +24,7 @@ from app.schemas.operation import (CaregiverDocumentOut, CaregiverDocumentReview
                                    CaregiverRankingItem, CaregiverReviewIn, CaregiverReviewOut,
                                    CaregiverReviewSyncIn, CaregiverSyncIn, ProductCreateIn,
                                    MonetizationOut, ProductOut, ProductPatchIn, ReviewArchiveIn,
-                                   VerificationIn, VerificationSiteOut)
+                                   VerificationEventOut, VerificationIn, VerificationSiteOut)
 from app.security import as_utc, now_utc
 
 router = APIRouter(prefix="/marketplace", tags=["Catálogos marketplace"])
@@ -111,6 +114,29 @@ def _effective_fee_status(c: models.CaregiverProfile) -> str:
 def _listing_until(c: models.CaregiverProfile):
     """Fecha desde la cual el sitio debe ocultar el perfil (solo las exenciones con vencimiento)."""
     return c.verification_waiver_until if c.verification_fee_status == "waived" else None
+
+
+WAIVER_LABELS = {"launch_promo": "Promoción de lanzamiento", "institution_agreement": "Convenio con institución",
+                 "scholarship": "Beca", "special_case": "Caso especial"}
+
+
+PAYMENT_LABELS = {"transfer": "Transferencia", "deposit": "Depósito", "cash": "Efectivo", "other": "Otro"}
+
+
+def _waiver_quotas() -> dict[str, int]:
+    """Cupos de exenciones vigentes por motivo. Convenio y caso especial no tienen límite."""
+    s = get_settings()
+    quotas = {"launch_promo": s.waiver_quota_launch_promo, "scholarship": s.waiver_quota_scholarship}
+    return {reason: limit for reason, limit in quotas.items() if limit > 0}
+
+
+def _fee_snapshot(c: models.CaregiverProfile) -> dict:
+    """Estado del cobro para el registro de auditoría (y de ahí el historial de la cuidadora)."""
+    until = c.verification_waiver_until
+    return {"status": c.verification_fee_status, "waiver_reason": c.verification_waiver_reason,
+            "waiver_until": until.isoformat() if until is not None else None,
+            "waiver_note": c.verification_waiver_note, "method": c.verification_payment_method,
+            "receipt": c.verification_receipt, "amount_clp": c.verification_fee_clp}
 
 
 def _new_reference() -> str:
@@ -378,14 +404,28 @@ async def set_verification(caregiver_id: UUID, body: VerificationIn, request: Re
     c = await db.get(models.CaregiverProfile, caregiver_id)
     if c is None:
         raise not_found()
+    # Solo un administrador regala o deshace cobros; el resto del equipo confirma pagos.
+    if body.action in ("waived", "unpaid") and admin.role != "admin":
+        raise forbidden("Solo un administrador puede eximir un pago o revertir un cobro. Tú puedes confirmar pagos recibidos.")
+    if body.action == "waived":
+        limit = _waiver_quotas().get(body.reason or "")
+        if limit is not None:
+            now_ = now_utc()
+            taken = [x for x in (await db.execute(select(models.CaregiverProfile).where(
+                models.CaregiverProfile.verification_fee_status == "waived",
+                models.CaregiverProfile.verification_waiver_reason == body.reason,
+                models.CaregiverProfile.id != c.id))).scalars().all() if not _waiver_expired(x, now_)]
+            if len(taken) >= limit:
+                raise conflict("WAIVER_QUOTA_REACHED",
+                               f"Se agotaron los cupos de «{WAIVER_LABELS[body.reason]}» ({limit}). "
+                               "Espera a que venza alguna exención o elige otro motivo.")
     if body.action == "unpaid" and c.status == "approved":
         # Invariante: un perfil publicado siempre tiene el pago confirmado o una exención vigente.
         raise conflict("FEE_REVERT_BLOCKED",
                        "El perfil está aprobado. Suspéndelo antes de revertir el cobro, para no dejar publicado "
                        "un perfil sin pago ni exención.")
     now = now_utc()
-    before = {"verification_fee_status": c.verification_fee_status,
-              "waiver_reason": c.verification_waiver_reason, "waiver_until": str(c.verification_waiver_until)}
+    before = _fee_snapshot(c)
     # Cada decisión reemplaza a la anterior: no quedan datos de un pago o exención que ya no rige.
     c.verification_paid_at = c.verification_marked_by = None
     c.verification_waiver_reason = c.verification_waiver_note = c.verification_waiver_until = None
@@ -404,13 +444,65 @@ async def set_verification(caregiver_id: UUID, body: VerificationIn, request: Re
     if c.verification_reference is None:
         c.verification_reference = _new_reference()
     await audit(db, request, "marketplace.verification_fee", "caregiver_profile", c.id, before=before,
-                after={"verification_fee_status": c.verification_fee_status, "amount_clp": c.verification_fee_clp,
-                       "waiver_reason": c.verification_waiver_reason, "waiver_until": str(c.verification_waiver_until),
-                       "method": c.verification_payment_method, "receipt": c.verification_receipt})
+                after=_fee_snapshot(c))
     # "Perfil calificado" solo si pagó. Una exención con vencimiento hace que el sitio oculte el perfil en esa
     # fecha. Si no se puede avisar, no se guarda.
     await general_client.push_qualified(c.email, c.verification_fee_status == "paid", _listing_until(c))
     return _cg_out(c, include_note=True)
+
+
+# ---------- Historial del cobro de una cuidadora (sale del registro de auditoría) ----------
+@router.get("/caregivers/{caregiver_id}/verification-history", response_model=list[VerificationEventOut],
+            dependencies=[require("marketplace")])
+async def verification_history(caregiver_id: UUID, db: Db):
+    rows = (await db.execute(select(models.AuditLog).where(
+        models.AuditLog.action == "marketplace.verification_fee", models.AuditLog.entity_id == caregiver_id)
+        .order_by(models.AuditLog.created_at.desc()).limit(50))).scalars().all()
+    events = []
+    for r in rows:
+        after, before = r.after or {}, r.before or {}
+        events.append(VerificationEventOut(
+            at=r.created_at, actor_name=r.actor_name, actor_role=r.actor_role,
+            status=after.get("status"), previous_status=before.get("status"), reason=after.get("waiver_reason"),
+            until=after.get("waiver_until"), note=after.get("waiver_note"), method=after.get("method"),
+            receipt=after.get("receipt")))
+    return events
+
+
+# ---------- Exportar cobros y exenciones (CSV para contabilidad) ----------
+def _csv_safe(value) -> str:
+    """Evita que Excel interprete un texto como fórmula (=, +, -, @) al abrir el archivo."""
+    text = "" if value is None else str(value)
+    return "'" + text if text[:1] in ("=", "+", "-", "@") else text
+
+
+@router.get("/verification/export")
+async def export_verification(request: Request, db: Db, admin: models.AdminUser = require("marketplace")):
+    caregivers = (await db.execute(select(models.CaregiverProfile)
+                                   .order_by(models.CaregiverProfile.name))).scalars().all()
+    now = now_utc()
+    labels = {"paid": "Pagada", "waived": "Eximida", "unpaid": "Por pagar"}
+
+    def day(dt):
+        return dt.date().isoformat() if dt is not None else ""
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, delimiter=";")  # el Excel en español separa las columnas con ;
+    writer.writerow(["Cuidadora", "Correo", "Estado del cobro", "Monto (CLP)", "Fecha de pago", "Método",
+                     "Comprobante", "Motivo de la exención", "Vence", "Confirmado o eximido por", "Código de pago"])
+    for c in caregivers:
+        expired = _waiver_expired(c, now)
+        state = "Exención vencida" if expired else labels.get(c.verification_fee_status, c.verification_fee_status)
+        writer.writerow([_csv_safe(v) for v in (
+            c.name, c.email, state, c.verification_fee_clp if c.verification_fee_status == "paid" else "",
+            day(c.verification_paid_at), PAYMENT_LABELS.get(c.verification_payment_method or "", ""), c.verification_receipt or "",
+            WAIVER_LABELS.get(c.verification_waiver_reason or "", ""), day(c.verification_waiver_until),
+            c.verification_marked_by or "", c.verification_reference or "")])
+    await audit(db, request, "marketplace.verification_export", "caregiver_profile", None,
+                after={"rows": len(caregivers)})
+    filename = f"verificaciones_{now.date().isoformat()}.csv"
+    return Response("\ufeff" + buffer.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
 # ---------- Eliminar el perfil de una cuidadora ----------
@@ -802,6 +894,8 @@ async def monetization(db: Db):
         verification_expiring_soon_count=len(soon),
         verification_waived_value_clp=sum(c.verification_fee_clp for c in waived),
         verification_waived_by_reason=by_reason,
+        verification_waiver_quotas={reason: {"used": by_reason.get(reason, 0), "limit": limit}
+                                    for reason, limit in _waiver_quotas().items()},
         products_published=len(products), products_sponsored=sum(1 for p in products if p.is_sponsored),
         clicks_30d=clicks_30d, clicks_total=clicks_total, estimated_commission_30d_clp=estimate,
         assumed_conversion_pct=ASSUMED_CONVERSION_PCT)
