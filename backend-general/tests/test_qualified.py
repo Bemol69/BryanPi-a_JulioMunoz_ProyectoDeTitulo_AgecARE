@@ -60,3 +60,37 @@ async def test_qualified_endpoint_needs_the_shared_key_and_a_known_caregiver(cli
     r = await client.post(f"{API}/internal/caregivers/qualified", json={"email": "andres@cuidado.cl", "qualified": True})
     assert r.status_code == 401
     assert (await set_qualified(client, "nadie@cuidado.cl", True)).status_code == 404
+
+
+# ---------- Exención con vencimiento: al vencer, el perfil deja de mostrarse ----------
+from datetime import datetime, timedelta, timezone  # noqa: E402
+
+
+async def set_until(client, email, until, qualified=False):
+    r = await client.post(f"{API}/internal/caregivers/qualified", headers=INTERNAL, json={
+        "email": email, "qualified": qualified, "listing_until": until.isoformat() if until else None})
+    assert r.status_code == 204, r.text
+
+
+async def test_a_profile_whose_waiver_expired_is_hidden_until_it_pays(client, family):
+    items = await search(client, family)
+    andres = next(c for c in items if c["full_name"] == "Andrés Pizarro")  # el seed lo deja con 60 días de exención
+    pid = andres["profile_id"]
+
+    await set_until(client, "andres@cuidado.cl", datetime.now(timezone.utc) - timedelta(days=1))
+    assert "Andrés Pizarro" not in {c["full_name"] for c in await search(client, family)}
+    assert (await client.get(f"{API}/marketplace/caregivers/{pid}", headers=family)).status_code == 404
+    r = await client.post(f"{API}/marketplace/caregivers/{pid}/hire-requests", json={}, headers=family)
+    assert r.status_code == 404
+
+    # Paga: vuelve a mostrarse, ahora como perfil calificado.
+    await set_until(client, "andres@cuidado.cl", None, qualified=True)
+    shown = next(c for c in await search(client, family) if c["full_name"] == "Andrés Pizarro")
+    assert shown["is_qualified"] is True
+
+
+async def test_a_waiver_that_has_not_expired_keeps_the_profile_visible(client, family):
+    await set_until(client, "andres@cuidado.cl", datetime.now(timezone.utc) + timedelta(days=3))
+    assert "Andrés Pizarro" in {c["full_name"] for c in await search(client, family)}
+    await set_until(client, "andres@cuidado.cl", None)  # exención sin vencimiento
+    assert "Andrés Pizarro" in {c["full_name"] for c in await search(client, family)}

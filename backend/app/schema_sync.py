@@ -24,6 +24,11 @@ COLUMN_PATCHES: list[tuple[str, str, str]] = [
     ("marketplace_caregivers", "verification_reference", "VARCHAR(20)"),
     ("marketplace_caregivers", "verification_paid_at", "TIMESTAMP WITH TIME ZONE"),
     ("marketplace_caregivers", "verification_marked_by", "VARCHAR(120)"),
+    ("marketplace_caregivers", "verification_waiver_reason", "VARCHAR(24)"),
+    ("marketplace_caregivers", "verification_waiver_note", "VARCHAR(300)"),
+    ("marketplace_caregivers", "verification_waiver_until", "TIMESTAMP WITH TIME ZONE"),
+    ("marketplace_caregivers", "verification_payment_method", "VARCHAR(16)"),
+    ("marketplace_caregivers", "verification_receipt", "VARCHAR(60)"),
     # Artículos de apoyo: patrocinio, comisión y condiciones.
     ("marketplace_products", "description", "TEXT"),
     ("marketplace_products", "is_sponsored", "BOOLEAN NOT NULL DEFAULT FALSE"),

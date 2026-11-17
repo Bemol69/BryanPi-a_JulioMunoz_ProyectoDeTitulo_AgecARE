@@ -6,7 +6,8 @@ import {
   Card, CardHead, Chip, Drawer, EmptyState, ErrorBanner, Kpi, Modal, Person, PersonAvatar, Spinner, StatusChip, Stars, fmtDate, fmtCLP, fmtNumber,
 } from "../components/ui";
 import type {
-  CaregiverDocType, CaregiverDocumentOut, CaregiverOut, ProductCategoryKey, ProductInput, ProductOut, VerificationFeeStatus,
+  CaregiverDocType, CaregiverDocumentOut, CaregiverOut, PaymentMethodKey, ProductCategoryKey, ProductInput, ProductOut,
+  VerificationInput, WaiverReasonKey,
 } from "../api/types";
 
 const DOC_TYPE_LABELS: Record<CaregiverDocType, string> = {
@@ -25,10 +26,161 @@ function DocStatusChip({ doc }: { doc: CaregiverDocumentOut }) {
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-function FeeChip({ status }: { status: VerificationFeeStatus }) {
-  if (status === "paid") return <Chip kind="ok">✓ Pagada</Chip>;
-  if (status === "waived") return <Chip kind="neutral">Eximida</Chip>;
+const daysLeft = (until: string) => Math.ceil((new Date(until).getTime() - Date.now()) / 86_400_000);
+
+function FeeChip({ c }: { c: Pick<CaregiverOut, "verification_fee_status" | "verification_waiver_until" | "verification_waiver_expired"> }) {
+  if (c.verification_fee_status === "paid") return <Chip kind="ok">✓ Pagada</Chip>;
+  if (c.verification_fee_status === "waived") {
+    if (c.verification_waiver_expired) return <Chip kind="crit">Exención vencida</Chip>;
+    const d = c.verification_waiver_until ? daysLeft(c.verification_waiver_until) : null;
+    if (d != null && d <= 14) return <Chip kind="warn">Eximida · vence en {Math.max(d, 0)} d</Chip>;
+    return <Chip kind="neutral">Eximida</Chip>;
+  }
   return <Chip kind="warn">Por pagar</Chip>;
+}
+
+const WAIVER_REASONS: { key: WaiverReasonKey; label: string; expires: boolean }[] = [
+  { key: "launch_promo", label: "Promoción de lanzamiento", expires: true },
+  { key: "institution_agreement", label: "Convenio con institución", expires: false },
+  { key: "scholarship", label: "Beca", expires: true },
+  { key: "special_case", label: "Caso especial (hay que explicarlo)", expires: false },
+];
+const WAIVER_LABEL = Object.fromEntries(WAIVER_REASONS.map((r) => [r.key, r.label.replace(/ \(.*\)$/, "")])) as Record<string, string>;
+const WAIVER_DAYS = [30, 60, 90, 180, 365];
+const PAYMENT_METHODS: { key: PaymentMethodKey; label: string }[] = [
+  { key: "transfer", label: "Transferencia" }, { key: "deposit", label: "Depósito" },
+  { key: "cash", label: "Efectivo" }, { key: "other", label: "Otro" },
+];
+const METHOD_LABEL = Object.fromEntries(PAYMENT_METHODS.map((m) => [m.key, m.label])) as Record<string, string>;
+
+/** Cobro de verificación de una cuidadora: pago con comprobante o exención con motivo y vencimiento. */
+function FeePanel({ c, onChanged }: { c: CaregiverOut; onChanged: () => void }) {
+  const [mode, setMode] = useState<null | "paid" | "waive">(null);
+  const [method, setMethod] = useState<PaymentMethodKey>("transfer");
+  const [receipt, setReceipt] = useState("");
+  const [reason, setReason] = useState<WaiverReasonKey>("launch_promo");
+  const [days, setDays] = useState("90"); // "none" = sin vencimiento
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const status = c.verification_fee_status;
+  const expired = c.verification_waiver_expired;
+  const reasonInfo = WAIVER_REASONS.find((r) => r.key === reason)!;
+  const published = c.status === "approved";
+
+  async function send(body: VerificationInput) {
+    setBusy(true);
+    setError(null);
+    try {
+      await MarketplaceApi.setVerification(c.caregiver_id, body);
+      setMode(null);
+      setReceipt("");
+      setNote("");
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo actualizar el cobro.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function submitWaiver() {
+    if (reasonInfo.expires && days === "none") return setError("Esta exención debe tener fecha de vencimiento.");
+    if (reason === "special_case" && note.trim().length < 10) return setError("Para un caso especial explica el motivo (mínimo 10 caracteres).");
+    void send({ action: "waived", reason, days: days === "none" ? null : Number(days), note: note.trim() || undefined });
+  }
+
+  const small = { fontSize: 11.5, color: "var(--ac-text-secondary)", marginTop: 6 } as const;
+  const label = { fontSize: 11.5, fontWeight: 700, color: "var(--ac-text-secondary)", margin: "10px 0 4px", display: "block" } as const;
+
+  return (
+    <div style={{ border: "1px solid var(--ac-border)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 700 }}>{fmtCLP(c.verification_fee_clp)} · pago único</span>
+        <FeeChip c={c} />
+      </div>
+      {c.verification_reference && (
+        <div style={small}>Código de pago de la cuidadora: <b style={{ letterSpacing: ".06em" }}>{c.verification_reference}</b></div>
+      )}
+
+      {status === "paid" && (
+        <div style={small}>
+          Pago confirmado{c.verification_marked_by ? ` por ${c.verification_marked_by}` : ""}
+          {c.verification_paid_at ? ` · ${fmtDate(c.verification_paid_at)}` : ""}
+          {c.verification_payment_method ? ` · ${METHOD_LABEL[c.verification_payment_method]}` : ""}
+          {c.verification_receipt ? ` · comprobante ${c.verification_receipt}` : ""}.
+          El sitio muestra «Perfil calificado» y la ubica primero en las búsquedas.
+        </div>
+      )}
+      {status === "waived" && (
+        <div style={small}>
+          <b>{c.verification_waiver_reason ? WAIVER_LABEL[c.verification_waiver_reason] : "Exención"}</b>
+          {c.verification_waiver_until
+            ? (expired
+                ? ` · venció el ${fmtDate(c.verification_waiver_until)}`
+                : ` · vence el ${fmtDate(c.verification_waiver_until)} (en ${Math.max(daysLeft(c.verification_waiver_until), 0)} días)`)
+            : " · sin vencimiento"}
+          {c.verification_marked_by ? ` · por ${c.verification_marked_by}` : ""}
+          {c.verification_waiver_note && <div style={{ marginTop: 3, fontStyle: "italic" }}>«{c.verification_waiver_note}»</div>}
+          <div style={{ marginTop: 3 }}>
+            {expired
+              ? (published ? "Su exención terminó: el perfil dejó de mostrarse en el sitio hasta que pague." : "Su exención terminó: debe pagar para publicarse.")
+              : "Se puede publicar, pero sin insignia ni prioridad en las búsquedas."}
+          </div>
+        </div>
+      )}
+      {status === "unpaid" && <div style={small}>No se puede aprobar el perfil hasta confirmar el pago o eximirla.</div>}
+
+      {mode === null && (
+        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+          {status !== "paid" && <button className="btn small primary" disabled={busy} onClick={() => { setError(null); setMode("paid"); }}>Confirmar pago recibido</button>}
+          {status !== "paid" && <button className="btn small" disabled={busy} onClick={() => { setError(null); setMode("waive"); }}>{status === "waived" ? "Renovar / cambiar exención" : "Eximir de pago"}</button>}
+          {status !== "unpaid" && (
+            <button className="btn small" disabled={busy || published} onClick={() => send({ action: "unpaid" })}
+                    title={published ? "El perfil está aprobado: suspéndelo antes de revertir el cobro" : undefined}>Revertir</button>
+          )}
+        </div>
+      )}
+      {mode === "paid" && (
+        <div>
+          <label style={label}>Cómo se recibió</label>
+          <select className="select" style={{ width: "100%" }} value={method} onChange={(e) => setMethod(e.target.value as PaymentMethodKey)}>
+            {PAYMENT_METHODS.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
+          </select>
+          <label style={label}>N° de comprobante (opcional, para conciliar con el banco)</label>
+          <input className="input" style={{ width: "100%" }} maxLength={60} value={receipt} onChange={(e) => setReceipt(e.target.value)} placeholder="Ej: TR-48213" />
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button className="btn small primary" disabled={busy} onClick={() => send({ action: "paid", method, receipt: receipt.trim() || undefined })}>{busy ? "Guardando…" : "Confirmar pago"}</button>
+            <button className="btn small" disabled={busy} onClick={() => setMode(null)}>Cancelar</button>
+          </div>
+        </div>
+      )}
+      {mode === "waive" && (
+        <div>
+          <label style={label}>Motivo de la exención</label>
+          <select className="select" style={{ width: "100%" }} value={reason}
+                  onChange={(e) => { const r = e.target.value as WaiverReasonKey; setReason(r); if (WAIVER_REASONS.find((x) => x.key === r)!.expires && days === "none") setDays("90"); }}>
+            {WAIVER_REASONS.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+          </select>
+          <label style={label}>Vigencia {reasonInfo.expires && "(obligatoria para este motivo)"}</label>
+          <select className="select" style={{ width: "100%" }} value={days} onChange={(e) => setDays(e.target.value)}>
+            {WAIVER_DAYS.map((d) => <option key={d} value={d}>{d} días</option>)}
+            {!reasonInfo.expires && <option value="none">Sin vencimiento</option>}
+          </select>
+          <label style={label}>Nota {reason === "special_case" ? "(obligatoria)" : "(opcional)"}</label>
+          <textarea className="input" style={{ width: "100%", minHeight: 52 }} maxLength={300} value={note} onChange={(e) => setNote(e.target.value)}
+                    placeholder="Ej: Convenio con la Municipalidad de Ñuñoa" />
+          <div style={small}>Al vencer, vuelve a «por pagar» y el perfil deja de mostrarse hasta que pague.</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button className="btn small primary" disabled={busy} onClick={submitWaiver}>{busy ? "Guardando…" : "Eximir de pago"}</button>
+            <button className="btn small" disabled={busy} onClick={() => { setMode(null); setError(null); }}>Cancelar</button>
+          </div>
+        </div>
+      )}
+      {error && <div style={{ marginTop: 10 }}><ErrorBanner message={error} /></div>}
+    </div>
+  );
 }
 
 /** Cuánto aportan hoy las dos fuentes de ingreso del marketplace (verificación y artículos de apoyo). */
@@ -40,9 +192,11 @@ function MonetizationSummary({ refreshKey }: { refreshKey: number }) {
   return (
     <div className="kpis" style={{ marginBottom: 18 }}>
       <Kpi label="Verificaciones cobradas" value={fmtCLP(d.verification_paid_total_clp)}
-          note={`${plural(d.verification_paid_count, "pago", "pagos")} de ${fmtCLP(d.verification_fee_clp)} · ${plural(d.verification_waived_count, "eximida", "eximidas")}`} />
+          note={`${plural(d.verification_paid_count, "pago", "pagos")} de ${fmtCLP(d.verification_fee_clp)}`} />
       <Kpi label="Por cobrar" value={fmtCLP(d.verification_pending_total_clp)}
-          note={`${plural(d.verification_pending_count, "cuidadora", "cuidadoras")} con el pago pendiente`} />
+          note={`${plural(d.verification_pending_count, "cuidadora", "cuidadoras")} con el pago pendiente${d.verification_expired_count ? ` · ${d.verification_expired_count} con exención vencida` : ""}`} />
+      <Kpi label="Exenciones vigentes" value={String(d.verification_waived_count)}
+          note={`${fmtCLP(d.verification_waived_value_clp)} sin cobrar${d.verification_expiring_soon_count ? ` · ${plural(d.verification_expiring_soon_count, "vence", "vencen")} en 14 días` : ""}`} />
       <Kpi label="Clics a tiendas (30 días)" value={d.clicks_30d != null ? fmtNumber(d.clicks_30d) : "—"}
           note={d.clicks_total != null ? `${fmtNumber(d.clicks_total)} en total · ${plural(d.products_published, "artículo", "artículos")}` : "El sitio público no respondió"} />
       <Kpi label="Comisión estimada (30 días)" value={d.estimated_commission_30d_clp != null ? fmtCLP(d.estimated_commission_30d_clp) : "—"}
@@ -75,10 +229,11 @@ export default function Marketplace() {
 
 function CaregiversTab({ onChanged }: { onChanged: () => void }) {
   const [status, setStatus] = useState("");
+  const [fee, setFee] = useState("");
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const list = useApi(() => MarketplaceApi.listCaregivers({ status: status || undefined, q: q || undefined }), [status, q]);
+  const list = useApi(() => MarketplaceApi.listCaregivers({ status: status || undefined, fee: fee || undefined, q: q || undefined }), [status, fee, q]);
 
   return (
     <Card>
@@ -93,6 +248,13 @@ function CaregiversTab({ onChanged }: { onChanged: () => void }) {
               <option value="pending">Pendientes</option>
               <option value="approved">Aprobadas</option>
               <option value="suspended">Suspendidas</option>
+            </select>
+            <select className="select" value={fee} onChange={(e) => setFee(e.target.value)} aria-label="Estado del cobro">
+              <option value="">Todos los cobros</option>
+              <option value="unpaid">Por pagar</option>
+              <option value="paid">Pagadas</option>
+              <option value="waived">Eximidas vigentes</option>
+              <option value="expired">Exención vencida</option>
             </select>
           </div>
         }
@@ -114,7 +276,7 @@ function CaregiversTab({ onChanged }: { onChanged: () => void }) {
                 <td className="num">{c.rating_avg != null ? <Stars rating={c.rating_avg} /> : "—"}</td>
                 <td><EngagementChip isEngaged={c.is_engaged} /></td>
                 <td><StatusChip status={c.status} /></td>
-                <td><FeeChip status={c.verification_fee_status} /></td>
+                <td><FeeChip c={c} /></td>
                 <td>{c.pending_documents > 0 ? <Chip kind="warn">{c.pending_documents} por revisar</Chip> : <span style={{ color: "var(--ac-text-tertiary)" }}>—</span>}</td>
                 <td>{fmtDate(c.submitted_at)}</td>
               </tr>
@@ -171,20 +333,6 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
       detail.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo registrar la revisión del documento.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function setFee(action: "paid" | "waived" | "unpaid") {
-    setBusy(true);
-    setError(null);
-    try {
-      await MarketplaceApi.setVerification(id, action);
-      onChanged();
-      detail.reload();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo actualizar el cobro.");
     } finally {
       setBusy(false);
     }
@@ -249,38 +397,7 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
           <div className="field-value">{c.certifications_count}</div>
 
           <div className="field-label">Cobro de verificación</div>
-          <div style={{ border: "1px solid var(--ac-border)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 700 }}>{fmtCLP(c.verification_fee_clp)} · pago único</span>
-              <FeeChip status={c.verification_fee_status} />
-            </div>
-            {c.verification_reference && (
-              <div style={{ fontSize: 12, color: "var(--ac-text-secondary)", marginTop: 6 }}>
-                Código de pago de la cuidadora: <b style={{ letterSpacing: ".06em" }}>{c.verification_reference}</b>
-              </div>
-            )}
-            <div style={{ fontSize: 11.5, color: "var(--ac-text-secondary)", marginTop: 6 }}>
-              {c.verification_fee_status === "paid"
-                ? "Con el pago, el sitio muestra «Perfil calificado» y la ubica primero en las búsquedas."
-                : "Sin pago confirmado el sitio no muestra insignia ni la prioriza (eximida = sin insignia)."}
-            </div>
-            {c.verification_fee_status !== "unpaid" && c.verification_marked_by && (
-              <div style={{ fontSize: 11, color: "var(--ac-text-tertiary)", marginTop: 6 }}>
-                {c.verification_fee_status === "paid" ? "Pago confirmado" : "Eximida"} por {c.verification_marked_by}
-                {c.verification_paid_at ? ` · ${fmtDate(c.verification_paid_at)}` : ""}
-              </div>
-            )}
-            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-              {c.verification_fee_status === "unpaid" ? (
-                <>
-                  <button className="btn small primary" disabled={busy} onClick={() => setFee("paid")}>Confirmar pago recibido</button>
-                  <button className="btn small" disabled={busy} onClick={() => setFee("waived")}>Eximir de pago</button>
-                </>
-              ) : (
-                <button className="btn small" disabled={busy} onClick={() => setFee("unpaid")}>Revertir</button>
-              )}
-            </div>
-          </div>
+          <FeePanel c={c} onChanged={() => { onChanged(); detail.reload(); }} />
 
           <div className="field-label">Documentos</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 4 }}>
@@ -357,9 +474,9 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
 
           {error && <div style={{ marginTop: 12 }}><ErrorBanner message={error} /></div>}
 
-          {c.status !== "approved" && c.verification_fee_status === "unpaid" && (
+          {c.status !== "approved" && (c.verification_fee_status === "unpaid" || c.verification_waiver_expired) && (
             <div style={{ marginTop: 14, fontSize: 12, color: "var(--ac-warn-700)", background: "var(--ac-warn-100)", borderRadius: 10, padding: "8px 12px" }}>
-              Falta el pago de la verificación: confirma el pago recibido o exime a la cuidadora para poder aprobar su perfil.
+              Falta el pago de la verificación (o su exención venció): confirma el pago o vuelve a eximirla para poder aprobar su perfil.
             </div>
           )}
           {c.status !== "approved" && !c.certifications_verified && (
@@ -369,10 +486,10 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
           )}
           <div style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
             {c.status === "suspended" && (
-              <button className="btn primary" disabled={locked || !c.certifications_verified || c.verification_fee_status === "unpaid"} onClick={() => act("approved")}>Reactivar perfil</button>
+              <button className="btn primary" disabled={locked || !c.certifications_verified || (c.verification_fee_status === "unpaid" || c.verification_waiver_expired)} onClick={() => act("approved")}>Reactivar perfil</button>
             )}
             {c.status === "pending" && (
-              <button className="btn primary" disabled={locked || !c.certifications_verified || c.verification_fee_status === "unpaid"} onClick={() => act("approved")}>Aprobar perfil</button>
+              <button className="btn primary" disabled={locked || !c.certifications_verified || (c.verification_fee_status === "unpaid" || c.verification_waiver_expired)} onClick={() => act("approved")}>Aprobar perfil</button>
             )}
             {c.status !== "suspended" && (
               <button className="btn danger" disabled={locked} onClick={() => act("suspended")}>Suspender</button>

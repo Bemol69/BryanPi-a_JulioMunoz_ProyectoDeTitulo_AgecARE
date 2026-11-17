@@ -73,9 +73,24 @@ export interface CaregiverOut {
   verification_reference: string | null;
   verification_paid_at: string | null;
   verification_marked_by: string | null;
+  verification_waiver_reason: WaiverReasonKey | null;
+  verification_waiver_note: string | null;
+  verification_waiver_until: string | null;
+  verification_waiver_expired: boolean; // exención vencida: cuenta como por pagar
+  verification_payment_method: PaymentMethodKey | null;
+  verification_receipt: string | null;
 }
 
 export type VerificationFeeStatus = "unpaid" | "paid" | "waived";
+export type WaiverReasonKey = "launch_promo" | "institution_agreement" | "scholarship" | "special_case";
+export type PaymentMethodKey = "transfer" | "deposit" | "cash" | "other";
+
+/** Decisión del equipo sobre el cobro: pago (con método y comprobante) o exención (con motivo y vigencia). */
+export interface VerificationInput {
+  action: "paid" | "waived" | "unpaid";
+  method?: PaymentMethodKey; receipt?: string;
+  reason?: WaiverReasonKey; days?: number | null; note?: string;
+}
 
 export interface CaregiverRankingItem {
   rank: number;
@@ -160,7 +175,11 @@ export interface MonetizationOut {
   verification_paid_total_clp: number;
   verification_pending_count: number;
   verification_pending_total_clp: number;
-  verification_waived_count: number;
+  verification_waived_count: number; // exenciones vigentes
+  verification_expired_count: number; // exenciones vencidas (ya cuentan como por cobrar)
+  verification_expiring_soon_count: number; // vencen en los próximos 14 días
+  verification_waived_value_clp: number; // lo que se dejó de cobrar por las exenciones vigentes
+  verification_waived_by_reason: Record<string, number>;
   products_published: number;
   products_sponsored: number;
   clicks_30d: number | null;

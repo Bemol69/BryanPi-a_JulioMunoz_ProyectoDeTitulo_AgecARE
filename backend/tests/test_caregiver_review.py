@@ -149,7 +149,7 @@ async def test_statuses_endpoint_is_internal_only(client, admin_headers):
     r = await client.get(f"{BASE}/caregivers/statuses", headers=INTERNAL)
     assert r.status_code == 200
     assert EMAIL in {i["email"] for i in r.json()["items"]}  # (el estado depende de las pruebas previas)
-    assert all(set(i) == {"email", "status", "qualified"} for i in r.json()["items"])  # sin más datos
+    assert all(set(i) == {"email", "status", "qualified", "listing_until"} for i in r.json()["items"])  # sin más datos
 
 
 async def test_site_can_query_the_review_state_of_the_documents(client, admin_headers, pushed):

@@ -53,11 +53,14 @@ async def push_status(email: str, status: str) -> None:
         raise _sync_failed()
 
 
-async def push_qualified(email: str, qualified: bool) -> None:
-    """Perfil calificado = verificación pagada. Si falla no se guarda el cambio (el sitio quedaría desfasado)."""
+async def push_qualified(email: str, qualified: bool, listing_until=None) -> None:
+    """Perfil calificado = verificación pagada. `listing_until` es la fecha en que vence una exención: desde
+    entonces el sitio oculta el perfil hasta que pague. Si falla no se guarda el cambio."""
     if not enabled():
         return
-    res = await _call("POST", "/internal/caregivers/qualified", json={"email": email, "qualified": qualified})
+    res = await _call("POST", "/internal/caregivers/qualified", json={
+        "email": email, "qualified": qualified,
+        "listing_until": listing_until.isoformat() if listing_until is not None else None})
     if res is None or (res.status_code >= 400 and res.status_code != 404):
         raise _sync_failed()
 

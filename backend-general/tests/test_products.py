@@ -128,7 +128,8 @@ async def test_caregiver_sees_her_verification_payment_state(client, maria, monk
     r = await client.get(f"{API}/caregiver/verification", headers=maria)
     assert r.status_code == 200, r.text
     assert r.json() == {"available": True, "fee_clp": 9990, "status": "unpaid", "reference": "AC-1A2B3C",
-                        "paid_at": None, "payment_info": ""}
+                        "paid_at": None, "payment_info": "", "waiver_reason": None, "waiver_until": None,
+                        "waiver_expired": False}
 
 
 async def test_verification_state_is_hidden_when_the_console_does_not_answer(client, maria, monkeypatch):

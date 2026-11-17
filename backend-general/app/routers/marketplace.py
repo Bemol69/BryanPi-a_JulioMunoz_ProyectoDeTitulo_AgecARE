@@ -10,6 +10,7 @@ from app.deps import CurrentUser, Db
 from app.chat_retention import purge_expired
 from app.errors import conflict, forbidden, not_found
 from app.hiring import caregiver_name, patient_first_name, resolve_patient
+from app.visibility import is_publicly_visible
 from app.routers.chat import add_message, get_or_create_conversation
 from app.schemas.common import Page
 from app.schemas.marketplace import (CaregiverCardOut, CaregiverPublicOut, ContactIn, ContactOut,
@@ -62,7 +63,7 @@ async def search_caregivers(db: Db, user: CurrentUser,
         stmt = stmt.where(models.User.full_name.ilike(f"%{q}%"))
     if min_rating is not None:
         stmt = stmt.where(models.CaregiverProfile.rating_avg >= min_rating)
-    rows = (await db.execute(stmt)).scalars().all()
+    rows = [c for c in (await db.execute(stmt)).scalars().all() if is_publicly_visible(c)]
 
     def matches_list_field(value_list, needle):
         if not needle:
@@ -91,7 +92,7 @@ async def search_caregivers(db: Db, user: CurrentUser,
 
 async def _get_listed(db: Db, profile_id: UUID) -> models.CaregiverProfile:
     p = await db.get(models.CaregiverProfile, profile_id)
-    if p is None or not p.is_listed or p.admin_status != "approved":
+    if p is None or not is_publicly_visible(p):
         raise not_found("El perfil solicitado no existe.")
     return p
 

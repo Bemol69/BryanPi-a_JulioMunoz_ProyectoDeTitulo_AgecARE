@@ -26,6 +26,7 @@ class StatusIn(BaseModel):
 class QualifiedIn(BaseModel):
     email: str
     qualified: bool
+    listing_until: datetime | None = None  # vence la exención de pago: el perfil se oculta desde esa fecha
 
 
 class DocumentReviewIn(BaseModel):
@@ -91,7 +92,9 @@ async def set_caregiver_status(body: StatusIn, db: Db):
 @router.post("/caregivers/qualified", status_code=204)
 async def set_caregiver_qualified(body: QualifiedIn, db: Db):
     """La Consola informa si la cuidadora pagó su verificación: solo entonces muestra "Perfil calificado"."""
-    (await _profile_by_email(db, body.email)).is_qualified = body.qualified
+    profile = await _profile_by_email(db, body.email)
+    profile.is_qualified = body.qualified
+    profile.listing_until = body.listing_until
 
 
 @router.delete("/caregivers", status_code=204)

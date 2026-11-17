@@ -45,6 +45,9 @@ class VerificationOut(BaseModel):
     reference: str | None = None  # código que la cuidadora indica al pagar
     paid_at: datetime | None = None
     payment_info: str = ""
+    waiver_reason: str | None = None  # motivo de la exención (si la tiene)
+    waiver_until: datetime | None = None  # hasta cuándo rige; después debe pagar para seguir publicada
+    waiver_expired: bool = False
 
 
 class CaregiverProfileOut(BaseModel):

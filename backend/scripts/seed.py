@@ -372,10 +372,15 @@ async def seed() -> None:
             if cg.status == "approved":
                 if cg.email == "andres@cuidado.cl":
                     cg.verification_fee_status, cg.verification_marked_by = "waived", "Administrador AgeCare"
+                    cg.verification_waiver_reason = "launch_promo"
+                    cg.verification_waiver_note = "Cuidador piloto del lanzamiento."
+                    cg.verification_waiver_until = now_ + timedelta(days=60)
                 else:
                     cg.verification_fee_status = "paid"
                     cg.verification_paid_at = now_ - timedelta(days=3 + n * 4)
                     cg.verification_marked_by = "Administrador AgeCare"
+                    cg.verification_payment_method = "transfer"
+                    cg.verification_receipt = f"TR-{20260 + n}"
         db.add_all(caregivers)
         db.add_all([
             models.Product(

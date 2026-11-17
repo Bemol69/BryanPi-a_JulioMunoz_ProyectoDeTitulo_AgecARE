@@ -1,6 +1,8 @@
 """Catálogos del marketplace: perfiles de cuidadoras, artículos de apoyo,
 reseñas, puntos de fidelización y ranking."""
 import secrets
+from datetime import timedelta
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -20,7 +22,7 @@ from app.schemas.operation import (CaregiverDocumentOut, CaregiverDocumentReview
                                    CaregiverReviewSyncIn, CaregiverSyncIn, ProductCreateIn,
                                    MonetizationOut, ProductOut, ProductPatchIn, ReviewArchiveIn,
                                    VerificationIn, VerificationSiteOut)
-from app.security import now_utc
+from app.security import as_utc, now_utc
 
 router = APIRouter(prefix="/marketplace", tags=["Catálogos marketplace"])
 
@@ -87,7 +89,28 @@ def _cg_out(c: models.CaregiverProfile, include_note: bool = False) -> Caregiver
                         verification_fee_clp=c.verification_fee_clp,
                         verification_reference=c.verification_reference,
                         verification_paid_at=c.verification_paid_at,
-                        verification_marked_by=c.verification_marked_by)
+                        verification_marked_by=c.verification_marked_by,
+                        verification_waiver_reason=c.verification_waiver_reason,
+                        verification_waiver_note=c.verification_waiver_note,
+                        verification_waiver_until=c.verification_waiver_until,
+                        verification_waiver_expired=_waiver_expired(c),
+                        verification_payment_method=c.verification_payment_method,
+                        verification_receipt=c.verification_receipt)
+
+
+def _waiver_expired(c: models.CaregiverProfile, now=None) -> bool:
+    """Exención con fecha de vencimiento que ya pasó: vuelve a ser un cobro pendiente."""
+    until = as_utc(c.verification_waiver_until)
+    return c.verification_fee_status == "waived" and until is not None and until <= (now or now_utc())
+
+
+def _effective_fee_status(c: models.CaregiverProfile) -> str:
+    return "unpaid" if _waiver_expired(c) else c.verification_fee_status
+
+
+def _listing_until(c: models.CaregiverProfile):
+    """Fecha desde la cual el sitio debe ocultar el perfil (solo las exenciones con vencimiento)."""
+    return c.verification_waiver_until if c.verification_fee_status == "waived" else None
 
 
 def _new_reference() -> str:
@@ -226,9 +249,10 @@ async def sync_document(body: CaregiverDocumentSyncIn, db: Db):
 @router.get("/caregivers/statuses", dependencies=[Depends(require_internal_key)])
 async def caregiver_statuses(db: Db):
     cg = models.CaregiverProfile
-    rows = (await db.execute(select(cg.email, cg.status, cg.verification_fee_status))).all()
-    return {"items": [CaregiverStatusItem(email=e, status=CaregiverStatus(st), qualified=fee == "paid").model_dump()
-                      for e, st, fee in rows]}
+    rows = (await db.execute(select(cg))).scalars().all()
+    return {"items": [CaregiverStatusItem(email=c.email, status=CaregiverStatus(c.status),
+                                          qualified=c.verification_fee_status == "paid",
+                                          listing_until=_listing_until(c)).model_dump() for c in rows]}
 
 
 # El sitio público consulta aquí las decisiones del staff sobre los documentos, por si el aviso de
@@ -255,8 +279,10 @@ async def caregiver_verification_for_site(db: Db, email: str = Query(max_length=
         raise not_found("No se encontró una cuidadora sincronizada con ese correo.")
     if c.verification_reference is None:  # perfiles anteriores al cobro
         c.verification_reference = _new_reference()
-    return VerificationSiteOut(fee_clp=c.verification_fee_clp, status=c.verification_fee_status,
-                               reference=c.verification_reference, paid_at=c.verification_paid_at)
+    return VerificationSiteOut(fee_clp=c.verification_fee_clp, status=_effective_fee_status(c),
+                               reference=c.verification_reference, paid_at=c.verification_paid_at,
+                               waiver_reason=c.verification_waiver_reason, waiver_until=c.verification_waiver_until,
+                               waiver_expired=_waiver_expired(c))
 
 
 # ---------- 10.1 Listar cuidadoras ----------
@@ -266,11 +292,22 @@ async def list_caregivers(db: Db,
                           zone: str | None = None,
                           specialty: str | None = None,
                           q: str | None = Query(default=None, max_length=120),
+                          fee: Literal["paid", "unpaid", "waived", "expired"] | None = None,
                           page: int = Query(default=1, ge=1),
                           page_size: int = Query(default=25, ge=1, le=100)):
     stmt = select(models.CaregiverProfile)
     if status_f:
         stmt = stmt.where(models.CaregiverProfile.status == status_f)
+    if fee:
+        cg, now = models.CaregiverProfile, now_utc()
+        expired = (cg.verification_fee_status == "waived") & cg.verification_waiver_until.is_not(None) \
+            & (cg.verification_waiver_until <= now)
+        stmt = stmt.where({
+            "paid": cg.verification_fee_status == "paid",
+            "waived": (cg.verification_fee_status == "waived") & ~expired,
+            "expired": expired,
+            "unpaid": (cg.verification_fee_status == "unpaid") | expired,  # una exención vencida cuenta como por pagar
+        }[fee])
     if zone:
         stmt = stmt.where(models.CaregiverProfile.zone.ilike(f"%{zone}%"))
     if q:
@@ -311,10 +348,11 @@ async def patch_caregiver(caregiver_id: UUID, body: CaregiverPatchIn, request: R
             raise conflict("CERTIFICATION_REQUIRED",
                            "Para aprobar el perfil primero aprueba su cédula de identidad y su "
                            "certificado de antecedentes.")
-        if body.status == CaregiverStatus.approved and c.verification_fee_status == "unpaid":
+        if body.status == CaregiverStatus.approved and _effective_fee_status(c) == "unpaid":
             raise conflict("VERIFICATION_FEE_PENDING",
-                           "Falta el pago de la verificación. Confirma el pago recibido o exime a la "
-                           "cuidadora antes de aprobar su perfil.")
+                           ("La exención de pago de esta cuidadora venció. " if _waiver_expired(c) else
+                            "Falta el pago de la verificación. ") +
+                           "Confirma el pago recibido o vuelve a eximirla antes de aprobar su perfil.")
         if body.status == CaregiverStatus.suspended and not body.reason:
             raise invalid("REASON_REQUIRED", "Para suspender un perfil debes indicar el motivo.")
         c.status = body.status
@@ -340,17 +378,38 @@ async def set_verification(caregiver_id: UUID, body: VerificationIn, request: Re
     c = await db.get(models.CaregiverProfile, caregiver_id)
     if c is None:
         raise not_found()
-    before = {"verification_fee_status": c.verification_fee_status}
+    if body.action == "unpaid" and c.status == "approved":
+        # Invariante: un perfil publicado siempre tiene el pago confirmado o una exención vigente.
+        raise conflict("FEE_REVERT_BLOCKED",
+                       "El perfil está aprobado. Suspéndelo antes de revertir el cobro, para no dejar publicado "
+                       "un perfil sin pago ni exención.")
+    now = now_utc()
+    before = {"verification_fee_status": c.verification_fee_status,
+              "waiver_reason": c.verification_waiver_reason, "waiver_until": str(c.verification_waiver_until)}
+    # Cada decisión reemplaza a la anterior: no quedan datos de un pago o exención que ya no rige.
+    c.verification_paid_at = c.verification_marked_by = None
+    c.verification_waiver_reason = c.verification_waiver_note = c.verification_waiver_until = None
+    c.verification_payment_method = c.verification_receipt = None
     c.verification_fee_status = body.action
-    c.verification_paid_at = now_utc() if body.action == "paid" else None
-    c.verification_marked_by = admin.full_name if body.action != "unpaid" else None
+    if body.action == "paid":
+        c.verification_paid_at = now
+        c.verification_marked_by = admin.full_name
+        c.verification_payment_method = body.method or "transfer"
+        c.verification_receipt = (body.receipt or "").strip() or None
+    elif body.action == "waived":
+        c.verification_marked_by = admin.full_name
+        c.verification_waiver_reason = body.reason
+        c.verification_waiver_note = (body.note or "").strip() or None
+        c.verification_waiver_until = now + timedelta(days=body.days) if body.days else None
     if c.verification_reference is None:
         c.verification_reference = _new_reference()
     await audit(db, request, "marketplace.verification_fee", "caregiver_profile", c.id, before=before,
-                after={"verification_fee_status": c.verification_fee_status,
-                       "amount_clp": c.verification_fee_clp})
-    # "Perfil calificado" solo si pagó: eximida o sin pago no muestra nada. Si no se puede avisar, no se guarda.
-    await general_client.push_qualified(c.email, c.verification_fee_status == "paid")
+                after={"verification_fee_status": c.verification_fee_status, "amount_clp": c.verification_fee_clp,
+                       "waiver_reason": c.verification_waiver_reason, "waiver_until": str(c.verification_waiver_until),
+                       "method": c.verification_payment_method, "receipt": c.verification_receipt})
+    # "Perfil calificado" solo si pagó. Una exención con vencimiento hace que el sitio oculte el perfil en esa
+    # fecha. Si no se puede avisar, no se guarda.
+    await general_client.push_qualified(c.email, c.verification_fee_status == "paid", _listing_until(c))
     return _cg_out(c, include_note=True)
 
 
@@ -710,12 +769,18 @@ async def patch_product(product_id: UUID, body: ProductPatchIn, request: Request
 @router.get("/monetization", response_model=MonetizationOut, dependencies=[require("marketplace")])
 async def monetization(db: Db):
     """Cuánto aportan hoy las dos fuentes de ingreso del marketplace: verificación y artículos."""
-    cg = models.CaregiverProfile
-    rows = (await db.execute(
-        select(cg.verification_fee_status, func.count(cg.id), func.coalesce(func.sum(cg.verification_fee_clp), 0))
-        .group_by(cg.verification_fee_status))).all()
-    by_status = {st: (int(n), int(total)) for st, n, total in rows}
-    fee_row = (await db.execute(select(cg.verification_fee_clp).limit(1))).first()
+    caregivers = (await db.execute(select(models.CaregiverProfile))).scalars().all()
+    now = now_utc()
+    paid = [c for c in caregivers if c.verification_fee_status == "paid"]
+    expired = [c for c in caregivers if _waiver_expired(c, now)]
+    waived = [c for c in caregivers if c.verification_fee_status == "waived" and c not in expired]
+    pending = [c for c in caregivers if c.verification_fee_status == "unpaid"] + expired  # vencidas = por cobrar
+    soon = [c for c in waived if c.verification_waiver_until is not None
+            and as_utc(c.verification_waiver_until) <= now + timedelta(days=14)]
+    by_reason: dict[str, int] = {}
+    for c in waived:
+        key = c.verification_waiver_reason or "unspecified"
+        by_reason[key] = by_reason.get(key, 0) + 1
 
     products = (await db.execute(select(models.Product).where(models.Product.status == "published"))).scalars().all()
     stats = await general_client.fetch_product_stats()
@@ -726,14 +791,17 @@ async def monetization(db: Db):
         estimate = round(sum(
             int(stats.get(str(p.id), {}).get("clicks_30d", 0)) * (ASSUMED_CONVERSION_PCT / 100)
             * (p.price_clp or 0) * ((p.commission_pct or 0) / 100) for p in products))
-    zero = (0, 0)
     return MonetizationOut(
-        verification_fee_clp=fee_row[0] if fee_row else 9990,
-        verification_paid_count=by_status.get("paid", zero)[0],
-        verification_paid_total_clp=by_status.get("paid", zero)[1],
-        verification_pending_count=by_status.get("unpaid", zero)[0],
-        verification_pending_total_clp=by_status.get("unpaid", zero)[1],
-        verification_waived_count=by_status.get("waived", zero)[0],
+        verification_fee_clp=caregivers[0].verification_fee_clp if caregivers else 9990,
+        verification_paid_count=len(paid),
+        verification_paid_total_clp=sum(c.verification_fee_clp for c in paid),
+        verification_pending_count=len(pending),
+        verification_pending_total_clp=sum(c.verification_fee_clp for c in pending),
+        verification_waived_count=len(waived),
+        verification_expired_count=len(expired),
+        verification_expiring_soon_count=len(soon),
+        verification_waived_value_clp=sum(c.verification_fee_clp for c in waived),
+        verification_waived_by_reason=by_reason,
         products_published=len(products), products_sponsored=sum(1 for p in products if p.is_sponsored),
         clicks_30d=clicks_30d, clicks_total=clicks_total, estimated_commission_30d_clp=estimate,
         assumed_conversion_pct=ASSUMED_CONVERSION_PCT)

@@ -301,6 +301,13 @@ class CaregiverProfile(Base):
     verification_reference: Mapped[str | None] = mapped_column(String(20), nullable=True)
     verification_paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     verification_marked_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # Exención: motivo obligatorio y vencimiento opcional (None = sin vencimiento). Vencida = vuelve a "por pagar".
+    verification_waiver_reason: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    verification_waiver_note: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    verification_waiver_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Pago: cómo y con qué comprobante se recibió (para conciliar con el banco).
+    verification_payment_method: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    verification_receipt: Mapped[str | None] = mapped_column(String(60), nullable=True)
 
 
 class CaregiverDocument(Base):

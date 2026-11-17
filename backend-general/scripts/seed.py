@@ -128,7 +128,8 @@ async def seed() -> None:
                 years_experience=c["years_experience"], specialties=c["specialties"],
                 languages=c["languages"], zones=c["zones"], certifications=c["certifications"],
                 is_listed=True, is_featured=c["featured"], admin_status="approved",
-                is_qualified=c["slug"] in QUALIFIED_SLUGS)
+                is_qualified=c["slug"] in QUALIFIED_SLUGS,
+                listing_until=NOW + timedelta(days=60) if c["slug"] == "andres" else None)
             db.add(profile)
             await db.flush()
             for i, rating in enumerate(c["rating_seed"]):

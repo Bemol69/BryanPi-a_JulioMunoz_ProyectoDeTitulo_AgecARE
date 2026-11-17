@@ -99,6 +99,8 @@ class CaregiverProfile(Base):
     # "Perfil calificado": la cuidadora pagó su verificación (lo informa la Consola). Muestra la
     # insignia y la ubica primero en las búsquedas. Eximida o sin pago = sin insignia ni prioridad.
     is_qualified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # Exención con vencimiento: desde esta fecha el perfil deja de mostrarse hasta que pague (la fija la Consola).
+    listing_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Estado de revisión que decide el staff en la Consola: solo las cuidadoras
     # 'approved' (y con is_listed) aparecen en el marketplace.
     admin_status: Mapped[str] = mapped_column(String(12), default="pending")  # pending | approved | suspended

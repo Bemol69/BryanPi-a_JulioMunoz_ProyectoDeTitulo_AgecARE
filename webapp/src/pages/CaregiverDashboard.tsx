@@ -205,24 +205,48 @@ function DocumentRow({ type, label, hint, doc, onUploaded }: {
 
 type DocsState = { data: CaregiverDocumentOut[] | null; loading: boolean; error: string | null; reload: () => void };
 
+const WAIVER_REASON_LABEL: Record<string, string> = {
+  launch_promo: "promoción de lanzamiento", institution_agreement: "convenio con una institución",
+  scholarship: "beca", special_case: "caso especial",
+};
+
 /** Cobro único por verificar identidad y antecedentes. El equipo confirma el pago desde la Consola. */
 function VerificationCard() {
   const v = useApi(() => CaregiverApi.verification(), []);
   const [copied, setCopied] = useState(false);
   if (v.loading || !v.data || !v.data.available) return null;
-  const { status, fee_clp, reference, paid_at, payment_info } = v.data;
+  const { status, fee_clp, reference, paid_at, payment_info, waiver_reason, waiver_until, waiver_expired } = v.data;
 
-  if (status === "paid" || status === "waived") {
+  if (status === "paid") {
     return (
       <div className="verify-card done">
         <span className="verify-ico">✓</span>
         <div>
-          <b>{status === "paid" ? "Verificación pagada" : "Verificación sin costo para ti"}</b>
+          <b>Verificación pagada</b>
           <span>
-            {status === "paid" && paid_at ? `Pago confirmado el ${fmtDate(paid_at)}. ` : ""}
-            {status === "paid"
-              ? "Tu perfil se muestra con la insignia «Perfil calificado» y aparece primero en las búsquedas de las familias. "
-              : "El equipo revisa tus documentos antes de publicar tu perfil. "}
+            {paid_at ? `Pago confirmado el ${fmtDate(paid_at)}. ` : ""}
+            Tu perfil se muestra con la insignia «Perfil calificado» y aparece primero en las búsquedas de las familias.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "waived") {
+    const daysLeft = waiver_until ? Math.ceil((new Date(waiver_until).getTime() - Date.now()) / 86_400_000) : null;
+    const soon = daysLeft != null && daysLeft <= 7;
+    return (
+      <div className={`verify-card ${soon ? "pending" : "done"}`}>
+        <span className="verify-ico">{soon ? "⏳" : "✓"}</span>
+        <div>
+          <b>Verificación sin costo para ti</b>
+          <span>
+            {waiver_reason ? `Motivo: ${WAIVER_REASON_LABEL[waiver_reason] ?? waiver_reason}. ` : ""}
+            {waiver_until
+              ? `Vigente hasta el ${fmtDate(waiver_until)}${soon ? ` (te quedan ${Math.max(daysLeft, 0)} días)` : ""}; después deberás pagar la verificación para seguir publicada. `
+              : "Sin fecha de vencimiento. "}
+            El equipo revisa tus documentos antes de publicar tu perfil. Al pagar, tu perfil muestra la insignia
+            «Perfil calificado» y aparece primero en las búsquedas.
           </span>
         </div>
       </div>
@@ -244,11 +268,14 @@ function VerificationCard() {
     <div className="verify-card pending">
       <span className="verify-ico">🛡️</span>
       <div style={{ flex: 1 }}>
-        <b>Verificación AgeCare · {fmtCLP(fee_clp)} (pago único)</b>
+        <b>{waiver_expired ? "Tu exención venció" : `Verificación AgeCare · ${fmtCLP(fee_clp)} (pago único)`}</b>
         <span>
-          Cubre la revisión de tu cédula y tus antecedentes. Con el pago, tu perfil se muestra con la insignia «Perfil
-          calificado» y aparece primero en las búsquedas de las familias. Tu perfil se publica cuando el equipo confirme
-          el pago y apruebe tus documentos. Puedes subir tus documentos ahora mismo.
+          {waiver_expired
+            ? `Tu exención${waiver_reason ? ` (${WAIVER_REASON_LABEL[waiver_reason] ?? waiver_reason})` : ""} terminó${waiver_until ? ` el ${fmtDate(waiver_until)}` : ""}. `
+              + `Tu perfil no aparece en las búsquedas hasta que pagues la verificación de ${fmtCLP(fee_clp)}. `
+            : "Cubre la revisión de tu cédula y tus antecedentes. "}
+          Con el pago, tu perfil se muestra con la insignia «Perfil calificado» y aparece primero en las búsquedas de las
+          familias. {waiver_expired ? "" : "Tu perfil se publica cuando el equipo confirme el pago y apruebe tus documentos. Puedes subir tus documentos ahora mismo."}
         </span>
         {reference && (
           <div className="verify-ref">

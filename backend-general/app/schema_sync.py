@@ -7,6 +7,7 @@ tablas nuevas, columnas nuevas y seguridad por filas (RLS) en las tablas nuevas.
 idempotente: si ya está al día, son solo dos consultas de lectura.
 """
 import logging
+from datetime import datetime
 
 import httpx
 from sqlalchemy import text
@@ -26,6 +27,7 @@ COLUMN_PATCHES: list[tuple[str, str, str]] = [
     ("caregiver_documents", "reviewed_at", "TIMESTAMP WITH TIME ZONE"),
     ("caregiver_engagements", "review_id", "UUID"),
     ("caregiver_profiles", "is_qualified", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("caregiver_profiles", "listing_until", "TIMESTAMP WITH TIME ZONE"),
     ("caregiver_reviews", "hidden", "BOOLEAN NOT NULL DEFAULT FALSE"),
     ("market_products", "vendor", "VARCHAR(120) NOT NULL DEFAULT ''"),
     ("market_products", "price_clp", "INTEGER"),
@@ -66,7 +68,7 @@ async def ensure_schema(engine) -> None:
             await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {ddl}"))
             if (table, column) == ("caregiver_profiles", "admin_status"):
                 admin_status_added = True
-            if (table, column) == ("caregiver_profiles", "is_qualified"):
+            if (table, column) in (("caregiver_profiles", "is_qualified"), ("caregiver_profiles", "listing_until")):
                 qualified_added = True
 
         if admin_status_added:
@@ -102,7 +104,9 @@ async def _backfill_statuses_from_admin(engine, *, statuses: bool = True, qualif
                     "(SELECT id FROM users WHERE lower(email) = lower(:email))"),
                     {"st": item["status"], "email": item["email"]})
             if qualified:  # quienes ya pagaron su verificación en la Consola
+                lu = item.get("listing_until")
                 await conn.execute(text(
-                    "UPDATE caregiver_profiles SET is_qualified = :q WHERE user_id IN "
+                    "UPDATE caregiver_profiles SET is_qualified = :q, listing_until = :lu WHERE user_id IN "
                     "(SELECT id FROM users WHERE lower(email) = lower(:email))"),
-                    {"q": bool(item.get("qualified")), "email": item["email"]})
+                    {"q": bool(item.get("qualified")), "lu": datetime.fromisoformat(lu) if lu else None,
+                     "email": item["email"]})

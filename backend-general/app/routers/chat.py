@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from sqlalchemy import or_, select
 
 from app import models
+from app.visibility import is_publicly_visible
 from app.chat_retention import purge_expired
 from app.deps import CurrentUser, Db
 from app.errors import forbidden, not_found
@@ -102,7 +103,7 @@ async def start_chat(body: ChatStartIn, db: Db, user: CurrentUser):
     if user.account_type != "family":
         raise forbidden("Solo una cuenta de familia puede iniciar una conversación.")
     profile = await db.get(models.CaregiverProfile, body.profile_id)
-    if profile is None or not profile.is_listed or profile.admin_status != "approved":
+    if profile is None or not is_publicly_visible(profile):
         raise not_found("El perfil solicitado no existe.")
     await purge_expired(db)
     conv, _ = await get_or_create_conversation(db, profile, user)

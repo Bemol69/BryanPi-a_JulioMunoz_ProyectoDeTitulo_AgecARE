@@ -123,7 +123,9 @@ async def get_verification(db: Db, user: CurrentUser):
         return VerificationOut(available=False)
     return VerificationOut(available=True, fee_clp=remote["fee_clp"], status=remote["status"],
                            reference=remote.get("reference"), paid_at=remote.get("paid_at"),
-                           payment_info=get_settings().verification_payment_info)
+                           payment_info=get_settings().verification_payment_info,
+                           waiver_reason=remote.get("waiver_reason"), waiver_until=remote.get("waiver_until"),
+                           waiver_expired=bool(remote.get("waiver_expired")))
 
 
 @router.get("/documents", response_model=list[CaregiverDocumentOut])

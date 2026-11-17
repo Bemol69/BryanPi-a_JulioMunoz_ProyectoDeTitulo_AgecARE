@@ -245,4 +245,7 @@ export interface VerificationOut {
   reference: string | null; // código que se indica al pagar
   paid_at: string | null;
   payment_info: string;
+  waiver_reason: string | null; // motivo de la exención (si la tiene)
+  waiver_until: string | null; // hasta cuándo rige; después debe pagar para seguir publicada
+  waiver_expired: boolean;
 }

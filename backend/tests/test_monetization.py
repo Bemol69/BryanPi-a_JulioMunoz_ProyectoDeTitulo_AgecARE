@@ -11,7 +11,7 @@ EMAIL = "cobro.cuidadora@test.cl"
 @pytest.fixture
 def pushed(monkeypatch):
     """Registra los avisos al sitio público (estado y productos) en vez de hacer llamadas de red."""
-    calls = {"status": [], "products": [], "qualified": []}
+    calls = {"status": [], "products": [], "qualified": [], "listing_until": []}
 
     async def push_status(email, status):
         calls["status"].append((email, status))
@@ -25,8 +25,9 @@ def pushed(monkeypatch):
     async def push_document_review(email, doc_type, action, note):
         return None
 
-    async def push_qualified(email, qualified):
+    async def push_qualified(email, qualified, listing_until=None):
         calls["qualified"].append((email, qualified))
+        calls["listing_until"].append(listing_until)
 
     monkeypatch.setattr(general_client, "push_qualified", push_qualified)
     monkeypatch.setattr(general_client, "push_status", push_status)
@@ -37,11 +38,12 @@ def pushed(monkeypatch):
 
 
 STATS: dict = {}
+WAIVE = {"action": "waived", "reason": "institution_agreement"}  # sin vencimiento
 
 
-async def new_caregiver(client):
+async def new_caregiver(client, email=EMAIL):
     r = await client.post(f"{BASE}/caregivers/sync", headers=INTERNAL, json={
-        "external_user_id": "u-cobro", "name": "Cuidadora Cobro", "email": EMAIL, "zone": "Ñuñoa",
+        "external_user_id": "u-cobro", "name": "Cuidadora Cobro", "email": email, "zone": "Ñuñoa",
         "specialties": [], "languages": [], "certifications_count": 0})
     assert r.status_code in (200, 201), r.text
     return r.json()["caregiver_id"]
@@ -77,7 +79,7 @@ async def test_staff_can_confirm_waive_and_revert_the_fee(client, admin_headers,
     d = (await client.post(url, headers=admin_headers, json={"action": "paid"})).json()
     assert d["verification_fee_status"] == "paid" and d["verification_paid_at"] and d["verification_marked_by"]
 
-    d = (await client.post(url, headers=admin_headers, json={"action": "waived"})).json()
+    d = (await client.post(url, headers=admin_headers, json=WAIVE)).json()
     assert d["verification_fee_status"] == "waived" and d["verification_paid_at"] is None
 
     d = (await client.post(url, headers=admin_headers, json={"action": "unpaid"})).json()
@@ -97,19 +99,20 @@ async def test_waived_caregiver_can_be_approved_without_paying(client, admin_hea
         r = await client.post(f"{BASE}/caregivers/{cid}/documents/{t}/review", headers=admin_headers,
                               json={"action": "approve"})
         assert r.status_code == 200
-    await client.post(f"{BASE}/caregivers/{cid}/verification", headers=admin_headers, json={"action": "waived"})
+    await client.post(f"{BASE}/caregivers/{cid}/verification", headers=admin_headers, json=WAIVE)
     r = await client.patch(f"{BASE}/caregivers/{cid}", headers=admin_headers, json={"status": "approved"})
     assert r.status_code == 200
 
 
 async def test_only_a_paid_fee_makes_the_profile_qualified_on_the_site(client, admin_headers, pushed):
-    cid = await new_caregiver(client)
+    EMAIL = "calificada.cuidadora@test.cl"  # perfil propio: las demás pruebas dejan el suyo aprobado
+    cid = await new_caregiver(client, EMAIL)
     url = f"{BASE}/caregivers/{cid}/verification"
 
     await client.post(url, headers=admin_headers, json={"action": "paid"})
     assert pushed["qualified"][-1] == (EMAIL, True)  # pagó: perfil calificado
 
-    await client.post(url, headers=admin_headers, json={"action": "waived"})
+    await client.post(url, headers=admin_headers, json=WAIVE)
     assert pushed["qualified"][-1] == (EMAIL, False)  # eximida: sin insignia ni prioridad
 
     await client.post(url, headers=admin_headers, json={"action": "paid"})

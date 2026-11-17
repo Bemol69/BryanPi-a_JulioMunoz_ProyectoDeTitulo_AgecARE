@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
 from app.enums import (CaregiverStatus, ContentStatus, ContentType, ModerationItemType,
                        ModerationStatus, RejectReason)
@@ -71,6 +71,7 @@ class CaregiverStatusItem(BaseModel):
     email: str
     status: CaregiverStatus
     qualified: bool = False  # verificación pagada
+    listing_until: datetime | None = None  # exención con vencimiento: el sitio oculta el perfil al llegar esa fecha
 
 
 class CaregiverOut(BaseModel):
@@ -96,19 +97,55 @@ class CaregiverOut(BaseModel):
     verification_reference: str | None = None
     verification_paid_at: datetime | None = None
     verification_marked_by: str | None = None
+    verification_waiver_reason: str | None = None
+    verification_waiver_note: str | None = None
+    verification_waiver_until: datetime | None = None
+    verification_waiver_expired: bool = False  # exención vencida: cuenta como "por pagar"
+    verification_payment_method: str | None = None
+    verification_receipt: str | None = None
+
+
+WaiverReason = Literal["launch_promo", "institution_agreement", "scholarship", "special_case"]
+PaymentMethod = Literal["transfer", "deposit", "cash", "other"]
+WAIVER_DAYS = (30, 60, 90, 180, 365)
+# Estas exenciones son un beneficio temporal: siempre llevan fecha de vencimiento.
+WAIVER_REASONS_WITH_EXPIRY = ("launch_promo", "scholarship")
 
 
 class VerificationIn(BaseModel):
     """Decisión del equipo sobre el cobro de verificación de una cuidadora."""
     action: Literal["paid", "waived", "unpaid"]
+    # paid: cómo se recibió el pago y con qué comprobante (para conciliar con el banco)
+    method: PaymentMethod | None = None
+    receipt: str | None = Field(default=None, max_length=60)
+    # waived: motivo obligatorio, vigencia en días (None = sin vencimiento) y nota
+    reason: WaiverReason | None = None
+    days: int | None = None
+    note: str | None = Field(default=None, max_length=300)
+
+    @model_validator(mode="after")
+    def _check(self):
+        if self.action == "waived":
+            if self.reason is None:
+                raise ValueError("Indica el motivo de la exención.")
+            if self.reason == "special_case" and len((self.note or "").strip()) < 10:
+                raise ValueError("Para un caso especial explica el motivo (mínimo 10 caracteres).")
+            if self.days is not None and self.days not in WAIVER_DAYS:
+                raise ValueError(f"La vigencia debe ser de {', '.join(map(str, WAIVER_DAYS))} días o sin vencimiento.")
+            if self.days is None and self.reason in WAIVER_REASONS_WITH_EXPIRY:
+                raise ValueError("Esta exención debe tener fecha de vencimiento.")
+        return self
 
 
 class VerificationSiteOut(BaseModel):
     """Lo que el sitio público muestra a la cuidadora sobre su pago."""
     fee_clp: int
-    status: Literal["unpaid", "paid", "waived"]
+    status: Literal["unpaid", "paid", "waived"]  # una exención vencida se informa como "unpaid"
     reference: str | None = None
     paid_at: datetime | None = None
+    waiver_reason: str | None = None
+    waiver_until: datetime | None = None
+    waiver_expired: bool = False
 
 
 class CaregiverPatchIn(BaseModel):
@@ -272,7 +309,11 @@ class MonetizationOut(BaseModel):
     verification_paid_total_clp: int
     verification_pending_count: int
     verification_pending_total_clp: int
-    verification_waived_count: int
+    verification_waived_count: int  # exenciones vigentes
+    verification_expired_count: int  # exenciones vencidas (ya cuentan como "por cobrar")
+    verification_expiring_soon_count: int  # vencen en los próximos 14 días
+    verification_waived_value_clp: int  # lo que se dejó de cobrar por las exenciones vigentes
+    verification_waived_by_reason: dict[str, int] = {}
     products_published: int
     products_sponsored: int
     clicks_30d: int | None  # None si el sitio público no respondió

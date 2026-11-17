@@ -2,7 +2,7 @@ import { api, qs } from "./client";
 import type {
   AdoptionOut, AlertsOut, CaregiverDocumentOut, CaregiverOut, CaregiverRankingItem, CaregiverReviewOut,
   CommercialSummaryOut, FunnelOut, IncidentOut, LoginOutT, MarketingDashboardOut,
-  MeOut, MonetizationOut, OpsStatusOut, Page, PlansOut, ProductInput, ProductOut, RolesSummaryOut,
+  MeOut, MonetizationOut, VerificationInput, OpsStatusOut, Page, PlansOut, ProductInput, ProductOut, RolesSummaryOut,
   SupportSummaryOut, TicketOut,
 } from "./types";
 
@@ -15,7 +15,7 @@ export const AuthApi = {
 
 // ---- Marketplace / Fidelizacion (nuestro modulo) ----
 export const MarketplaceApi = {
-  listCaregivers: (params: { status?: string; zone?: string; q?: string; page?: number }) =>
+  listCaregivers: (params: { status?: string; zone?: string; q?: string; fee?: string; page?: number }) =>
     api.get<Page<CaregiverOut>>(`/marketplace/caregivers${qs({ ...params, page_size: 100 })}`),
   getCaregiver: (id: string) => api.get<CaregiverOut>(`/marketplace/caregivers/${id}`),
   deleteCaregiver: (id: string) => api.del<void>(`/marketplace/caregivers/${id}`),
@@ -38,8 +38,8 @@ export const MarketplaceApi = {
     api.get<Page<ProductOut>>(`/marketplace/products${qs({ ...params, page_size: 100 })}`),
   createProduct: (body: ProductInput) => api.post<ProductOut>("/marketplace/products", body),
   patchProduct: (id: string, body: Partial<ProductInput>) => api.patch<ProductOut>(`/marketplace/products/${id}`, body),
-  setVerification: (id: string, action: "paid" | "waived" | "unpaid") =>
-    api.post<CaregiverOut>(`/marketplace/caregivers/${id}/verification`, { action }),
+  setVerification: (id: string, body: VerificationInput) =>
+    api.post<CaregiverOut>(`/marketplace/caregivers/${id}/verification`, body),
   monetization: () => api.get<MonetizationOut>("/marketplace/monetization"),
 };
 

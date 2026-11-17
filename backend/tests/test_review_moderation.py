@@ -38,7 +38,8 @@ async def approved_caregiver(client, admin_headers, email):
         await client.post(f"{BASE}/caregivers/{cid}/documents/{t}/review", headers=admin_headers,
                           json={"action": "approve"})
     # Para aprobar también hay que resolver el cobro de verificación (se exime para la prueba).
-    await client.post(f"{BASE}/caregivers/{cid}/verification", headers=admin_headers, json={"action": "waived"})
+    await client.post(f"{BASE}/caregivers/{cid}/verification", headers=admin_headers,
+                      json={"action": "waived", "reason": "institution_agreement"})
     r = await client.patch(f"{BASE}/caregivers/{cid}", headers=admin_headers, json={"status": "approved"})
     assert r.status_code == 200, r.text
     return cid
