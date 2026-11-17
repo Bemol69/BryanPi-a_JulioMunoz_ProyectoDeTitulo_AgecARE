@@ -112,6 +112,7 @@ export interface CaregiverPublic extends CaregiverProfileOut {
   reviews: Review[];
   hired_by_me: boolean;
   my_engagement_id: string | null;
+  family_caregiver_name: string | null; // la familia ya tiene a otra cuidadora contratada: no puede contratar a una segunda
   is_engaged: boolean;
   can_review: boolean; // la familia terminó un trabajo con ella y aún no lo reseñó
   conversation_id: string | null;

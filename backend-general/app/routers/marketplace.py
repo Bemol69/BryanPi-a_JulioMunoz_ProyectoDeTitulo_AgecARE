@@ -9,6 +9,7 @@ from app import accounts, models
 from app.deps import CurrentUser, Db
 from app.chat_retention import purge_expired
 from app.errors import conflict, forbidden, not_found
+from app.hiring import caregiver_name, patient_first_name, resolve_patient
 from app.routers.chat import add_message, get_or_create_conversation
 from app.schemas.common import Page
 from app.schemas.marketplace import (CaregiverCardOut, CaregiverPublicOut, ContactIn, ContactOut,
@@ -127,6 +128,12 @@ async def get_caregiver_public(profile_id: UUID, db: Db, user: CurrentUser):
     conversation = (await db.execute(select(models.ChatConversation.id).where(
         models.ChatConversation.caregiver_profile_id == profile_id,
         models.ChatConversation.family_user_id == user.id))).first()
+    other_caregiver_name = None
+    if user.account_type == "family" and my_engagement is None:
+        # Solo se bloquea si TODOS sus adultos mayores ya tienen cuidadora; si alguno está libre, puede pedir.
+        _, current = await resolve_patient(db, user, None)
+        if current is not None and current.caregiver_profile_id != profile_id:
+            other_caregiver_name = await caregiver_name(db, current.caregiver_profile_id)
     return CaregiverPublicOut(
         profile_id=p.id, headline=p.headline, bio=p.bio, years_experience=p.years_experience,
         specialties=p.specialties or [], languages=p.languages or [], zones=p.zones or [],
@@ -134,6 +141,7 @@ async def get_caregiver_public(profile_id: UUID, db: Db, user: CurrentUser):
         is_listed=p.is_listed, is_featured=p.is_featured, is_qualified=p.is_qualified, full_name=p.user.full_name,
         photo_url=p.user.avatar_url, hired_by_me=my_engagement is not None,
         my_engagement_id=my_engagement.id if my_engagement else None,
+        family_caregiver_name=other_caregiver_name,
         is_engaged=await _is_engaged(db, profile_id), can_review=can_review,
         conversation_id=conversation[0] if conversation else None, my_request=my_request,
         reviews=[ReviewOut(review_id=r.id, rating=r.rating, comment=r.comment,
@@ -170,9 +178,18 @@ async def request_hire(profile_id: UUID, body: HireRequestIn, db: Db, user: Curr
         if member is None:
             raise forbidden("No tienes acceso a ese perfil de adulto mayor.")
 
+    # Cada adulto mayor tiene una sola cuidadora a la vez; una familia con varios puede tener una por cada uno.
+    patient_id, current = await resolve_patient(db, user, body.patient_id)
+    if current is not None:
+        who = await patient_first_name(db, patient_id)
+        raise conflict("PATIENT_ALREADY_HAS_CAREGIVER",
+                       f"{who + ' ya tiene' if who else 'Ya tienes'} una cuidadora contratada "
+                       f"({await caregiver_name(db, current.caregiver_profile_id)}). "
+                       "Finaliza ese trabajo antes de contratar a otra.")
+
     text = (body.message or "").strip() or None
     req = models.HireRequest(caregiver_profile_id=profile_id, family_user_id=user.id,
-                             patient_id=body.patient_id, message=text)
+                             patient_id=patient_id, message=text)
     db.add(req)
     await db.flush()
     await db.refresh(req)

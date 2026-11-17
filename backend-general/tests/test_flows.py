@@ -321,6 +321,14 @@ async def register_family(client, email):
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
+async def end_demo_job(client, family):
+    """La familia demo ya tiene contratada a María: una familia tiene una sola cuidadora a la vez,
+    así que para contratar a otra primero finaliza ese trabajo."""
+    pid = await profile_id_of(client, family, "María Torres")
+    eid = (await client.get(f"{API}/marketplace/caregivers/{pid}", headers=family)).json()["my_engagement_id"]
+    assert (await client.post(f"{API}/marketplace/engagements/{eid}/end", headers=family)).status_code == 204
+
+
 async def ask(client, headers, pid, **body):
     return await client.post(f"{API}/marketplace/caregivers/{pid}/hire-requests", json=body, headers=headers)
 
@@ -336,6 +344,7 @@ async def test_a_working_caregiver_cannot_be_requested_by_another_family(client,
 
 
 async def test_hire_request_is_accepted_by_the_caregiver(client, family, javiera):
+    await end_demo_job(client, family)
     pid = await profile_id_of(client, family, "Javiera Soto")
     r = await ask(client, family, pid, message="Necesito apoyo de lunes a viernes")
     assert r.status_code == 201 and r.json()["status"] == "pending", r.text
@@ -378,6 +387,7 @@ async def test_hire_request_is_accepted_by_the_caregiver(client, family, javiera
 
 
 async def test_caregiver_can_decline_and_family_can_cancel(client, family, javiera, maria):
+    await end_demo_job(client, family)
     pid = await profile_id_of(client, family, "Javiera Soto")
     await ask(client, family, pid)
     rid = (await client.get(f"{API}/caregiver/hire-requests", headers=javiera)).json()["items"][0]["request_id"]
@@ -397,6 +407,7 @@ async def test_caregiver_can_decline_and_family_can_cancel(client, family, javie
 
 
 async def test_accepting_one_request_leaves_the_others_unavailable(client, family, javiera):
+    await end_demo_job(client, family)
     pid = await profile_id_of(client, family, "Javiera Soto")
     other = await register_family(client, "otra@familia.cl")
     await ask(client, family, pid)

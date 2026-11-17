@@ -101,6 +101,8 @@ class CaregiverPublicOut(CaregiverProfileOut):
     reviews: list[ReviewOut] = []
     hired_by_me: bool = False
     my_engagement_id: UUID | None = None
+    # Si la familia ya tiene otra cuidadora contratada: su nombre (no puede contratar a una segunda).
+    family_caregiver_name: str | None = None
     is_engaged: bool = False
     can_review: bool = False  # la familia terminó un trabajo con ella y aún no lo reseñó
     conversation_id: UUID | None = None

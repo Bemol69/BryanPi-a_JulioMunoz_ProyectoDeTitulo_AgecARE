@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { MarketplaceApi, PatientsApi } from "../api/endpoints";
 import { useApi } from "../hooks/useApi";
@@ -113,6 +113,8 @@ export default function CaregiverDetail() {
               <button className="btn ghost" disabled>🕒 Solicitud enviada</button>
             ) : c.is_engaged ? (
               <button className="btn ghost" disabled title="Ya está trabajando con otra familia">En servicio</button>
+            ) : c.family_caregiver_name ? (
+              <button className="btn ghost" disabled title="Ya tienes una cuidadora contratada">Ya tienes cuidadora</button>
             ) : (
               <button className="btn ghost" onClick={() => setShowHire(true)}>Solicitar contratación</button>
             )}
@@ -137,6 +139,15 @@ export default function CaregiverDetail() {
               {c.my_request.status === "declined"
                 ? "La cuidadora no aceptó tu última solicitud. Puedes escribirle o enviar otra."
                 : "Tu última solicitud quedó sin efecto porque la cuidadora aceptó otro trabajo."}
+            </div>
+          )}
+          {!c.hired_by_me && !c.is_engaged && c.family_caregiver_name && (
+            <div className="working-note">
+              <i />
+              <span>
+                Ya tienes cuidadora contratada: <b>{c.family_caregiver_name}</b>. Cada adulto mayor tiene una cuidadora a la vez:
+                finaliza ese trabajo, o crea el perfil de otro familiar si necesitas una segunda cuidadora. Puedes escribirle igual.
+              </span>
             </div>
           )}
           {!c.hired_by_me && c.is_engaged && !c.my_request && (
@@ -218,14 +229,27 @@ function ContactModal({ profileId, onClose }: { profileId: string; onClose: () =
   );
 }
 
-function PatientPicker({ patientId, onChange }: { patientId: string; onChange: (id: string) => void }) {
+function PatientPicker({ patientId, onChange, blockWithCaregiver = false }: {
+  patientId: string; onChange: (id: string) => void; blockWithCaregiver?: boolean;
+}) {
   const patients = useApi(() => PatientsApi.list(), []);
-  if (!patients.data || patients.data.items.length <= 1) return null;
+  const items = patients.data?.items ?? [];
+  // Al contratar, un adulto mayor que ya tiene cuidadora no se puede elegir: queda marcado y se parte por uno libre.
+  const isBusy = (p: { caregiver_names: string[] }) => blockWithCaregiver && p.caregiver_names.length > 0;
+  const firstFree = items.find((p) => !isBusy(p));
+  useEffect(() => {
+    if (items.length > 1 && !patientId && firstFree) onChange(firstFree.patient_id);
+  }, [items.length, patientId, firstFree?.patient_id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (items.length <= 1) return null;
   return (
     <div className="field">
       <label>¿Sobre qué familiar es esto?</label>
       <select value={patientId} onChange={(e) => onChange(e.target.value)}>
-        {patients.data.items.map((p) => <option key={p.patient_id} value={p.patient_id}>{p.full_name}</option>)}
+        {items.map((p) => (
+          <option key={p.patient_id} value={p.patient_id} disabled={isBusy(p)}>
+            {p.full_name}{isBusy(p) ? ` · ya tiene cuidadora (${p.caregiver_names[0]})` : ""}
+          </option>
+        ))}
       </select>
     </div>
   );
@@ -300,7 +324,7 @@ function HireModal({ profileId, onClose, onDone }: { profileId: string; onClose:
         Le enviaremos tu solicitud a la cuidadora. El trabajo comienza cuando ella la <b>acepte</b>, y podrán
         conversar por el chat mientras tanto.
       </p>
-      <PatientPicker patientId={patientId} onChange={setPatientId} />
+      <PatientPicker patientId={patientId} onChange={setPatientId} blockWithCaregiver />
       <div className="field">
         <label>Mensaje (opcional)</label>
         <textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)}

@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.deps import CurrentUser, Db
 from app.enums import CaregiverDocType
 from app.errors import ApiError, conflict, forbidden, not_found
+from app.hiring import engagement_blocking
 from app.schemas.common import Page
 from app.schemas.marketplace import (CaregiverDocumentOut, CaregiverProfileOut,
                                      CaregiverProfilePatchIn, ContactMessageOut, EngagementOut,
@@ -282,6 +283,13 @@ async def accept_hire_request(request_id: UUID, db: Db, user: CurrentUser):
     if await _is_engaged(db, profile.id):
         raise conflict("ALREADY_WORKING", "Ya tienes un trabajo activo. Termínalo antes de aceptar otro.")
     now = now_utc()
+    # Cada adulto mayor tiene una sola cuidadora: si ya tiene otra, esta solicitud queda sin efecto.
+    if await engagement_blocking(db, r.family_user_id, r.patient_id) is not None:
+        r.status = "cancelled"
+        r.responded_at = now
+        await db.commit()  # el cambio de estado se guarda aunque se responda con error
+        raise conflict("PATIENT_ALREADY_HAS_CAREGIVER",
+                       "Este adulto mayor ya tiene otra cuidadora contratada, por eso la solicitud quedó sin efecto.")
     engagement = models.CaregiverEngagement(caregiver_profile_id=profile.id, family_user_id=r.family_user_id,
                                             patient_id=r.patient_id)
     db.add(engagement)
@@ -293,6 +301,15 @@ async def accept_hire_request(request_id: UUID, db: Db, user: CurrentUser):
         models.HireRequest.status == "pending", models.HireRequest.id != r.id))).scalars().all()
     for o in others:
         o.status = "unavailable"
+        o.responded_at = now
+    # Ese adulto mayor ya tiene su cuidadora: las otras solicitudes pendientes para él se cancelan.
+    # (Las que la familia envió para otro adulto mayor siguen su curso.)
+    same_patient = (models.HireRequest.patient_id == r.patient_id) if r.patient_id is not None else (
+        (models.HireRequest.family_user_id == r.family_user_id) & models.HireRequest.patient_id.is_(None))
+    family_others = (await db.execute(select(models.HireRequest).where(
+        same_patient, models.HireRequest.status == "pending", models.HireRequest.id != r.id))).scalars().all()
+    for o in family_others:
+        o.status = "cancelled"
         o.responded_at = now
     await db.flush()
     await db.refresh(engagement)
