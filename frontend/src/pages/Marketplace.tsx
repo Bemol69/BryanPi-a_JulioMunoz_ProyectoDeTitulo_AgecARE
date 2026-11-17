@@ -259,6 +259,11 @@ function CaregiverDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
                 Código de pago de la cuidadora: <b style={{ letterSpacing: ".06em" }}>{c.verification_reference}</b>
               </div>
             )}
+            <div style={{ fontSize: 11.5, color: "var(--ac-text-secondary)", marginTop: 6 }}>
+              {c.verification_fee_status === "paid"
+                ? "Con el pago, el sitio muestra «Perfil calificado» y la ubica primero en las búsquedas."
+                : "Sin pago confirmado el sitio no muestra insignia ni la prioriza (eximida = sin insignia)."}
+            </div>
             {c.verification_fee_status !== "unpaid" && c.verification_marked_by && (
               <div style={{ fontSize: 11, color: "var(--ac-text-tertiary)", marginTop: 6 }}>
                 {c.verification_fee_status === "paid" ? "Pago confirmado" : "Eximida"} por {c.verification_marked_by}

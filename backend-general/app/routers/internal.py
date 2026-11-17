@@ -23,6 +23,11 @@ class StatusIn(BaseModel):
     status: Literal["pending", "approved", "suspended"]
 
 
+class QualifiedIn(BaseModel):
+    email: str
+    qualified: bool
+
+
 class DocumentReviewIn(BaseModel):
     email: str
     doc_type: str
@@ -81,6 +86,12 @@ def apply_review(d: models.CaregiverDocument, action: str, note: str | None) -> 
 async def set_caregiver_status(body: StatusIn, db: Db):
     """Estado de revisión del perfil: solo 'approved' permite aparecer en el marketplace."""
     (await _profile_by_email(db, body.email)).admin_status = body.status
+
+
+@router.post("/caregivers/qualified", status_code=204)
+async def set_caregiver_qualified(body: QualifiedIn, db: Db):
+    """La Consola informa si la cuidadora pagó su verificación: solo entonces muestra "Perfil calificado"."""
+    (await _profile_by_email(db, body.email)).is_qualified = body.qualified
 
 
 @router.delete("/caregivers", status_code=204)

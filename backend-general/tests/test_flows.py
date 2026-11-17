@@ -61,8 +61,10 @@ async def test_working_caregivers_are_flagged_and_listed_last(client, family):
     items = r.json()["items"]
     maria = next(c for c in items if c["full_name"] == "María Torres")
     assert maria["is_engaged"] is True
-    assert items[-1]["full_name"] == "María Torres"
     assert all(not c["is_engaged"] for c in items if c["full_name"] != "María Torres")
+    # Dentro de su grupo (calificadas / no calificadas) las que están trabajando van al final.
+    qualified = [c for c in items if c["is_qualified"]]
+    assert qualified[-1]["full_name"] == "María Torres"
 
 
 # ---------- Documentos con aprobación del staff ----------

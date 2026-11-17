@@ -96,6 +96,9 @@ class CaregiverProfile(Base):
     reviews_count: Mapped[int] = mapped_column(Integer, default=0)
     is_listed: Mapped[bool] = mapped_column(Boolean, default=False)
     is_featured: Mapped[bool] = mapped_column(Boolean, default=False)
+    # "Perfil calificado": la cuidadora pagó su verificación (lo informa la Consola). Muestra la
+    # insignia y la ubica primero en las búsquedas. Eximida o sin pago = sin insignia ni prioridad.
+    is_qualified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     # Estado de revisión que decide el staff en la Consola: solo las cuidadoras
     # 'approved' (y con is_listed) aparecen en el marketplace.
     admin_status: Mapped[str] = mapped_column(String(12), default="pending")  # pending | approved | suspended

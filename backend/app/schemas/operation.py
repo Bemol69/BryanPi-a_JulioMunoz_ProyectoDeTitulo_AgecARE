@@ -70,6 +70,7 @@ class CaregiverDocumentReviewIn(BaseModel):
 class CaregiverStatusItem(BaseModel):
     email: str
     status: CaregiverStatus
+    qualified: bool = False  # verificación pagada
 
 
 class CaregiverOut(BaseModel):

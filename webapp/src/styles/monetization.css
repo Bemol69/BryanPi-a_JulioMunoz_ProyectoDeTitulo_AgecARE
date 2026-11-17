@@ -72,3 +72,10 @@
   border: 1px dashed rgba(143, 88, 0, .5); color: var(--ac-warn-700);
 }
 .verify-howto { font-weight: 600; color: var(--ac-ink) !important; }
+
+/* ---------- Perfil calificado (verificación pagada) ---------- */
+.qualified-badge {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 3px 10px; border-radius: 999px;
+  background: #fff; color: var(--ac-brand-700); font-size: 11px; font-weight: 800; border: 1px solid var(--ac-brand-100);
+  width: fit-content;
+}

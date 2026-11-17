@@ -16,7 +16,8 @@ function CaregiverTile({ c }: { c: CaregiverCard }) {
           {c.is_featured && <Chip kind="gold">⭐ Destacada</Chip>}
         </div>
       </div>
-      <div className="name">{c.full_name} <span className="verified-tick" title="Perfil verificado por el equipo de AgeCare">✓</span></div>
+      <div className="name">{c.full_name}</div>
+      {c.is_qualified && <span className="qualified-badge" title="Perfil calificado por el equipo de AgeCare">✓ Perfil calificado</span>}
       <div className="headline">{c.headline ?? "—"}</div>
       <div className="cg-rating">
         {c.rating_avg != null ? (
@@ -48,7 +49,7 @@ export default function Marketplace() {
       <div className="page-head">
         <div>
           <h1>Buscar cuidadoras</h1>
-          <p>Cuidadoras verificadas por el equipo de AgeCare. Las que están en servicio aparecen marcadas.</p>
+          <p>Cuidadoras revisadas por el equipo de AgeCare. Las de perfil calificado aparecen primero; las que están en servicio aparecen marcadas.</p>
         </div>
         {list.data && (
           <div className="head-chips">

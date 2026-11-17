@@ -60,6 +60,7 @@ class CaregiverProfileOut(BaseModel):
     reviews_count: int
     is_listed: bool
     is_featured: bool
+    is_qualified: bool = False
     admin_status: str = "pending"  # pending | approved | suspended (lo decide el staff)
 
 
@@ -75,6 +76,7 @@ class CaregiverCardOut(BaseModel):
     rating_avg: float | None
     reviews_count: int
     is_featured: bool
+    is_qualified: bool = False  # pagó su verificación: insignia y prioridad
     is_engaged: bool = False  # tiene un trabajo activo con alguna familia
 
 

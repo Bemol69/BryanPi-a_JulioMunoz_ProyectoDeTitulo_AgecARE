@@ -220,7 +220,9 @@ function VerificationCard() {
           <b>{status === "paid" ? "Verificación pagada" : "Verificación sin costo para ti"}</b>
           <span>
             {status === "paid" && paid_at ? `Pago confirmado el ${fmtDate(paid_at)}. ` : ""}
-            El equipo revisa tus documentos y, al aprobarlos, tu perfil muestra la insignia «Verificada por AgeCare».
+            {status === "paid"
+              ? "Tu perfil se muestra con la insignia «Perfil calificado» y aparece primero en las búsquedas de las familias. "
+              : "El equipo revisa tus documentos antes de publicar tu perfil. "}
           </span>
         </div>
       </div>
@@ -244,9 +246,9 @@ function VerificationCard() {
       <div style={{ flex: 1 }}>
         <b>Verificación AgeCare · {fmtCLP(fee_clp)} (pago único)</b>
         <span>
-          Cubre la revisión de tu cédula y tus antecedentes y te da la insignia «Verificada por AgeCare», que las familias
-          buscan al elegir. Tu perfil se publica cuando el equipo confirme el pago y apruebe tus documentos. Puedes subir
-          tus documentos ahora mismo.
+          Cubre la revisión de tu cédula y tus antecedentes. Con el pago, tu perfil se muestra con la insignia «Perfil
+          calificado» y aparece primero en las búsquedas de las familias. Tu perfil se publica cuando el equipo confirme
+          el pago y apruebe tus documentos. Puedes subir tus documentos ahora mismo.
         </span>
         {reference && (
           <div className="verify-ref">

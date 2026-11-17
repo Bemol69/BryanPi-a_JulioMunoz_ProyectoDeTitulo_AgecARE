@@ -11,7 +11,7 @@ EMAIL = "cobro.cuidadora@test.cl"
 @pytest.fixture
 def pushed(monkeypatch):
     """Registra los avisos al sitio público (estado y productos) en vez de hacer llamadas de red."""
-    calls = {"status": [], "products": []}
+    calls = {"status": [], "products": [], "qualified": []}
 
     async def push_status(email, status):
         calls["status"].append((email, status))
@@ -25,6 +25,10 @@ def pushed(monkeypatch):
     async def push_document_review(email, doc_type, action, note):
         return None
 
+    async def push_qualified(email, qualified):
+        calls["qualified"].append((email, qualified))
+
+    monkeypatch.setattr(general_client, "push_qualified", push_qualified)
     monkeypatch.setattr(general_client, "push_status", push_status)
     monkeypatch.setattr(general_client, "push_document_review", push_document_review)
     monkeypatch.setattr(general_client, "push_product", push_product)
@@ -96,6 +100,29 @@ async def test_waived_caregiver_can_be_approved_without_paying(client, admin_hea
     await client.post(f"{BASE}/caregivers/{cid}/verification", headers=admin_headers, json={"action": "waived"})
     r = await client.patch(f"{BASE}/caregivers/{cid}", headers=admin_headers, json={"status": "approved"})
     assert r.status_code == 200
+
+
+async def test_only_a_paid_fee_makes_the_profile_qualified_on_the_site(client, admin_headers, pushed):
+    cid = await new_caregiver(client)
+    url = f"{BASE}/caregivers/{cid}/verification"
+
+    await client.post(url, headers=admin_headers, json={"action": "paid"})
+    assert pushed["qualified"][-1] == (EMAIL, True)  # pagó: perfil calificado
+
+    await client.post(url, headers=admin_headers, json={"action": "waived"})
+    assert pushed["qualified"][-1] == (EMAIL, False)  # eximida: sin insignia ni prioridad
+
+    await client.post(url, headers=admin_headers, json={"action": "paid"})
+    await client.post(url, headers=admin_headers, json={"action": "unpaid"})
+    assert pushed["qualified"][-1] == (EMAIL, False)  # revertido: se la quitan
+
+
+async def test_the_site_can_ask_who_is_qualified(client, admin_headers, pushed):
+    cid = await new_caregiver(client)
+    await client.post(f"{BASE}/caregivers/{cid}/verification", headers=admin_headers, json={"action": "paid"})
+    items = (await client.get(f"{BASE}/caregivers/statuses", headers=INTERNAL)).json()["items"]
+    assert next(i for i in items if i["email"] == EMAIL)["qualified"] is True
+    assert next(i for i in items if i["email"] == "andres@cuidado.cl")["qualified"] is False  # eximido
 
 
 PRODUCT = {"name": "Silla de ducha plegable", "category": "home_safety", "vendor": "SaludHogar",

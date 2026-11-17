@@ -25,6 +25,7 @@ COLUMN_PATCHES: list[tuple[str, str, str]] = [
     ("caregiver_documents", "review_note", "TEXT"),
     ("caregiver_documents", "reviewed_at", "TIMESTAMP WITH TIME ZONE"),
     ("caregiver_engagements", "review_id", "UUID"),
+    ("caregiver_profiles", "is_qualified", "BOOLEAN NOT NULL DEFAULT FALSE"),
     ("caregiver_reviews", "hidden", "BOOLEAN NOT NULL DEFAULT FALSE"),
     ("market_products", "vendor", "VARCHAR(120) NOT NULL DEFAULT ''"),
     ("market_products", "price_clp", "INTEGER"),
@@ -45,6 +46,7 @@ async def ensure_schema(engine) -> None:
 
     table_names = sorted(Base.metadata.tables.keys())
     admin_status_added = False
+    qualified_added = False
     async with engine.begin() as conn:
         await conn.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": ADVISORY_LOCK_KEY})
         existing_tables = {r[0] for r in (await conn.execute(text(
@@ -64,6 +66,8 @@ async def ensure_schema(engine) -> None:
             await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {ddl}"))
             if (table, column) == ("caregiver_profiles", "admin_status"):
                 admin_status_added = True
+            if (table, column) == ("caregiver_profiles", "is_qualified"):
+                qualified_added = True
 
         if admin_status_added:
             # Las cuidadoras que ya eran visibles siguen visibles; el estado real se trae de la Consola.
@@ -72,11 +76,11 @@ async def ensure_schema(engine) -> None:
             if table in existing_tables or table in missing_tables:
                 await conn.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
 
-    if admin_status_added:
-        await _backfill_statuses_from_admin(engine)
+    if admin_status_added or qualified_added:
+        await _backfill_statuses_from_admin(engine, statuses=admin_status_added, qualified=qualified_added)
 
 
-async def _backfill_statuses_from_admin(engine) -> None:
+async def _backfill_statuses_from_admin(engine, *, statuses: bool = True, qualified: bool = False) -> None:
     """Primera vez que existe admin_status: copia el estado real (aprobada / pendiente /
     suspendida) desde la Consola. Si la Consola no responde, queda 'approved' y el staff lo
     corrige con su próxima acción sobre el perfil."""
@@ -92,7 +96,13 @@ async def _backfill_statuses_from_admin(engine) -> None:
         return
     async with engine.begin() as conn:
         for item in items:
-            await conn.execute(text(
-                "UPDATE caregiver_profiles SET admin_status = :st WHERE user_id IN "
-                "(SELECT id FROM users WHERE lower(email) = lower(:email))"),
-                {"st": item["status"], "email": item["email"]})
+            if statuses:
+                await conn.execute(text(
+                    "UPDATE caregiver_profiles SET admin_status = :st WHERE user_id IN "
+                    "(SELECT id FROM users WHERE lower(email) = lower(:email))"),
+                    {"st": item["status"], "email": item["email"]})
+            if qualified:  # quienes ya pagaron su verificación en la Consola
+                await conn.execute(text(
+                    "UPDATE caregiver_profiles SET is_qualified = :q WHERE user_id IN "
+                    "(SELECT id FROM users WHERE lower(email) = lower(:email))"),
+                    {"q": bool(item.get("qualified")), "email": item["email"]})

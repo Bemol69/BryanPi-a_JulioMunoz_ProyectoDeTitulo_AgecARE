@@ -73,15 +73,18 @@ async def search_caregivers(db: Db, user: CurrentUser,
     engaged_ids = {r[0] for r in (await db.execute(
         select(models.CaregiverEngagement.caregiver_profile_id)
         .where(models.CaregiverEngagement.status == "active"))).all()}
-    # Las que no están trabajando van primero; dentro de cada grupo, destacadas y mejor calificadas.
-    filtered.sort(key=lambda c: (c.id in engaged_ids, not c.is_featured, -(c.rating_avg or 0)))
+    # Primero las de perfil calificado (pagaron su verificación), luego el resto. Dentro de cada grupo,
+    # las que no están trabajando van antes; después las destacadas y las mejor evaluadas.
+    filtered.sort(key=lambda c: (not c.is_qualified, c.id in engaged_ids, not c.is_featured,
+                                 -(c.rating_avg or 0), c.user.full_name.lower()))
     total = len(filtered)
     page_rows = filtered[(page - 1) * page_size: (page - 1) * page_size + page_size]
     items = [CaregiverCardOut(profile_id=c.id, full_name=c.user.full_name, photo_url=c.user.avatar_url,
                               headline=c.headline, years_experience=c.years_experience,
                               specialties=c.specialties or [], zones=c.zones or [],
                               rating_avg=c.rating_avg, reviews_count=c.reviews_count,
-                              is_featured=c.is_featured, is_engaged=c.id in engaged_ids) for c in page_rows]
+                              is_featured=c.is_featured, is_qualified=c.is_qualified,
+                              is_engaged=c.id in engaged_ids) for c in page_rows]
     return Page(items=items, total=total)
 
 
@@ -128,7 +131,7 @@ async def get_caregiver_public(profile_id: UUID, db: Db, user: CurrentUser):
         profile_id=p.id, headline=p.headline, bio=p.bio, years_experience=p.years_experience,
         specialties=p.specialties or [], languages=p.languages or [], zones=p.zones or [],
         certifications=p.certifications or [], rating_avg=p.rating_avg, reviews_count=p.reviews_count,
-        is_listed=p.is_listed, is_featured=p.is_featured, full_name=p.user.full_name,
+        is_listed=p.is_listed, is_featured=p.is_featured, is_qualified=p.is_qualified, full_name=p.user.full_name,
         photo_url=p.user.avatar_url, hired_by_me=my_engagement is not None,
         my_engagement_id=my_engagement.id if my_engagement else None,
         is_engaged=await _is_engaged(db, profile_id), can_review=can_review,

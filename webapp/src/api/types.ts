@@ -79,6 +79,7 @@ export interface CaregiverProfileOut {
   reviews_count: number;
   is_listed: boolean;
   is_featured: boolean;
+  is_qualified: boolean; // pagó su verificación: "Perfil calificado"
   admin_status: "pending" | "approved" | "suspended";
 }
 
@@ -93,6 +94,7 @@ export interface CaregiverCard {
   rating_avg: number | null;
   reviews_count: number;
   is_featured: boolean;
+  is_qualified: boolean;
   is_engaged: boolean; // tiene un trabajo activo con alguna familia
 }
 

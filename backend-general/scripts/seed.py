@@ -87,6 +87,10 @@ PRODUCTS = [
          external_url="https://saludhogar.cl/reloj-gps"),
 ]
 
+# Las que pagaron su verificación en la Consola (ver backend/scripts/seed.py): muestran "Perfil calificado".
+# Andrés está eximido y Fernanda no pagó: sin insignia ni prioridad.
+QUALIFIED_SLUGS = {"maria", "javiera", "rocio", "sebastian"}
+
 FAMILY_REVIEW_NAMES = ["Familia Pérez", "Familia González", "Familia Rojas", "Familia Silva"]
 
 
@@ -123,7 +127,8 @@ async def seed() -> None:
                 "de servicio. Me dedico al cuidado de adultos mayores con paciencia, cariño y responsabilidad.",
                 years_experience=c["years_experience"], specialties=c["specialties"],
                 languages=c["languages"], zones=c["zones"], certifications=c["certifications"],
-                is_listed=True, is_featured=c["featured"], admin_status="approved")
+                is_listed=True, is_featured=c["featured"], admin_status="approved",
+                is_qualified=c["slug"] in QUALIFIED_SLUGS)
             db.add(profile)
             await db.flush()
             for i, rating in enumerate(c["rating_seed"]):

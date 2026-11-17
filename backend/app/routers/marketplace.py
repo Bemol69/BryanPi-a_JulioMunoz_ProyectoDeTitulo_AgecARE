@@ -225,8 +225,10 @@ async def sync_document(body: CaregiverDocumentSyncIn, db: Db):
 # aún no tiene el estado de revisión) — solo la llama el otro servicio, con la clave interna.
 @router.get("/caregivers/statuses", dependencies=[Depends(require_internal_key)])
 async def caregiver_statuses(db: Db):
-    rows = (await db.execute(select(models.CaregiverProfile.email, models.CaregiverProfile.status))).all()
-    return {"items": [CaregiverStatusItem(email=e, status=CaregiverStatus(st)).model_dump() for e, st in rows]}
+    cg = models.CaregiverProfile
+    rows = (await db.execute(select(cg.email, cg.status, cg.verification_fee_status))).all()
+    return {"items": [CaregiverStatusItem(email=e, status=CaregiverStatus(st), qualified=fee == "paid").model_dump()
+                      for e, st, fee in rows]}
 
 
 # El sitio público consulta aquí las decisiones del staff sobre los documentos, por si el aviso de
@@ -347,6 +349,8 @@ async def set_verification(caregiver_id: UUID, body: VerificationIn, request: Re
     await audit(db, request, "marketplace.verification_fee", "caregiver_profile", c.id, before=before,
                 after={"verification_fee_status": c.verification_fee_status,
                        "amount_clp": c.verification_fee_clp})
+    # "Perfil calificado" solo si pagó: eximida o sin pago no muestra nada. Si no se puede avisar, no se guarda.
+    await general_client.push_qualified(c.email, c.verification_fee_status == "paid")
     return _cg_out(c, include_note=True)
 
 

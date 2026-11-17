@@ -53,6 +53,15 @@ async def push_status(email: str, status: str) -> None:
         raise _sync_failed()
 
 
+async def push_qualified(email: str, qualified: bool) -> None:
+    """Perfil calificado = verificación pagada. Si falla no se guarda el cambio (el sitio quedaría desfasado)."""
+    if not enabled():
+        return
+    res = await _call("POST", "/internal/caregivers/qualified", json={"email": email, "qualified": qualified})
+    if res is None or (res.status_code >= 400 and res.status_code != 404):
+        raise _sync_failed()
+
+
 async def push_caregiver_delete(email: str) -> None:
     """Elimina la cuenta de la cuidadora en el sitio público. Si el sitio no la conoce (404) no hay nada que borrar."""
     if not enabled():
