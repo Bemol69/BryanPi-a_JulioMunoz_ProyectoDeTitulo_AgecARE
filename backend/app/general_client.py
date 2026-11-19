@@ -83,6 +83,19 @@ async def push_document_review(email: str, doc_type: str, action: str, note: str
         raise _sync_failed()
 
 
+async def push_review_created(email: str, *, review_id: str, family_name: str, rating: int,
+                              comment: str | None) -> None:
+    """El staff registró una reseña en la Consola: se publica también en el sitio (y cuenta para su valoración).
+    Si el sitio no responde, no se guarda (así los dos lados no quedan distintos)."""
+    if not enabled():
+        return
+    res = await _call("POST", "/internal/reviews", json={
+        "email": email, "review_id": review_id, "family_name": family_name, "rating": rating, "comment": comment})
+    # 404 = la cuidadora aún no existe en el sitio (perfil de prueba solo de la Consola): no bloquea al staff.
+    if res is None or (res.status_code >= 400 and res.status_code != 404):
+        raise _sync_failed()
+
+
 async def push_review_moderation(email: str, action: str, *, review_id: str | None, family_name: str,
                                  rating: int, comment: str | None) -> None:
     """El staff archivó, restauró o eliminó una reseña: el sitio la oculta/muestra/borra y recalcula la nota."""

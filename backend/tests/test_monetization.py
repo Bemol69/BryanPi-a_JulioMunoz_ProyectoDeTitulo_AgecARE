@@ -201,3 +201,37 @@ async def test_monetization_works_when_the_site_does_not_answer(client, admin_he
     monkeypatch.setattr(general_client, "fetch_product_stats", down)
     m = (await client.get(f"{BASE}/monetization", headers=admin_headers)).json()
     assert m["clicks_30d"] is None and m["estimated_commission_30d_clp"] is None
+
+
+# ---------- Reseñas registradas en la Consola: también se publican en el sitio ----------
+async def test_a_review_created_in_the_console_is_sent_to_the_site_with_the_same_id(client, admin_headers, monkeypatch):
+    sent = []
+
+    async def push_review_created(email, *, review_id, family_name, rating, comment):
+        sent.append({"email": email, "review_id": review_id, "family_name": family_name, "rating": rating})
+
+    monkeypatch.setattr(general_client, "push_review_created", push_review_created)
+    items = (await client.get(f"{BASE}/caregivers", headers=admin_headers, params={"status": "approved"})).json()["items"]
+    maria = next(i for i in items if i["name"] == "María Torres")
+    r = await client.post(f"{BASE}/reviews", headers=admin_headers, json={
+        "caregiver_id": maria["caregiver_id"], "family_name": "Familia Sincronizada", "rating": 5, "comment": "Genial"})
+    assert r.status_code == 201, r.text
+    assert sent == [{"email": "maria@cuidado.cl", "review_id": r.json()["id"],
+                     "family_name": "Familia Sincronizada", "rating": 5}]
+
+
+async def test_if_the_site_cannot_be_told_the_review_is_not_saved(client, admin_headers, monkeypatch):
+    from app.errors import ApiError
+
+    async def down(*args, **kwargs):
+        raise ApiError(502, "GENERAL_SYNC_FAILED", "No se pudo avisar al sitio público.")
+
+    monkeypatch.setattr(general_client, "push_review_created", down)
+    items = (await client.get(f"{BASE}/caregivers", headers=admin_headers, params={"status": "approved"})).json()["items"]
+    javiera = next(i for i in items if i["name"] == "Javiera Soto")
+    before = (await client.get(f"{BASE}/caregivers/{javiera['caregiver_id']}", headers=admin_headers)).json()["reviews_count"]
+    r = await client.post(f"{BASE}/reviews", headers=admin_headers, json={
+        "caregiver_id": javiera["caregiver_id"], "family_name": "Familia Fallida", "rating": 4})
+    assert r.status_code == 502
+    after = (await client.get(f"{BASE}/caregivers/{javiera['caregiver_id']}", headers=admin_headers)).json()["reviews_count"]
+    assert after == before  # no quedó guardada: los dos lados no se desfasan

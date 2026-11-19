@@ -148,7 +148,7 @@ function RegisterReviewCard({ candidates, onDone }: { candidates: CaregiverRanki
 
   return (
     <Card>
-      <CardHead title="Registrar reseña de un trabajo" sub="Simula el paso de la familia: cierra el ciclo de fidelización y suma puntos automáticamente" />
+      <CardHead title="Registrar reseña de un trabajo" sub="Simula el paso de la familia: suma puntos automáticamente y publica la reseña también en el sitio de la cuidadora" />
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div>
           <label className="field-label" style={{ margin: "0 0 5px" }}>Cuidadora</label>

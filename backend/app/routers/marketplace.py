@@ -665,6 +665,10 @@ async def create_review(body: CaregiverReviewIn, request: Request, db: Db,
                        "Solo se puede reseñar a cuidadoras con perfil aprobado.")
     review, points_awarded = await _register_review(db, c, body.family_name, body.rating,
                                                      body.comment, body.job_reference, admin)
+    # La reseña también se publica en el sitio, con el mismo id (así archivarla o eliminarla actúa en los dos lados).
+    review.external_id = review.id
+    await general_client.push_review_created(c.email, review_id=str(review.id), family_name=body.family_name,
+                                             rating=body.rating, comment=body.comment)
     await audit(db, request, "marketplace.review_created", "caregiver_profile", c.id,
                after={"rating": body.rating, "points_awarded": points_awarded})
     return CaregiverReviewOut(id=review.id, caregiver_id=c.id, family_name=body.family_name,

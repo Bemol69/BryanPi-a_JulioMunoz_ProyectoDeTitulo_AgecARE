@@ -45,6 +45,15 @@ class ReviewModerationIn(BaseModel):
     comment: str | None = None
 
 
+class ReviewCreateIn(BaseModel):
+    """Reseña registrada por el staff en la Consola ("simula el paso de la familia")."""
+    email: str
+    review_id: UUID  # el mismo id en la Consola y en el sitio: así archivarla o eliminarla funciona en los dos lados
+    family_name: str = Field(max_length=120)
+    rating: int = Field(ge=1, le=5)
+    comment: str | None = Field(default=None, max_length=2000)
+
+
 class InternalDocumentOut(BaseModel):
     doc_type: str
     file_url: str
@@ -107,6 +116,21 @@ async def delete_caregiver_account(db: Db, email: str = Query(max_length=254)):
     paths = await accounts.purge_user(db, user, force=True)
     await db.flush()
     await storage.delete(paths)
+
+
+@router.post("/reviews", status_code=204)
+async def create_review_from_console(body: ReviewCreateIn, db: Db):
+    """Publica en el sitio una reseña registrada en la Consola y recalcula la valoración de la cuidadora.
+    Sin esto, la reseña solo existiría en la Consola y nunca contaría para la valoración ni para "Destacada"."""
+    p = await _profile_by_email(db, body.email)
+    if await db.get(models.CaregiverReview, body.review_id) is not None:
+        return  # ya estaba (el aviso se repitió)
+    # author_user_id es obligatorio: igual que en los datos de demostración, se usa la propia cuenta de la cuidadora
+    # como marcador, porque quien reseña aquí no es un usuario del sitio.
+    db.add(models.CaregiverReview(id=body.review_id, caregiver_profile_id=p.id, author_user_id=p.user_id,
+                                  author_name=body.family_name, rating=body.rating, comment=body.comment))
+    await db.flush()
+    await accounts.recalc_ratings(db, {p.id})
 
 
 @router.post("/reviews/moderate", status_code=204)
