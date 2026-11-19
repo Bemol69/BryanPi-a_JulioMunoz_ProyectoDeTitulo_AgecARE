@@ -14,15 +14,18 @@ if ($url -match "\[YOUR-PASSWORD\]|\[TU-PASSWORD\]") { Write-Error "Reemplaza [Y
 
 $repo = Split-Path $PSScriptRoot -Parent
 
+# Las fotos de demostración (cuidadoras y artículos) viven en el sitio público: sin esto quedarían apuntando a localhost.
+$avatarBase = if ($env:DEMO_AVATAR_BASE) { $env:DEMO_AVATAR_BASE } else { "https://bryan-pi-a-julio-munoz-proyecto-de-sigma.vercel.app" }
+
 Write-Host "`n1/2 · Consola de administración (migraciones + datos demo)..." -ForegroundColor Cyan
 Push-Location (Join-Path $repo "backend")
-docker compose run --rm --no-deps -e "ADMIN_DATABASE_URL=$url" api sh -c "alembic upgrade head && python -m scripts.seed"
+docker compose run --rm --no-deps -e "ADMIN_DATABASE_URL=$url" -e "DEMO_AVATAR_BASE=$avatarBase" api sh -c "alembic upgrade head && python -m scripts.seed"
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Error "Falló la consola."; exit 1 }
 Pop-Location
 
 Write-Host "`n2/2 · Sitio público (tablas + datos demo)..." -ForegroundColor Cyan
 Push-Location (Join-Path $repo "backend-general")
-docker compose run --rm --no-deps -e "GENERAL_DATABASE_URL=$url" api python -m scripts.seed
+docker compose run --rm --no-deps -e "GENERAL_DATABASE_URL=$url" -e "DEMO_AVATAR_BASE=$avatarBase" api python -m scripts.seed
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Error "Falló el sitio público."; exit 1 }
 Pop-Location
 
