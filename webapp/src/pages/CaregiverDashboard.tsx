@@ -210,8 +210,30 @@ const WAIVER_REASON_LABEL: Record<string, string> = {
   scholarship: "beca", special_case: "caso especial",
 };
 
+/** Qué le falta para ser «Destacada»: el reconocimiento automático a las cuidadoras mejor evaluadas. */
+function FeaturedChecklist({ profile }: { profile: CaregiverProfileOut }) {
+  const steps = [
+    { ok: profile.is_qualified, text: "Perfil calificado (verificación pagada)" },
+    { ok: (profile.rating_avg ?? 0) >= FEATURED_MIN_RATING,
+      text: `Valoración de ${FEATURED_MIN_RATING.toString().replace(".", ",")} o más (hoy: ${profile.rating_avg != null ? profile.rating_avg.toFixed(1).replace(".", ",") : "sin reseñas"})` },
+    { ok: profile.reviews_count >= FEATURED_MIN_REVIEWS, text: `Al menos ${FEATURED_MIN_REVIEWS} reseñas (hoy: ${profile.reviews_count})` },
+  ];
+  return (
+    <div className={`featured-check${profile.is_featured ? " done" : ""}`}>
+      <b>{profile.is_featured ? "⭐ Eres una cuidadora Destacada" : "Para ser Destacada"}</b>
+      <span>{profile.is_featured
+        ? "Apareces con la marca dorada y entre las primeras de las búsquedas. La mantienes mientras cumplas esto:"
+        : "Las cuidadoras Destacadas se muestran con una marca dorada y antes que el resto. Necesitas:"}</span>
+      <ul>{steps.map((s) => <li key={s.text} className={s.ok ? "ok" : ""}>{s.ok ? "✓" : "○"} {s.text}</li>)}</ul>
+    </div>
+  );
+}
+
 /** Cuánta visibilidad tiene su perfil y cómo se compara con los perfiles calificados y los que no lo son. */
-function VisibilityCard() {
+const FEATURED_MIN_RATING = 4.5;
+const FEATURED_MIN_REVIEWS = 3;
+
+function VisibilityCard({ profile }: { profile: CaregiverProfileOut }) {
   const st = useApi(() => CaregiverApi.stats(), []);
   if (!st.data) return null;
   const { views_30d, families_contacted_30d, is_qualified, avg_views_qualified, avg_views_unqualified } = st.data;
@@ -224,6 +246,7 @@ function VisibilityCard() {
         <div><span>Visitas a tu perfil</span><b>{views_30d}</b></div>
         <div><span>Familias que te contactaron</span><b>{families_contacted_30d}</b></div>
       </div>
+      <FeaturedChecklist profile={profile} />
       {avg_views_qualified != null && avg_views_unqualified != null && (
         <p className="visibility-compare">
           Promedio de visitas en AgeCare: perfiles calificados <b>{fmt(avg_views_qualified)}</b> · perfiles sin insignia{" "}
@@ -502,7 +525,7 @@ function ProfileView({ user, profile, docs, isListed, engagement, onToggleListed
 
         <ReviewStatusBanner status={profile.admin_status} />
         <VerificationCard />
-        <VisibilityCard />
+        <VisibilityCard profile={profile} />
         <ProfileCompleteness user={user} profile={profile} docs={docs} onEdit={onEdit} />
 
         <div className="stat-tiles">

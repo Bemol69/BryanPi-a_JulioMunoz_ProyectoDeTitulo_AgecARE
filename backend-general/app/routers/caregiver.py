@@ -18,7 +18,7 @@ from app.schemas.marketplace import (CaregiverDocumentOut, CaregiverProfileOut,
                                      CaregiverProfilePatchIn, ContactMessageOut, EngagementOut,
                                      ReceivedHireRequestOut, ReviewOut, VerificationOut, CaregiverStatsOut)
 from app.security import now_utc
-from app.visibility import is_publicly_visible
+from app.visibility import is_featured, is_publicly_visible
 from app.sync import (fetch_admin_documents, fetch_admin_verification, sync_caregiver_to_admin,
                       sync_document_to_admin)
 
@@ -40,7 +40,7 @@ def _out(p: models.CaregiverProfile) -> CaregiverProfileOut:
                                languages=p.languages or [], zones=p.zones or [],
                                certifications=p.certifications or [], rating_avg=p.rating_avg,
                                reviews_count=p.reviews_count, is_listed=p.is_listed,
-                               is_featured=p.is_featured, is_qualified=p.is_qualified, admin_status=p.admin_status)
+                               is_featured=is_featured(p), is_qualified=p.is_qualified, admin_status=p.admin_status)
 
 
 async def _get_own_profile(db: Db, user: models.User) -> models.CaregiverProfile:

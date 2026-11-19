@@ -13,7 +13,7 @@ function CaregiverTile({ c }: { c: CaregiverCard }) {
         <div className="cg-avatar ring"><Avatar name={c.full_name} photoUrl={c.photo_url} /></div>
         <div className="cg-badges">
           {c.is_engaged && <span className="working-badge"><i /> Trabajando</span>}
-          {c.is_featured && <Chip kind="gold">⭐ Destacada</Chip>}
+          {c.is_featured && <span title="Destacada: perfil calificado, valoración de 4,5 o más y al menos 3 reseñas"><Chip kind="gold">⭐ Destacada</Chip></span>}
         </div>
       </div>
       <div className="name">{c.full_name}</div>

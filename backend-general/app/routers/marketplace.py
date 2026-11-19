@@ -10,7 +10,7 @@ from app.deps import CurrentUser, Db
 from app.chat_retention import purge_expired
 from app.errors import conflict, forbidden, not_found
 from app.hiring import caregiver_name, patient_first_name, resolve_patient
-from app.visibility import is_publicly_visible
+from app.visibility import is_featured, is_publicly_visible
 from app.routers.chat import add_message, get_or_create_conversation
 from app.schemas.common import Page
 from app.schemas.marketplace import (CaregiverCardOut, CaregiverPublicOut, ContactIn, ContactOut,
@@ -80,7 +80,7 @@ async def search_caregivers(db: Db, user: CurrentUser,
         .where(models.CaregiverEngagement.status == "active"))).all()}
     # Primero las de perfil calificado (pagaron su verificación), luego el resto. Dentro de cada grupo,
     # las que no están trabajando van antes; después las destacadas y las mejor evaluadas.
-    filtered.sort(key=lambda c: (not c.is_qualified, c.id in engaged_ids, not c.is_featured,
+    filtered.sort(key=lambda c: (not c.is_qualified, c.id in engaged_ids, not is_featured(c),
                                  -(c.rating_avg or 0), c.user.full_name.lower()))
     total = len(filtered)
     page_rows = filtered[(page - 1) * page_size: (page - 1) * page_size + page_size]
@@ -88,7 +88,7 @@ async def search_caregivers(db: Db, user: CurrentUser,
                               headline=c.headline, years_experience=c.years_experience,
                               specialties=c.specialties or [], zones=c.zones or [],
                               rating_avg=c.rating_avg, reviews_count=c.reviews_count,
-                              is_featured=c.is_featured, is_qualified=c.is_qualified,
+                              is_featured=is_featured(c), is_qualified=c.is_qualified,
                               is_engaged=c.id in engaged_ids) for c in page_rows]
     return Page(items=items, total=total)
 
@@ -157,7 +157,7 @@ async def get_caregiver_public(profile_id: UUID, db: Db, user: CurrentUser):
         profile_id=p.id, headline=p.headline, bio=p.bio, years_experience=p.years_experience,
         specialties=p.specialties or [], languages=p.languages or [], zones=p.zones or [],
         certifications=p.certifications or [], rating_avg=p.rating_avg, reviews_count=p.reviews_count,
-        is_listed=p.is_listed, is_featured=p.is_featured, is_qualified=p.is_qualified, full_name=p.user.full_name,
+        is_listed=p.is_listed, is_featured=is_featured(p), is_qualified=p.is_qualified, full_name=p.user.full_name,
         photo_url=p.user.avatar_url, hired_by_me=my_engagement is not None,
         my_engagement_id=my_engagement.id if my_engagement else None,
         family_caregiver_name=other_caregiver_name,

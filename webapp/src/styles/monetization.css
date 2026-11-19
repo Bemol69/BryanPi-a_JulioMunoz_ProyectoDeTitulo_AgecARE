@@ -96,3 +96,11 @@
 .visibility-tiles span { font-size: 11.5px; font-weight: 700; color: var(--ac-text-secondary); }
 .visibility-tiles b { font-size: 26px; letter-spacing: -.03em; }
 .visibility-compare { font-size: 12.5px; line-height: 1.5; color: var(--ac-text-secondary); margin: 10px 0 0; }
+
+/* ---------- Requisitos para ser Destacada ---------- */
+.featured-check { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: #fff; border: 1px dashed var(--ac-border); font-size: 12.5px; }
+.featured-check.done { background: var(--ac-gold-100); border: 1px solid var(--ac-gold-400); }
+.featured-check b { display: block; font-size: 13px; margin-bottom: 2px; }
+.featured-check span { color: var(--ac-text-secondary); }
+.featured-check ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; color: var(--ac-text-tertiary); }
+.featured-check li.ok { color: var(--ac-ok-700); font-weight: 700; }

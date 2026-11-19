@@ -59,7 +59,7 @@ export default function CaregiverDetail() {
           <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 16 }}>
             <div className="cg-avatar" style={{ width: 72, height: 72, fontSize: 28 }}><Avatar name={c.full_name} photoUrl={c.photo_url} /></div>
             <div>
-              <h1 style={{ margin: 0, fontSize: 22 }}>{c.full_name} {c.is_featured && <Chip kind="gold">⭐ Destacada</Chip>}</h1>
+              <h1 style={{ margin: 0, fontSize: 22 }}>{c.full_name} {c.is_featured && <span title="Destacada: perfil calificado, valoración de 4,5 o más y al menos 3 reseñas"><Chip kind="gold">⭐ Destacada</Chip></span>}</h1>
               {c.is_qualified && <span className="verified-pill">✓ Perfil calificado por AgeCare</span>}
               <div style={{ color: "var(--ac-text-secondary)", fontSize: 14 }}>{c.headline}</div>
               <div style={{ marginTop: 6 }}>
