@@ -16,7 +16,7 @@ from app.audit import audit
 from app.deps import Db, require, require_internal_key
 from app.enums import CaregiverStatus, ContentStatus
 from app.config import get_settings
-from app.errors import conflict, forbidden, invalid, not_found
+from app.errors import conflict, invalid, not_found
 from app.schemas.common import Page
 from app.schemas.operation import (CaregiverDocumentOut, CaregiverDocumentReviewIn,
                                    CaregiverDocumentSyncIn, CaregiverOut, CaregiverStatusItem,
@@ -404,9 +404,6 @@ async def set_verification(caregiver_id: UUID, body: VerificationIn, request: Re
     c = await db.get(models.CaregiverProfile, caregiver_id)
     if c is None:
         raise not_found()
-    # Solo un administrador regala o deshace cobros; el resto del equipo confirma pagos.
-    if body.action in ("waived", "unpaid") and admin.role != "admin":
-        raise forbidden("Solo un administrador puede eximir un pago o revertir un cobro. Tú puedes confirmar pagos recibidos.")
     if body.action == "waived":
         limit = _waiver_quotas().get(body.reason or "")
         if limit is not None:

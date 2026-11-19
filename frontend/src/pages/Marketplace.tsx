@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { MarketplaceApi } from "../api/endpoints";
-import { useAuth } from "../auth/AuthContext";
 import { useApi } from "../hooks/useApi";
 import ReviewsManager from "../components/ReviewsManager";
 import {
@@ -94,8 +93,6 @@ function FeeHistory({ id, refreshKey }: { id: string; refreshKey: number }) {
 
 /** Cobro de verificación de una cuidadora: pago con comprobante o exención con motivo y vencimiento. */
 function FeePanel({ c, onChanged }: { c: CaregiverOut; onChanged: () => void }) {
-  const { me } = useAuth();
-  const isAdmin = me?.role === "admin"; // solo un administrador exime o revierte; el resto confirma pagos
   const quotas = useApi(() => MarketplaceApi.monetization(), [c.verification_fee_status, c.verification_waiver_reason]).data?.verification_waiver_quotas ?? {};
   const [mode, setMode] = useState<null | "paid" | "waive">(null);
   const [method, setMethod] = useState<PaymentMethodKey>("transfer");
@@ -174,12 +171,11 @@ function FeePanel({ c, onChanged }: { c: CaregiverOut; onChanged: () => void }) 
       )}
       {status === "unpaid" && <div style={small}>No se puede aprobar el perfil hasta confirmar el pago o eximirla.</div>}
 
-      {!isAdmin && <div style={small}>Solo un administrador puede eximir un pago o revertir un cobro. Tú puedes confirmar pagos recibidos.</div>}
       {mode === null && (
         <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
           {status !== "paid" && <button className="btn small primary" disabled={busy} onClick={() => { setError(null); setMode("paid"); }}>Confirmar pago recibido</button>}
-          {status !== "paid" && isAdmin && <button className="btn small" disabled={busy} onClick={() => { setError(null); setMode("waive"); }}>{status === "waived" ? "Renovar / cambiar exención" : "Eximir de pago"}</button>}
-          {status !== "unpaid" && isAdmin && (
+          {status !== "paid" && <button className="btn small" disabled={busy} onClick={() => { setError(null); setMode("waive"); }}>{status === "waived" ? "Renovar / cambiar exención" : "Eximir de pago"}</button>}
+          {status !== "unpaid" && (
             <button className="btn small" disabled={busy || published} onClick={() => send({ action: "unpaid" })}
                     title={published ? "El perfil está aprobado: suspéndelo antes de revertir el cobro" : undefined}>Revertir</button>
           )}

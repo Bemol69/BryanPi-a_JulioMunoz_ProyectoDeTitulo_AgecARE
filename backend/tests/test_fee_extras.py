@@ -1,4 +1,4 @@
-"""Cupos de exención, historial, exportación CSV y permisos por rol del cobro de verificación."""
+"""Cupos de exención, historial y exportación CSV del cobro de verificación."""
 import csv
 import io
 
@@ -24,13 +24,6 @@ def pushed(monkeypatch):
     monkeypatch.setattr(general_client, "push_status", push_status)
 
 
-@pytest.fixture
-async def editor_headers(client):
-    r = await client.post("/api/v1/admin/auth/login", json={"email": "editora@wellq.co.uk", "password": "Editora123!"})
-    assert r.status_code == 200, r.text
-    return {"Authorization": f"Bearer {r.json()['access_token']}"}
-
-
 async def new_caregiver(client, email, name="Cuidadora Extra"):
     r = await client.post(f"{BASE}/caregivers/sync", headers=INTERNAL, json={
         "external_user_id": email, "name": name, "email": email, "zone": "Ñuñoa",
@@ -41,22 +34,6 @@ async def new_caregiver(client, email, name="Cuidadora Extra"):
 
 async def fee(client, headers, cid, **body):
     return await client.post(f"{BASE}/caregivers/{cid}/verification", headers=headers, json=body)
-
-
-# ---------- Permisos por rol ----------
-async def test_an_editor_can_confirm_payments_but_not_waive_or_revert(client, editor_headers, pushed):
-    cid = await new_caregiver(client, "rol.editor@test.cl")
-    r = await fee(client, editor_headers, cid, **PROMO)
-    assert r.status_code == 403
-    assert (await fee(client, editor_headers, cid, action="paid", method="transfer", receipt="TR-1")).status_code == 200
-    assert (await fee(client, editor_headers, cid, action="unpaid")).status_code == 403
-
-
-async def test_an_administrator_can_do_all_three(client, admin_headers, pushed):
-    cid = await new_caregiver(client, "rol.admin@test.cl")
-    assert (await fee(client, admin_headers, cid, **PROMO)).status_code == 200
-    assert (await fee(client, admin_headers, cid, action="paid")).status_code == 200
-    assert (await fee(client, admin_headers, cid, action="unpaid")).status_code == 200
 
 
 # ---------- Cupos ----------
