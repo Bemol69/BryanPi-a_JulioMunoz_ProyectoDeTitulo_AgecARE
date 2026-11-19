@@ -8,6 +8,8 @@ Credenciales demo:
     analista@wellq.co.uk / Analista123!
 """
 import asyncio
+import json
+from pathlib import Path
 import os
 import random
 import uuid
@@ -333,54 +335,32 @@ async def seed() -> None:
         ])
 
         # ---- Marketplace ----
-        caregivers = [
-            models.CaregiverProfile(name="María Torres", email="maria@cuidado.cl", zone="Providencia",
-                                    photo_url=_avatar("maria"),
-                                    specialties=["Alzheimer", "Movilidad reducida"], languages=["es"],
-                                    certifications_count=3, certifications_verified=True,
-                                    rating_avg=None, reviews_count=0, status="approved", is_engaged=True),
-            models.CaregiverProfile(name="Javiera Soto", email="javiera@cuidado.cl", zone="Las Condes",
-                                    photo_url=_avatar("javiera"),
-                                    specialties=["Cuidados paliativos", "Enfermería básica"],
-                                    languages=["es", "en"], certifications_count=4,
-                                    certifications_verified=True, rating_avg=None, reviews_count=0,
-                                    status="approved", is_engaged=False),
-            models.CaregiverProfile(name="Rocío Álvarez", email="rocio@cuidado.cl", zone="Maipú",
-                                    photo_url=_avatar("rocio"),
-                                    specialties=["Movilidad reducida"], languages=["es"],
-                                    certifications_count=2, certifications_verified=True,
-                                    rating_avg=None, reviews_count=0, status="approved", is_engaged=False),
-            models.CaregiverProfile(name="Sebastián Rivas", email="sebastian@cuidado.cl", zone="Santiago Centro",
-                                    photo_url=_avatar("sebastian"),
-                                    specialties=["Movilidad reducida", "Posoperatorio"], languages=["es"],
-                                    certifications_count=2, certifications_verified=True,
-                                    rating_avg=None, reviews_count=0, status="approved", is_engaged=False),
-            models.CaregiverProfile(name="Andrés Pizarro", email="andres@cuidado.cl", zone="La Florida",
-                                    photo_url=_avatar("andres"),
-                                    specialties=["Demencia", "Acompañamiento"], languages=["es"],
-                                    certifications_count=1, certifications_verified=True,
-                                    rating_avg=None, reviews_count=0, status="approved", is_engaged=False),
-            models.CaregiverProfile(name="Paula Fuentes", email="paula@cuidado.cl", zone="Ñuñoa",
-                                    specialties=["Posoperatorio"], languages=["es", "en"],
-                                    certifications_count=1, certifications_verified=False,
-                                    rating_avg=None, reviews_count=0, status="pending"),
-        ]
-        # Las aprobadas ya pasaron por el cobro de verificación (una está eximida); Paula sigue sin pagar.
+        # Las cuidadoras salen de demo_cuidadoras.json, la misma fuente que usa el sitio público
+        # (backend-general/scripts/seed.py): así las dos aplicaciones muestran las mismas personas.
+        DEMO = json.loads((Path(__file__).parent / "demo_cuidadoras.json").read_text(encoding="utf-8"))["caregivers"]
         now_ = datetime.now(timezone.utc)
-        for n, cg in enumerate(caregivers):
+        caregivers = []
+        for n, d in enumerate(DEMO):
+            fee = d["fee"]
+            cg = models.CaregiverProfile(
+                name=d["full_name"], email=d["email"], zone=d["zones"][0],
+                photo_url=_avatar(d["slug"]) if d["status"] == "approved" else None,
+                specialties=d["specialties"], languages=d["languages"],
+                certifications_count=len(d["certifications"]), certifications_verified=d["status"] == "approved",
+                rating_avg=None, reviews_count=0, status=d["status"], is_engaged=d["engaged"])
             cg.verification_reference = f"AC-{(n + 1) * 7919 % 0xFFFFFF:06X}"
-            if cg.status == "approved":
-                if cg.email == "andres@cuidado.cl":
-                    cg.verification_fee_status, cg.verification_marked_by = "waived", "Administrador AgeCare"
-                    cg.verification_waiver_reason = "launch_promo"
-                    cg.verification_waiver_note = "Cuidador piloto del lanzamiento."
-                    cg.verification_waiver_until = now_ + timedelta(days=60)
-                else:
-                    cg.verification_fee_status = "paid"
-                    cg.verification_paid_at = now_ - timedelta(days=3 + n * 4)
-                    cg.verification_marked_by = "Administrador AgeCare"
-                    cg.verification_payment_method = "transfer"
-                    cg.verification_receipt = f"TR-{20260 + n}"
+            cg.verification_fee_status = fee["status"]
+            if fee["status"] == "paid":
+                cg.verification_paid_at = now_ - timedelta(days=fee["paid_days_ago"])
+                cg.verification_marked_by = "Administrador AgeCare"
+                cg.verification_payment_method = fee["method"]
+                cg.verification_receipt = f"TR-{20260 + n}"
+            elif fee["status"] == "waived":
+                cg.verification_marked_by = "Administrador AgeCare"
+                cg.verification_waiver_reason = fee["waiver_reason"]
+                cg.verification_waiver_note = fee["waiver_note"]
+                cg.verification_waiver_until = now_ + timedelta(days=fee["waiver_days"])
+            caregivers.append(cg)
         db.add_all(caregivers)
         db.add_all([
             models.Product(
@@ -394,42 +374,29 @@ async def seed() -> None:
         await db.flush()
 
         # ---- Reseñas y puntos de fidelización ----
-        # Se simula el ciclo real (trabajo -> reseña -> puntos) para las cuidadoras
-        # aprobadas, con la misma regla de negocio que aplica el endpoint en vivo:
-        # 10 puntos base por trabajo + 5 de bono si la calificación es >= 4.
-        FAMILY_NAMES = ["Familia Pérez", "Familia González", "Familia Rojas", "Familia Silva",
-                        "Familia Contreras", "Familia Herrera", "Familia Muñoz", "Familia Castro"]
-        COMMENTS_GOOD = ["Muy puntual y cariñosa con mi papá.", "Excelente manejo de emergencias.",
-                         "Se nota la experiencia, muy profesional.", "Mi mamá quedó feliz, la recomiendo.",
-                         "Comunicación clara y constante durante el turno."]
-        COMMENTS_OK = ["Buen trabajo en general, llegó unos minutos tarde.",
-                       "Cumplió lo básico, esperaba más iniciativa."]
-        # (aprobadas, número de reseñas simuladas — controla quién lidera el ranking)
-        REVIEW_COUNTS = {"María Torres": 18, "Javiera Soto": 24, "Rocío Álvarez": 9}
-        for c in caregivers:
-            n = REVIEW_COUNTS.get(c.name, 0)
-            for i in range(n):
-                rating = random.choices([5, 4, 3], weights=[.6, .3, .1])[0]
-                created = NOW - timedelta(days=random.uniform(0, 55), hours=random.uniform(0, 23))
+        # Se simula el ciclo real (trabajo -> reseña -> puntos) con la misma regla que aplica el endpoint en vivo
+        # (10 puntos por trabajo + 5 de bono si la calificación es >= 4) y las mismas reseñas que ve el sitio público.
+        by_email = {c.email: c for c in caregivers}
+        for d in DEMO:
+            c = by_email[d["email"]]
+            for rv in d["reviews"]:
+                created = NOW - timedelta(days=rv["days_ago"])
                 review = models.CaregiverReview(
-                    caregiver_id=c.id, family_name=random.choice(FAMILY_NAMES), rating=rating,
-                    comment=random.choice(COMMENTS_GOOD if rating >= 4 else COMMENTS_OK),
-                    job_reference=f"TRB-{2026}{i + 1:04d}", created_at=created)
+                    caregiver_id=c.id, family_name=rv["family"], rating=rv["rating"], comment=rv["comment"],
+                    job_reference=rv["job"], created_at=created)
                 db.add(review)
                 await db.flush()
                 db.add(models.CaregiverPointsLog(
                     caregiver_id=c.id, points=10, reason="job_completed", review_id=review.id,
                     note=f"Trabajo cerrado con reseña de {review.family_name}.", created_at=created))
-                if rating >= 4:
+                if rv["rating"] >= 4:
                     db.add(models.CaregiverPointsLog(
                         caregiver_id=c.id, points=5, reason="good_review", review_id=review.id,
-                        note=f"Bono por buena reseña (rating {rating}).", created_at=created))
-            if n:
-                agg = (await db.execute(
-                    select(func.avg(models.CaregiverReview.rating), func.count(models.CaregiverReview.id))
-                    .where(models.CaregiverReview.caregiver_id == c.id))).one()
-                c.rating_avg = round(float(agg[0]), 2)
-                c.reviews_count = int(agg[1])
+                        note=f"Bono por buena reseña (rating {rv['rating']}).", created_at=created))
+            if d["reviews"]:
+                ratings = [rv["rating"] for rv in d["reviews"]]
+                c.rating_avg = round(sum(ratings) / len(ratings), 2)
+                c.reviews_count = len(ratings)
 
         # ---- Moderación ----
         db.add_all([

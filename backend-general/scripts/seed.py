@@ -6,6 +6,8 @@ Credenciales demo:
     maria@cuidado.cl / Cuidado123!  (cuenta de cuidadora, publicada en el marketplace)
 """
 import asyncio
+import json
+from pathlib import Path
 import os
 import random
 import uuid
@@ -23,35 +25,9 @@ random.seed(20260909)
 AVATAR_BASE = os.getenv("DEMO_AVATAR_BASE", "http://localhost:5174").rstrip("/")
 NOW = datetime.now(timezone.utc)
 
-CAREGIVERS = [
-    dict(slug="maria", full_name="María Torres", email="maria@cuidado.cl", headline="Cuidadora certificada · 8 años de experiencia",
-        years_experience=8, specialties=["Alzheimer", "Movilidad reducida", "Posoperatorio"],
-        languages=["Español"], zones=["Providencia", "Ñuñoa"],
-        certifications=[{"name": "Cuidados geriátricos", "issuer": "INACAP", "year": 2019}],
-        rating_seed=[5, 5, 4, 5]),
-    dict(slug="javiera", full_name="Javiera Soto", email="javiera@cuidado.cl", headline="Enfermera geriátrica · turnos nocturnos",
-        years_experience=6, specialties=["Cuidados paliativos", "Control de medicación"],
-        languages=["Español", "Inglés"], zones=["Las Condes"],
-        certifications=[{"name": "Enfermería geriátrica", "issuer": "U. de Chile", "year": 2020}],
-        rating_seed=[5, 4, 5]),
-    dict(slug="rocio", full_name="Rocío Álvarez", email="rocio@cuidado.cl", headline="Acompañamiento y estimulación cognitiva",
-        years_experience=4, specialties=["Estimulación cognitiva", "Acompañamiento"],
-        languages=["Español"], zones=["Maipú"],
-        certifications=[], rating_seed=[5, 5]),
-    dict(slug="fernanda", full_name="Fernanda Ibáñez", email="fernanda@cuidado.cl", headline="Cuidadora de día, experiencia con Alzheimer",
-        years_experience=5, specialties=["Alzheimer"], languages=["Español"], zones=["Providencia"],
-        certifications=[], rating_seed=[4, 5, 5]),
-    dict(slug="sebastian", full_name="Sebastián Rivas", email="sebastian@cuidado.cl",
-        headline="Técnico en enfermería · turnos de día", years_experience=7,
-        specialties=["Movilidad reducida", "Posoperatorio", "Control de medicación"],
-        languages=["Español"], zones=["Santiago Centro", "Estación Central"],
-        certifications=[{"name": "Técnico en enfermería", "issuer": "Duoc UC", "year": 2018}],
-        rating_seed=[5, 4, 5, 5]),
-    dict(slug="andres", full_name="Andrés Pizarro", email="andres@cuidado.cl",
-        headline="Cuidador con experiencia en demencia y acompañamiento", years_experience=10,
-        specialties=["Demencia", "Acompañamiento"], languages=["Español"], zones=["La Florida", "Puente Alto"],
-        certifications=[], rating_seed=[5, 5, 4]),
-]
+# Las cuidadoras salen de demo_cuidadoras.json, la misma fuente que usa la Consola (backend/scripts/seed.py):
+# así las dos aplicaciones muestran las mismas personas, reseñas y estado de pago.
+CAREGIVERS = json.loads((Path(__file__).parent / "demo_cuidadoras.json").read_text(encoding="utf-8"))["caregivers"]
 
 # Catálogo demo. El id sale del slug, igual que en la Consola (backend/scripts/seed.py): así
 # el mismo producto es el mismo en los dos sistemas y los clics se pueden asociar.
@@ -87,9 +63,6 @@ PRODUCTS = [
          external_url="https://saludhogar.cl/reloj-gps"),
 ]
 
-# Las que pagaron su verificación en la Consola (ver backend/scripts/seed.py): muestran "Perfil calificado".
-# Andrés está eximido y Fernanda no pagó: sin insignia ni prioridad.
-QUALIFIED_SLUGS = {"maria", "javiera", "rocio", "sebastian"}
 
 FAMILY_REVIEW_NAMES = ["Familia Pérez", "Familia González", "Familia Rojas", "Familia Silva"]
 
@@ -127,20 +100,23 @@ async def seed() -> None:
                 "de servicio. Me dedico al cuidado de adultos mayores con paciencia, cariño y responsabilidad.",
                 years_experience=c["years_experience"], specialties=c["specialties"],
                 languages=c["languages"], zones=c["zones"], certifications=c["certifications"],
-                is_listed=True, admin_status="approved",
-                is_qualified=c["slug"] in QUALIFIED_SLUGS,
-                listing_until=NOW + timedelta(days=60) if c["slug"] == "andres" else None)
+                is_listed=True, admin_status=c["status"],
+                # Misma regla que la Consola: solo quien pagó la verificación es «perfil calificado»; una exención
+                # vigente la deja publicada hasta que venza.
+                is_qualified=c["fee"]["status"] == "paid",
+                listing_until=NOW + timedelta(days=c["fee"]["waiver_days"]) if c["fee"]["status"] == "waived" else None)
             db.add(profile)
             await db.flush()
-            for i, rating in enumerate(c["rating_seed"]):
+            for rv in c["reviews"]:
                 db.add(models.CaregiverReview(
                     caregiver_profile_id=profile.id,
                     author_user_id=user.id,  # placeholder: reseñas demo, no de un familiar real
-                    author_name=random.choice(FAMILY_REVIEW_NAMES), rating=rating,
-                    comment="Muy puntual y profesional." if rating >= 5 else "Buen trato en general.",
-                    created_at=NOW - timedelta(days=random.randint(1, 60))))
-            profile.rating_avg = round(sum(c["rating_seed"]) / len(c["rating_seed"]), 2)
-            profile.reviews_count = len(c["rating_seed"])
+                    author_name=rv["family"], rating=rv["rating"], comment=rv["comment"],
+                    created_at=NOW - timedelta(days=rv["days_ago"])))
+            if c["reviews"]:
+                ratings = [rv["rating"] for rv in c["reviews"]]
+                profile.rating_avg = round(sum(ratings) / len(ratings), 2)
+                profile.reviews_count = len(ratings)
 
         # ---- Familia demo con un paciente ----
         family = models.User(full_name="Carolina Muñoz", email="familia@demo.cl",
@@ -155,22 +131,26 @@ async def seed() -> None:
         await db.flush()
         db.add(models.PatientMember(patient_id=patient.id, user_id=family.id, role="family", is_owner=True))
 
-        # ---- Trabajo activo demo: la familia ya contrató a María Torres ----
-        maria = (await db.execute(select(models.CaregiverProfile)
-                                  .join(models.User, models.User.id == models.CaregiverProfile.user_id)
-                                  .where(models.User.email == "maria@cuidado.cl"))).scalar_one()
-        db.add(models.CaregiverEngagement(caregiver_profile_id=maria.id, family_user_id=family.id,
-                                          patient_id=patient.id))
+        # ---- Trabajo activo demo: la familia ya contrató a la cuidadora marcada como «engaged» ----
+        for c in CAREGIVERS:
+            if c["engaged"]:
+                hired = (await db.execute(select(models.CaregiverProfile)
+                                          .join(models.User, models.User.id == models.CaregiverProfile.user_id)
+                                          .where(models.User.email == c["email"]))).scalar_one()
+                db.add(models.CaregiverEngagement(caregiver_profile_id=hired.id, family_user_id=family.id,
+                                                  patient_id=patient.id))
 
         # Visitas de ejemplo a las fichas (solo demo): los perfiles calificados reciben más.
         rng = random.Random(7)
-        for profile in (await db.execute(select(models.CaregiverProfile))).scalars().all():
+        for profile in (await db.execute(select(models.CaregiverProfile)
+                                         .where(models.CaregiverProfile.admin_status == "approved"))).scalars().all():
             for _ in range(rng.randint(28, 52) if profile.is_qualified else rng.randint(4, 14)):
                 db.add(models.ProfileView(caregiver_profile_id=profile.id, viewer_user_id=family.id,
                                           created_at=NOW - timedelta(days=rng.randint(0, 28), hours=rng.randint(0, 23))))
 
         await db.commit()
-        print(f"Seed completado: {len(CAREGIVERS)} cuidadoras publicadas, 1 familia demo, {len(PRODUCTS)} productos.")
+        published = sum(1 for c in CAREGIVERS if c["status"] == "approved")
+        print(f"Seed completado: {published} cuidadoras publicadas ({len(CAREGIVERS) - published} pendiente), 1 familia demo, {len(PRODUCTS)} productos.")
 
 
 if __name__ == "__main__":

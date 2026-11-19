@@ -1,0 +1,618 @@
+{
+ "caregivers": [
+  {
+   "slug": "maria",
+   "full_name": "María Torres",
+   "email": "maria@cuidado.cl",
+   "status": "approved",
+   "engaged": true,
+   "headline": "Cuidadora certificada · 8 años de experiencia",
+   "years_experience": 8,
+   "specialties": [
+    "Alzheimer",
+    "Movilidad reducida",
+    "Posoperatorio"
+   ],
+   "languages": [
+    "Español"
+   ],
+   "zones": [
+    "Providencia",
+    "Ñuñoa"
+   ],
+   "certifications": [
+    {
+     "name": "Cuidados geriátricos",
+     "issuer": "INACAP",
+     "year": 2019
+    }
+   ],
+   "fee": {
+    "status": "paid",
+    "paid_days_ago": 3,
+    "method": "transfer"
+   },
+   "reviews": [
+    {
+     "rating": 5,
+     "family": "Familia González",
+     "comment": "Muy puntual y cariñosa con mi papá.",
+     "days_ago": 11,
+     "job": "TRB-20260001"
+    },
+    {
+     "rating": 5,
+     "family": "Familia González",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 1,
+     "job": "TRB-20260002"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Contreras",
+     "comment": "Muy puntual y cariñosa con mi papá.",
+     "days_ago": 16,
+     "job": "TRB-20260003"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Castro",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 29,
+     "job": "TRB-20260004"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Silva",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 19,
+     "job": "TRB-20260005"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Herrera",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 13,
+     "job": "TRB-20260006"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Pérez",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 58,
+     "job": "TRB-20260007"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Castro",
+     "comment": "Comunicación clara y constante durante el turno.",
+     "days_ago": 16,
+     "job": "TRB-20260008"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Herrera",
+     "comment": "Comunicación clara y constante durante el turno.",
+     "days_ago": 16,
+     "job": "TRB-20260009"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Castro",
+     "comment": "Comunicación clara y constante durante el turno.",
+     "days_ago": 32,
+     "job": "TRB-20260010"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Silva",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 4,
+     "job": "TRB-20260011"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Rojas",
+     "comment": "Muy puntual y cariñosa con mi papá.",
+     "days_ago": 30,
+     "job": "TRB-20260012"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Contreras",
+     "comment": "Comunicación clara y constante durante el turno.",
+     "days_ago": 40,
+     "job": "TRB-20260013"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Castro",
+     "comment": "Muy puntual y cariñosa con mi papá.",
+     "days_ago": 3,
+     "job": "TRB-20260014"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Rojas",
+     "comment": "Muy puntual y cariñosa con mi papá.",
+     "days_ago": 50,
+     "job": "TRB-20260015"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Pérez",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 9,
+     "job": "TRB-20260016"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Castro",
+     "comment": "Muy puntual y cariñosa con mi papá.",
+     "days_ago": 28,
+     "job": "TRB-20260017"
+    },
+    {
+     "rating": 3,
+     "family": "Familia Herrera",
+     "comment": "Cumplió lo básico, esperaba más iniciativa.",
+     "days_ago": 4,
+     "job": "TRB-20260018"
+    }
+   ]
+  },
+  {
+   "slug": "javiera",
+   "full_name": "Javiera Soto",
+   "email": "javiera@cuidado.cl",
+   "status": "approved",
+   "engaged": false,
+   "headline": "Enfermera geriátrica · turnos nocturnos",
+   "years_experience": 6,
+   "specialties": [
+    "Cuidados paliativos",
+    "Control de medicación"
+   ],
+   "languages": [
+    "Español",
+    "Inglés"
+   ],
+   "zones": [
+    "Las Condes"
+   ],
+   "certifications": [
+    {
+     "name": "Enfermería geriátrica",
+     "issuer": "U. de Chile",
+     "year": 2020
+    }
+   ],
+   "fee": {
+    "status": "paid",
+    "paid_days_ago": 7,
+    "method": "transfer"
+   },
+   "reviews": [
+    {
+     "rating": 5,
+     "family": "Familia González",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 21,
+     "job": "TRB-20260001"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Contreras",
+     "comment": "Se nota la experiencia, muy profesional.",
+     "days_ago": 56,
+     "job": "TRB-20260002"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Herrera",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 28,
+     "job": "TRB-20260003"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Rojas",
+     "comment": "Se nota la experiencia, muy profesional.",
+     "days_ago": 58,
+     "job": "TRB-20260004"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Silva",
+     "comment": "Se nota la experiencia, muy profesional.",
+     "days_ago": 16,
+     "job": "TRB-20260005"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Castro",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 17,
+     "job": "TRB-20260006"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Herrera",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 14,
+     "job": "TRB-20260007"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Rojas",
+     "comment": "Comunicación clara y constante durante el turno.",
+     "days_ago": 1,
+     "job": "TRB-20260008"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Muñoz",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 11,
+     "job": "TRB-20260009"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Herrera",
+     "comment": "Muy puntual y cariñosa con mi papá.",
+     "days_ago": 43,
+     "job": "TRB-20260010"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Muñoz",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 18,
+     "job": "TRB-20260011"
+    },
+    {
+     "rating": 5,
+     "family": "Familia González",
+     "comment": "Muy puntual y cariñosa con mi papá.",
+     "days_ago": 29,
+     "job": "TRB-20260012"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Castro",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 18,
+     "job": "TRB-20260013"
+    },
+    {
+     "rating": 5,
+     "family": "Familia González",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 15,
+     "job": "TRB-20260014"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Contreras",
+     "comment": "Comunicación clara y constante durante el turno.",
+     "days_ago": 7,
+     "job": "TRB-20260015"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Rojas",
+     "comment": "Se nota la experiencia, muy profesional.",
+     "days_ago": 13,
+     "job": "TRB-20260016"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Castro",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 32,
+     "job": "TRB-20260017"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Rojas",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 27,
+     "job": "TRB-20260018"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Castro",
+     "comment": "Se nota la experiencia, muy profesional.",
+     "days_ago": 54,
+     "job": "TRB-20260019"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Contreras",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 46,
+     "job": "TRB-20260020"
+    },
+    {
+     "rating": 4,
+     "family": "Familia González",
+     "comment": "Comunicación clara y constante durante el turno.",
+     "days_ago": 10,
+     "job": "TRB-20260021"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Herrera",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 30,
+     "job": "TRB-20260022"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Contreras",
+     "comment": "Comunicación clara y constante durante el turno.",
+     "days_ago": 9,
+     "job": "TRB-20260023"
+    },
+    {
+     "rating": 3,
+     "family": "Familia Rojas",
+     "comment": "Buen trabajo en general, llegó unos minutos tarde.",
+     "days_ago": 4,
+     "job": "TRB-20260024"
+    }
+   ]
+  },
+  {
+   "slug": "rocio",
+   "full_name": "Rocío Álvarez",
+   "email": "rocio@cuidado.cl",
+   "status": "approved",
+   "engaged": false,
+   "headline": "Acompañamiento y estimulación cognitiva",
+   "years_experience": 4,
+   "specialties": [
+    "Estimulación cognitiva",
+    "Acompañamiento"
+   ],
+   "languages": [
+    "Español"
+   ],
+   "zones": [
+    "Maipú"
+   ],
+   "certifications": [],
+   "fee": {
+    "status": "paid",
+    "paid_days_ago": 11,
+    "method": "transfer"
+   },
+   "reviews": [
+    {
+     "rating": 5,
+     "family": "Familia González",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 13,
+     "job": "TRB-20260001"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Contreras",
+     "comment": "Comunicación clara y constante durante el turno.",
+     "days_ago": 25,
+     "job": "TRB-20260002"
+    }
+   ]
+  },
+  {
+   "slug": "fernanda",
+   "full_name": "Fernanda Ibáñez",
+   "email": "fernanda@cuidado.cl",
+   "status": "approved",
+   "engaged": false,
+   "headline": "Cuidadora de día, experiencia con Alzheimer",
+   "years_experience": 5,
+   "specialties": [
+    "Alzheimer"
+   ],
+   "languages": [
+    "Español"
+   ],
+   "zones": [
+    "Providencia"
+   ],
+   "certifications": [],
+   "fee": {
+    "status": "unpaid"
+   },
+   "reviews": [
+    {
+     "rating": 4,
+     "family": "Familia Rojas",
+     "comment": "Se nota la experiencia, muy profesional.",
+     "days_ago": 25,
+     "job": "TRB-20260001"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Contreras",
+     "comment": "Comunicación clara y constante durante el turno.",
+     "days_ago": 3,
+     "job": "TRB-20260002"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Silva",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 15,
+     "job": "TRB-20260003"
+    },
+    {
+     "rating": 3,
+     "family": "Familia Muñoz",
+     "comment": "Cumplió lo básico, esperaba más iniciativa.",
+     "days_ago": 12,
+     "job": "TRB-20260004"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Herrera",
+     "comment": "Muy puntual y cariñosa con mi papá.",
+     "days_ago": 5,
+     "job": "TRB-20260005"
+    }
+   ]
+  },
+  {
+   "slug": "sebastian",
+   "full_name": "Sebastián Rivas",
+   "email": "sebastian@cuidado.cl",
+   "status": "approved",
+   "engaged": false,
+   "headline": "Técnico en enfermería · turnos de día",
+   "years_experience": 7,
+   "specialties": [
+    "Movilidad reducida",
+    "Posoperatorio",
+    "Control de medicación"
+   ],
+   "languages": [
+    "Español"
+   ],
+   "zones": [
+    "Santiago Centro",
+    "Estación Central"
+   ],
+   "certifications": [
+    {
+     "name": "Técnico en enfermería",
+     "issuer": "Duoc UC",
+     "year": 2018
+    }
+   ],
+   "fee": {
+    "status": "paid",
+    "paid_days_ago": 19,
+    "method": "transfer"
+   },
+   "reviews": [
+    {
+     "rating": 5,
+     "family": "Familia Silva",
+     "comment": "Se nota la experiencia, muy profesional.",
+     "days_ago": 32,
+     "job": "TRB-20260001"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Silva",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 14,
+     "job": "TRB-20260002"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Pérez",
+     "comment": "Excelente manejo de emergencias.",
+     "days_ago": 23,
+     "job": "TRB-20260003"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Pérez",
+     "comment": "Muy puntual y cariñosa con mi papá.",
+     "days_ago": 29,
+     "job": "TRB-20260004"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Contreras",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 25,
+     "job": "TRB-20260005"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Herrera",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 5,
+     "job": "TRB-20260006"
+    }
+   ]
+  },
+  {
+   "slug": "andres",
+   "full_name": "Andrés Pizarro",
+   "email": "andres@cuidado.cl",
+   "status": "approved",
+   "engaged": false,
+   "headline": "Cuidador con experiencia en demencia y acompañamiento",
+   "years_experience": 10,
+   "specialties": [
+    "Demencia",
+    "Acompañamiento"
+   ],
+   "languages": [
+    "Español"
+   ],
+   "zones": [
+    "La Florida",
+    "Puente Alto"
+   ],
+   "certifications": [],
+   "fee": {
+    "status": "waived",
+    "waiver_reason": "launch_promo",
+    "waiver_note": "Cuidador piloto del lanzamiento.",
+    "waiver_days": 60
+   },
+   "reviews": [
+    {
+     "rating": 5,
+     "family": "Familia Pérez",
+     "comment": "Mi mamá quedó feliz, la recomiendo.",
+     "days_ago": 56,
+     "job": "TRB-20260001"
+    },
+    {
+     "rating": 5,
+     "family": "Familia Castro",
+     "comment": "Se nota la experiencia, muy profesional.",
+     "days_ago": 1,
+     "job": "TRB-20260002"
+    },
+    {
+     "rating": 4,
+     "family": "Familia Contreras",
+     "comment": "Comunicación clara y constante durante el turno.",
+     "days_ago": 31,
+     "job": "TRB-20260003"
+    }
+   ]
+  },
+  {
+   "slug": "paula",
+   "full_name": "Paula Fuentes",
+   "email": "paula@cuidado.cl",
+   "status": "pending",
+   "engaged": false,
+   "headline": "Técnica en cuidados · posoperatorio",
+   "years_experience": 3,
+   "specialties": [
+    "Posoperatorio"
+   ],
+   "languages": [
+    "Español",
+    "Inglés"
+   ],
+   "zones": [
+    "Ñuñoa"
+   ],
+   "certifications": [],
+   "fee": {
+    "status": "unpaid"
+   },
+   "reviews": []
+  }
+ ]
+}

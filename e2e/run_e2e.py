@@ -275,6 +275,12 @@ def main():
                     if docs_btn.count() < pending:
                         break
             shot(adm, "07_consola_documentos_aprobados.png")
+            # El cobro de verificación debe estar resuelto antes de aprobar el perfil (pagado o eximido).
+            fee = adm.pg.get_by_role("button", name=re.compile("Confirmar pago recibido"))
+            if fee.count():
+                fee.first.click()
+                adm.pg.get_by_role("button", name="Confirmar pago", exact=True).click()  # abre un formulario de pago
+                adm.pg.wait_for_timeout(1800)
             adm.pg.get_by_role("button", name="Aprobar perfil").click()
             adm.pg.wait_for_timeout(2500)
             body = adm.pg.inner_text(".drawer")

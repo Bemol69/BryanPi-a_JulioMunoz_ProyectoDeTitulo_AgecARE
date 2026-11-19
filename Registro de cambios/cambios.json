@@ -1,5 +1,38 @@
 [
   {
+    "fecha": "2026-11-19",
+    "titulo": "El sitio y la Consola muestran los mismos datos de demostración, y un verificador que lo comprueba",
+    "resumen": "Los datos de demostración del sitio y de la Consola venían de dos listas distintas: una cuidadora con 4,7 estrellas y 3 reseñas en el sitio aparecía sin reseñas en la Consola, y otra solo existía en un lado. Ahora los dos salen de un mismo archivo y hay pruebas que detectan cualquier diferencia.",
+    "areas": [
+      {
+        "nombre": "Datos de demostración",
+        "items": [
+          "Fuente única demo_data/cuidadoras.json (se regenera con demo_data/generar_cuidadoras.py): las mismas 7 cuidadoras, reseñas, notas, puntos, idiomas, fotos y estado de pago en el sitio y en la Consola. Fernanda Ibáñez ahora existe en la Consola y Paula Fuentes (pendiente) también en el sitio.",
+          "Los idiomas eran «es» en la Consola y «Español» en el sitio; ahora son iguales.",
+          "La insignia «Perfil calificado» del sitio sigue la misma regla que la Consola: solo quien pagó la verificación."
+        ]
+      },
+      {
+        "nombre": "Pruebas",
+        "items": [
+          "pruebas/consistencia.py compara en vivo lo que muestra el sitio con lo que muestra la Consola (102 comprobaciones): personas, fotos, idiomas, zonas, notas, reseñas, «trabajando», insignias y artículos.",
+          "e2e/flujos_consistencia.py recorre 18 acciones reales (registro, documentos, aprobación, cobro, foto, contratación, reseñas, archivar, restaurar, eliminar, suspender, eximir, borrar cuenta) y comprueba la consistencia después de cada una: 18 de 18 sin diferencias.",
+          "Pruebas automáticas nuevas (sitio 127, Consola 105) que fallan si los datos de demostración dejan de coincidir.",
+          "El recorrido con navegador (e2e/run_e2e.py) ahora incluye el cobro de verificación: 34 de 34."
+        ]
+      },
+      {
+        "nombre": "Restauración",
+        "items": [
+          "deploy/restaurar_marketplace_demo.sql borra el marketplace y carga los datos de demostración unificados (probado, con una fila basura de por medio). No toca el equipo, los tickets ni las métricas."
+        ]
+      }
+    ],
+    "pasos_manuales": [
+      "En Supabase → SQL Editor, pegar y ejecutar deploy/restaurar_marketplace_demo.sql para que producción quede con los datos unificados."
+    ]
+  },
+  {
     "fecha": "2026-11-12",
     "titulo": "Reseñas malas restan puntos y el equipo modera las calificaciones de cada cuidadora",
     "resumen": "Las calificaciones bajas ahora afectan el puntaje de fidelización, y desde la Consola se ven las reseñas de cada cuidadora una por una para archivarlas, restaurarlas o eliminarlas. Los cambios se reflejan también en el sitio público.",
