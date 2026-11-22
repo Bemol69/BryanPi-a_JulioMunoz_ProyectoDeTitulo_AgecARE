@@ -1,0 +1,79 @@
+classDiagram
+  class User {
+    +UUID id
+    +String full_name
+    +String email
+    +String account_type  «family | caregiver»
+    +String avatar_url
+    +int failed_attempts
+    +DateTime locked_until
+  }
+  class CaregiverProfile {
+    +UUID id
+    +String headline
+    +int years_experience
+    +List specialties
+    +List languages
+    +List zones
+    +float rating_avg
+    +int reviews_count
+    +String admin_status  «pending | approved | suspended»
+    +bool is_qualified
+    +DateTime listing_until
+  }
+  class CaregiverDocument {
+    +String doc_type  «id_card | background_check | certificate»
+    +String file_url
+    +String status  «pending | approved | rejected»
+    +String pending_file_url
+    +String review_note
+  }
+  class Patient {
+    +UUID id
+    +String full_name
+    +Date birth_date
+    +List conditions
+    +List medication_allergies
+  }
+  class PatientMember {
+    +String role
+    +bool is_owner
+  }
+  class HireRequest {
+    +String status  «pending | declined | unavailable | cancelled»
+    +DateTime created_at
+  }
+  class CaregiverEngagement {
+    +String status  «active | ended»
+    +DateTime started_at
+    +DateTime ended_at
+    +UUID review_id
+  }
+  class CaregiverReview {
+    +int rating  «1..5»
+    +String comment
+    +String author_name
+    +bool hidden
+  }
+  class ChatConversation {
+    +DateTime last_message_at
+  }
+  class ChatMessage {
+    +String body
+    +DateTime created_at
+  }
+  User "1" -- "0..1" CaregiverProfile : tiene si es cuidadora
+  CaregiverProfile "1" -- "0..3" CaregiverDocument : sube
+  User "1" -- "*" PatientMember
+  Patient "1" -- "*" PatientMember
+  User "1" -- "*" HireRequest : envía (familia)
+  CaregiverProfile "1" -- "*" HireRequest : recibe
+  Patient "1" -- "*" HireRequest : es para
+  HireRequest "1" -- "0..1" CaregiverEngagement : al aceptarse
+  CaregiverProfile "1" -- "*" CaregiverEngagement
+  CaregiverProfile "1" -- "*" CaregiverReview : recibe
+  User "1" -- "*" CaregiverReview : escribe
+  CaregiverEngagement "1" -- "0..1" CaregiverReview
+  ChatConversation "1" -- "*" ChatMessage
+  User "1" -- "*" ChatConversation
+  CaregiverProfile "1" -- "*" ChatConversation

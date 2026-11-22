@@ -1,0 +1,28 @@
+sequenceDiagram
+  autonumber
+  actor Familia
+  actor Cuidadora
+  participant ApiS as API del sitio
+  participant ApiC as API de la Consola
+  participant BD as Base de datos
+  Familia->>ApiS: Solicita contratación (familiar + mensaje)
+  ApiS->>ApiS: Valida: cuidadora visible y libre, el familiar sin cuidadora activa
+  ApiS->>BD: guarda la solicitud y abre el chat
+  Cuidadora->>ApiS: Acepta la solicitud
+  ApiS->>BD: crea el trabajo (activo)
+  ApiS-)ApiC: sync del perfil (is_engaged = true)
+  Familia->>ApiS: Termina el trabajo
+  ApiS->>BD: trabajo «terminado»
+  Familia->>ApiS: Deja la reseña (solo con el trabajo terminado)
+  ApiS->>BD: guarda la reseña y recalcula la nota
+  ApiS-)ApiC: POST /marketplace/reviews/sync (review_id)
+  ApiC->>BD: guarda la reseña (idempotente por review_id)
+  ApiC->>BD: puntos: +10 por el trabajo
+  alt 4 o 5 estrellas
+    ApiC->>BD: +5 de bono
+  else 2 estrellas
+    ApiC->>BD: -5 de descuento
+  else 1 estrella
+    ApiC->>BD: -15 de descuento
+  end
+  ApiC->>BD: recalcula nota y ranking

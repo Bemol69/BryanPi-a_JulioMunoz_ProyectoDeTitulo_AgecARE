@@ -1,0 +1,31 @@
+sequenceDiagram
+  autonumber
+  actor Cuidadora
+  participant Sitio as Sitio web
+  participant ApiS as API del sitio
+  participant ApiC as API de la Consola
+  participant BD as Base de datos
+  actor Staff
+  Cuidadora->>Sitio: Se registra y completa su perfil
+  Sitio->>ApiS: POST /auth/register · PUT /caregiver/profile
+  ApiS->>BD: guarda usuario y perfil (pendiente)
+  ApiS-)ApiC: POST /marketplace/caregivers/sync (X-Internal-Key)
+  ApiC->>BD: crea el perfil «pendiente»
+  Cuidadora->>Sitio: Sube cédula, antecedentes y certificado
+  Sitio->>ApiS: POST /caregiver/documents
+  ApiS-)ApiC: POST /marketplace/documents/sync
+  Staff->>ApiC: Revisa y aprueba cada documento
+  ApiC->>ApiS: POST /internal/documents/review
+  alt El sitio no responde
+    ApiS--xApiC: error
+    ApiC-->>Staff: 502: no se guardó, intenta de nuevo
+  else El sitio confirma
+    ApiS-->>ApiC: 204
+    ApiC->>BD: documento «aprobado»
+  end
+  Staff->>ApiC: Confirma el pago de verificación (o la exime)
+  Staff->>ApiC: Aprueba el perfil
+  Note over ApiC: Exige cédula y antecedentes aprobados y el cobro resuelto
+  ApiC->>ApiS: POST /internal/caregivers/status (approved)
+  ApiS->>BD: admin_status = approved
+  Note over Cuidadora,Sitio: Desde ahora aparece en las búsquedas de las familias

@@ -1,0 +1,28 @@
+flowchart TB
+  subgraph WEB["Capa web (React 19 + TypeScript + Vite)"]
+    W1["Sitio público<br/>webapp"]
+    W2["Consola de Administración<br/>frontend"]
+  end
+  subgraph API1["API del sitio (FastAPI) · backend-general"]
+    A1["auth · usuarios"]
+    A2["patients"]
+    A3["caregiver · documentos"]
+    A4["marketplace · chat"]
+    A5["internal (servidor a servidor)"]
+  end
+  subgraph API2["API de la Consola (FastAPI) · backend"]
+    B1["auth · MFA · roles"]
+    B2["marketplace · fidelización"]
+    B3["marketing · métricas"]
+    B4["soporte · auditoría"]
+  end
+  DB[("PostgreSQL 16<br/>Supabase")]
+  ST[("Storage de archivos<br/>fotos y documentos")]
+  W1 -->|HTTPS · JWT| API1
+  W2 -->|HTTPS · JWT| API2
+  A5 <-->|"X-Internal-Key"| B2
+  API1 --> DB
+  API2 --> DB
+  A3 --> ST
+  CI["GitHub Actions<br/>pruebas + compilación"] -.-> API1
+  CI -.-> API2

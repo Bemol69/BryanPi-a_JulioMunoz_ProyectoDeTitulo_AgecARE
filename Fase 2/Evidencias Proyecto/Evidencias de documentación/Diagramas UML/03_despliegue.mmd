@@ -1,0 +1,33 @@
+flowchart LR
+  subgraph USER["Dispositivo del usuario"]
+    BR["Navegador web"]
+  end
+  subgraph GH["GitHub"]
+    REPO["Repositorio (rama main)"]
+    ACT["GitHub Actions<br/>4 trabajos de CI"]
+  end
+  subgraph VERCEL["Vercel (plan Hobby)"]
+    V1["Sitio web<br/>(estático)"]
+    V2["Consola web<br/>(estática)"]
+    V3["API del sitio<br/>función Python · gru1"]
+    V4["API de la Consola<br/>función Python · gru1"]
+  end
+  subgraph SUPA["Supabase · São Paulo"]
+    PG[("PostgreSQL 16")]
+    STO[("Storage")]
+  end
+  subgraph DEV["Computador del equipo"]
+    DK["Docker: PostgreSQL de prueba"]
+    TST["pytest · Playwright · carga"]
+  end
+  BR --> V1 & V2
+  V1 --> V3
+  V2 --> V4
+  V3 <-->|clave interna| V4
+  V3 --> PG
+  V4 --> PG
+  V3 --> STO
+  REPO --> ACT
+  REPO ==>|despliegue automático| VERCEL
+  DEV -->|git push| REPO
+  TST --> DK

@@ -1,0 +1,21 @@
+sequenceDiagram
+  autonumber
+  actor Staff
+  participant Consola as Consola web
+  participant ApiC as API de la Consola
+  participant ApiS as API del sitio
+  participant BD as Base de datos
+  Staff->>Consola: Archiva una reseña (o la restaura / elimina)
+  Consola->>ApiC: PATCH o DELETE /marketplace/reviews/{id}
+  ApiC->>ApiS: POST /internal/reviews/moderate
+  alt El sitio no responde
+    ApiS--xApiC: error
+    ApiC-->>Consola: 502, no se cambió nada
+  else El sitio confirma
+    ApiS->>BD: oculta (o muestra / borra) la reseña y recalcula la nota
+    ApiS-->>ApiC: 204
+    ApiC->>BD: archived_at (o lo quita / borra la reseña y sus puntos)
+    ApiC->>BD: recalcula nota y puntos, y escribe la auditoría
+    ApiC-->>Consola: reseña actualizada
+  end
+  Note over ApiC,ApiS: Los dos sistemas quedan siempre iguales

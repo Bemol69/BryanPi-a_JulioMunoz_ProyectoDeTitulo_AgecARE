@@ -1,0 +1,64 @@
+classDiagram
+  class AdminUser {
+    +UUID id
+    +String full_name
+    +String email
+    +String role  «admin | support | analyst | editor | moderator»
+    +bool mfa_enabled
+    +int failed_attempts
+    +DateTime locked_until
+  }
+  class MarketplaceCaregiver {
+    +UUID id
+    +String name
+    +String email
+    +String zone
+    +List specialties
+    +List languages
+    +float rating_avg
+    +int reviews_count
+    +String status  «pending | approved | suspended»
+    +bool is_engaged
+    +String verification_fee_status  «unpaid | paid | waived»
+    +DateTime verification_waiver_until
+    +String photo_url
+  }
+  class CaregiverDocument {
+    +String doc_type
+    +String status
+    +String pending_file_url
+    +String review_note
+    +String reviewed_by_name
+  }
+  class CaregiverReview {
+    +int rating
+    +String family_name
+    +String comment
+    +UUID external_id
+    +DateTime archived_at
+  }
+  class CaregiverPointsLog {
+    +int points
+    +String reason  «job_completed | good_review | bad_review | manual»
+    +String note
+  }
+  class Product {
+    +String name
+    +String vendor
+    +int price_clp
+    +bool is_sponsored
+    +float commission_pct
+    +String status
+  }
+  class AuditLog {
+    +String action
+    +String entity_type
+    +JSON before
+    +JSON after
+  }
+  MarketplaceCaregiver "1" -- "*" CaregiverDocument
+  MarketplaceCaregiver "1" -- "*" CaregiverReview
+  MarketplaceCaregiver "1" -- "*" CaregiverPointsLog
+  CaregiverReview "1" -- "0..2" CaregiverPointsLog : genera
+  AdminUser "1" -- "*" AuditLog : actor
+  AdminUser "1" -- "*" CaregiverDocument : revisa

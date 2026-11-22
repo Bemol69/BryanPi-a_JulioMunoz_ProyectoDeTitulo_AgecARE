@@ -1,0 +1,21 @@
+flowchart TD
+  A([La familia deja una reseña]) --> B{¿El trabajo<br/>está terminado?}
+  B -- No --> X[Se rechaza: REVIEW_NOT_ALLOWED]
+  B -- Sí --> C[Se guarda la reseña<br/>y se recalcula la nota]
+  C --> D[+10 puntos por el trabajo cerrado]
+  D --> E{¿Calificación?}
+  E -- 4 o 5 estrellas --> F[+5 de bono]
+  E -- 3 estrellas --> G[Sin cambio]
+  E -- 2 estrellas --> H[-5 puntos]
+  E -- 1 estrella --> I[-15 puntos]
+  F --> J[Total = suma del historial<br/>sin reseñas archivadas]
+  G --> J
+  H --> J
+  I --> J
+  J --> K[(Se actualiza el ranking)]
+  K --> L{¿El staff archiva<br/>o elimina la reseña?}
+  L -- Archiva --> M[Deja de contar; se puede restaurar]
+  L -- Elimina --> N[Se borra con sus puntos]
+  L -- No --> Z([Fin])
+  M --> J
+  N --> J

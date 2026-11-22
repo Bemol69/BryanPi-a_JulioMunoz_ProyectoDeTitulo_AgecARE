@@ -1,0 +1,19 @@
+flowchart TB
+  subgraph FAM["👪 Actor: Familia (sitio público)"]
+    direction TB
+    F1([Registrarse e<br/>iniciar sesión]) ~~~ F2([Crear y gestionar<br/>perfiles de familiares]) ~~~ F3([Buscar cuidadoras<br/>y ver su perfil]) ~~~ F4([Solicitar<br/>contratación]) ~~~ F5([Conversar<br/>por chat]) ~~~ F6([Terminar el trabajo<br/>y dejar una reseña]) ~~~ F7([Ver artículos<br/>de apoyo]) ~~~ F8([Eliminar familiares<br/>o su cuenta])
+  end
+  subgraph CUI["🩺 Actor: Cuidadora (sitio público)"]
+    direction TB
+    C1([Registrarse e<br/>iniciar sesión]) ~~~ C2([Completar perfil<br/>profesional y foto]) ~~~ C3([Subir documentos<br/>cédula, antecedentes,<br/>certificado]) ~~~ C4([Aceptar o rechazar<br/>solicitudes]) ~~~ C5([Conversar<br/>por chat]) ~~~ C6([Ver sus reseñas<br/>y estadísticas]) ~~~ C7([Consultar el cobro<br/>de verificación]) ~~~ C8([Eliminar<br/>su cuenta])
+  end
+  subgraph STA["💼 Actor: Staff de Wellq (Consola)"]
+    direction TB
+    S1([Revisar<br/>documentos]) ~~~ S2([Aprobar, suspender<br/>o reactivar perfiles]) ~~~ S3([Gestionar cobro de<br/>verificación y exenciones]) ~~~ S4([Ver ranking y métricas<br/>de fidelización]) ~~~ S5([Registrar reseñas y<br/>otorgar puntos]) ~~~ S6([Moderar reseñas: archivar,<br/>restaurar o eliminar]) ~~~ S7([Gestionar artículos<br/>patrocinados]) ~~~ S8([Eliminar perfiles])
+  end
+  F6 -. requiere .-> F4
+  F4 -. requiere .-> F3
+  S2 -. incluye .-> S1
+  S2 -. incluye .-> S3
+  classDef uc fill:#F2F4FF,stroke:#3649C8,color:#12164A
+  class F1,F2,F3,F4,F5,F6,F7,F8,C1,C2,C3,C4,C5,C6,C7,C8,S1,S2,S3,S4,S5,S6,S7,S8 uc

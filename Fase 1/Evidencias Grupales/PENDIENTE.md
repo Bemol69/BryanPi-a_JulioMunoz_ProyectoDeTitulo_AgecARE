@@ -1,9 +1,9 @@
-# Evidencias grupales pendientes
+# Evidencias grupales — Fase 1
 
-Ya están en esta carpeta la Guía de definición de proyecto y la presentación.
+Ya están en esta carpeta las guías 1.5 (una por integrante) y la presentación del proyecto.
 Falta subir:
 
 - [ ] `1.4_APT122_FormativaFase1.docx`
 - [ ] `PLANILLA DE EVALUACIÓN FASE 1.xlsx`
 
-Una vez subidos, este archivo `PENDIENTE.md` se puede eliminar.
+Cuando estén subidos, este `PENDIENTE.md` se puede eliminar.

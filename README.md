@@ -24,9 +24,23 @@ backend-general/    API pública: registro, pacientes y marketplace de cuidadora
 webapp/             Sitio público (React + Vite + TypeScript)
 Avances del proyecto/ Cómo partimos y hasta dónde llegamos, etapa por etapa, con pantallazos
 Fase 1/              Evidencias académicas de la Fase 1 (Duoc UC)
-Fase 2/              Evidencias académicas de la Fase 2 (informe de avance, presentación, capturas)
+Fase 2/              Evidencias académicas de la Fase 2 (informe de avance, documentación técnica, presentación)
+Fase 3/              Evidencias de la Fase 3 (en preparación)
+Documentos AgeCare/  Índice de toda la documentación (empezar por aquí)
+Material de apoyo/   Guías de estudio para la presentación (no son evidencias)
 Registro de cambios/ Cambios del sistema con fecha (JSON y PDF)
 ```
+
+## Equipo y metodología
+
+| Integrante | Rol | Aporte principal |
+|---|---|---|
+| Bryan Alexander Piña Frías | Desarrollo backend/frontend, despliegue y calidad | Marketplace, documentos, reseñas, puntos y ranking, sitio público, sincronización, pruebas y despliegue |
+| Julio Muñoz Rojas | Desarrollo y modelo de negocio | Módulo de rentabilidad: cobro de verificación, exenciones y artículos patrocinados; integración al repositorio común |
+
+Se trabajó con Scrum adaptado a dos personas (5 sprints de dos semanas). Toda la documentación
+(Product Backlog, Sprint Backlog, Definition of Done, retrospectivas, diagramas UML, requisitos no funcionales
+e innovación) está indexada en [`Documentos AgeCare`](Documentos%20AgeCare/README.md).
 
 ## Revisar el proyecto en línea
 

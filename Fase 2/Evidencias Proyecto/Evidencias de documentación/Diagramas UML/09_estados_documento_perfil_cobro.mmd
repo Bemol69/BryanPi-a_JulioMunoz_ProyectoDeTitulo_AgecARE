@@ -1,0 +1,24 @@
+stateDiagram-v2
+  direction LR
+  state "Documento" as DOC {
+    [*] --> Pendiente
+    Pendiente --> Aprobado: el staff aprueba
+    Pendiente --> Rechazado: el staff rechaza (con motivo)
+    Rechazado --> Pendiente: la cuidadora sube otro archivo
+    Aprobado --> CambioPendiente: sube un reemplazo
+    CambioPendiente --> Aprobado: se aprueba (el nuevo es el vigente)
+    CambioPendiente --> Aprobado: se rechaza (sigue el anterior)
+  }
+  state "Perfil" as PER {
+    [*] --> PerfilPendiente
+    PerfilPendiente --> Aprobada: documentos + cobro resueltos
+    Aprobada --> Suspendida: el staff suspende (con motivo)
+    Suspendida --> Aprobada: reactiva
+  }
+  state "Cobro de verificación" as FEE {
+    [*] --> PorPagar
+    PorPagar --> Pagado: el staff confirma el pago
+    PorPagar --> Eximido: exención con motivo y vigencia
+    Pagado --> PorPagar: revertir
+    Eximido --> PorPagar: revertir o vence
+  }
