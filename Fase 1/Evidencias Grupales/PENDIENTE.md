@@ -1,9 +1,6 @@
 # Evidencias grupales — Fase 1
 
-Ya están en esta carpeta las guías 1.5 (una por integrante) y la presentación del proyecto.
-Falta subir:
-
-- [ ] `1.4_APT122_FormativaFase1.docx`
+- [x] `1.4_APT122_FormativaFase1.docx`
+- [x] `1.5_GuiaEstudiante_Fase1_Definicion_Proyecto_APT_*.docx` (una por integrante)
+- [x] `Presentacion Proyecto.pptx`
 - [ ] `PLANILLA DE EVALUACIÓN FASE 1.xlsx`
-
-Cuando estén subidos, este `PENDIENTE.md` se puede eliminar.
